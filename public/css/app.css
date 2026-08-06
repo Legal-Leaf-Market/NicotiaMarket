@@ -190,6 +190,17 @@ header.top{position:sticky;top:0;z-index:50;
   letter-spacing:-.02em;color:var(--text)}
 .hstats div span{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
 @media(max-width:560px){.hero{padding:26px 0 20px}.hstats{gap:20px}}
+/* On a phone the hero was costing ~340px before a single product.
+   Keep the promise, drop the throat-clearing: eyebrow and the stat row
+   go, the headline shrinks, the subtitle keeps one sentence. */
+@media(max-width:480px){
+  .hero{padding:16px 0 12px}
+  .hero::before{display:none}
+  .hero .eyebrow,.hstats{display:none}
+  .hero h1{font-size:2.1rem;margin-top:0}
+  .hero .h-lead{font-size:1.15rem}
+  .hero .hsub{font-size:.92rem;margin-top:10px}
+}
 /* ============================================================
    FILTERS
    ------------------------------------------------------------
@@ -388,8 +399,13 @@ header.top{position:sticky;top:0;z-index:50;
 .face{border-radius:var(--r);overflow:hidden;
   -webkit-backface-visibility:hidden;backface-visibility:hidden;
   display:flex;flex-direction:column}
-.front{position:relative;flex:1;background:linear-gradient(180deg,#111a15,#0c130f);
-  border:1px solid var(--line);transition:border-color .18s,box-shadow .18s}
+/* The card has to read as a surface sitting ON the page, not a hairline
+   drawn over it. The old #111a15 was ~6% lighter than the page and the
+   border did all the work; both sisters get separation from a real
+   tonal step, so this lifts the plate and adds a drop shadow. */
+.front{position:relative;flex:1;background:linear-gradient(180deg,#16211b,#101913);
+  border:1px solid #2a352e;box-shadow:0 2px 12px rgba(0,0,0,.45);
+  transition:border-color .18s,box-shadow .18s}
 .back{position:absolute;inset:0}
 .front:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
 .card:hover .front{border-color:var(--sage-dk);box-shadow:0 12px 30px rgba(0,0,0,.4)}
@@ -504,11 +520,17 @@ header.top{position:sticky;top:0;z-index:50;
   .card.on .back{opacity:1;pointer-events:auto}
 }
 @media(max-width:560px){
-  .grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
-  .shot{height:152px}
+  .shot{height:180px}
   .rail{grid-auto-columns:minmax(168px,1fr)}
-  .cprice b{font-size:18px}
-  .unitchip{font-size:10.5px;padding:3px 8px}
+}
+/* Single column below 480px, matching BOTH sisters. Two-up at 375px
+   left each card 168px wide, which is narrower than the store pill,
+   the variant dropdown label and the price row need — they clipped
+   into the neighbouring card. A phone has room for one product. */
+@media(max-width:480px){
+  .grid{grid-template-columns:1fr;gap:14px}
+  .skel{grid-template-columns:1fr}
+  .shot{height:210px}
 }
 
 /* ============================================================

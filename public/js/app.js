@@ -1273,23 +1273,42 @@ function shipEstimate(st, after){
    /cart/: Wave Vape's basket lives at /cart-2/ and their own buttons
    post to /store/. `cartPath` carries that per store, and only one
    line can be added per hop, so we send the rest as a note. */
+/* Append params without ever emitting an empty one. `&ref=` with
+   nothing after it is worse than no ref: GoAffPro reads it as an
+   explicit empty attribution and can clear a cookie set earlier in the
+   session, so a sale we DID earn stops tracking. */
+function addParams(url, params){
+  var qs=[];
+  for(var k in params){
+    var v=params[k];
+    if(v===undefined||v===null||v==='') continue;
+    qs.push(encodeURIComponent(k)+'='+encodeURIComponent(v));
+  }
+  if(!qs.length) return url;
+  return url+(url.indexOf('?')>-1?'&':'?')+qs.join('&');
+}
+
 function checkoutUrl(st, items){
   var base='https://'+st.domain;
   if(st.platform==='shopify'){
     var parts=items.filter(function(x){return x.vid;})
                    .map(function(x){return encodeURIComponent(x.vid)+':'+x.qty;});
-    if(parts.length) return base+'/cart/'+parts.join(',')+
-      (st.coupon?('?discount='+encodeURIComponent(st.coupon)):'');
-    return st.coupon ? base+'/discount/'+encodeURIComponent(st.coupon)+'?redirect=/cart'
-                     : base+'/cart';
+    /* The cart permalink jumps straight to /cart, skipping any product
+       page — so the affiliate cookie was never set on the way through
+       and Shopify handoffs were tracking to nobody. ?ref= rides along
+       on the permalink itself. */
+    if(parts.length) return addParams(base+'/cart/'+parts.join(','),
+      {discount:st.coupon, ref:st.ref});
+    return st.coupon
+      ? addParams(base+'/discount/'+encodeURIComponent(st.coupon),{redirect:'/cart', ref:st.ref})
+      : addParams(base+'/cart',{ref:st.ref});
   }
   if(st.platform==='woocommerce' && items[0] && items[0].vid){
     var path=st.cartPath||'/cart/';
-    return base+path+(path.indexOf('?')>-1?'&':'?')+'add-to-cart='+
-           encodeURIComponent(items[0].vid)+'&quantity='+items[0].qty+
-           '&ref='+encodeURIComponent(st.ref||'');
+    return addParams(base+path,
+      {'add-to-cart':items[0].vid, quantity:items[0].qty, ref:st.ref});
   }
-  return items[0] ? (items[0].aff||items[0].url) : base+'/?ref='+(st.ref||'');
+  return items[0] ? (items[0].aff||items[0].url) : addParams(base+'/',{ref:st.ref});
 }
 function checkoutStore(key){
   if(!isLoggedIn()) toast('One step first — we need an email to send your order details');

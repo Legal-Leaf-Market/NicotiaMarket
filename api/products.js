@@ -32,12 +32,15 @@ const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' +
    ============================================================ */
 export const STORES = [
   /* --- pouches & snus --- */
+  /* `currency` pins what the store actually charges in. It is fetched
+     from /meta.json when absent, but pinning the known ones means a
+     blocked meta.json can never silently relabel £4.45 as $4.45. */
   { key:'snusoclock', name:"Snus O'Clock", dept:'pouch', domain:'snusoclock.com',
-    ref:'nicotinebaby', ships:['EU'], guess:1, perPack:20, platform:'shopify' },
+    ref:'nicotinebaby', ships:['EU'], guess:1, perPack:20, platform:'shopify', currency:'GBP' },
   { key:'europesnus', name:'Europesnus', dept:'pouch', domain:'europesnus.com',
-    ref:'rjuntxyu', ships:['EU'], guess:1, perPack:20, platform:'shopify' },
+    ref:'rjuntxyu', ships:['EU'], guess:1, perPack:20, platform:'shopify', currency:'EUR' },
   { key:'nikopouches', name:'NikoPouches.dk', dept:'pouch', domain:'nikopouches.dk',
-    ref:'idtzhxpu', ships:['EU'], guess:1, perPack:20, platform:'shopify' },
+    ref:'idtzhxpu', ships:['EU'], guess:1, perPack:20, platform:'shopify', currency:'DKK' },
 
   /* --- disposables ---
      Wave Vape: GoAffPro 10%, shop id 4QTSbUnS3TvZ. Foger 35 + Geek Bar 5.
@@ -74,7 +77,11 @@ export const STORES = [
      This one store spans FOUR of our departments, which is the whole
      reason deptMap exists. It is currently our only source of US
      nicotine pouches AND our only source of e-liquid at all. */
-  { key:'eightvape', name:'EightVape', dept:'disposable', domain:'www.eightvape.com',
+  /* domain is the APEX, not www. www.eightvape.com redirects, and the
+     redirect is where the Store API sweep was dying — it fell all the
+     way down the ladder to JSON-LD and returned 41 rows with zero
+     variants instead of 1,074 products and 4,925 variations. */
+  { key:'eightvape', name:'EightVape', dept:'disposable', domain:'eightvape.com',
     ref:'', ships:['US'], guess:1, platform:'woocommerce', awin:86487,
     cats:['disposable-vape','kits','vape-mods','vape-pods','vape-tanks',
           'vape-coils','vape-accessories','juice','nicotine-pouch',
@@ -94,7 +101,7 @@ export const STORES = [
   { key:'freemax', name:'Freemax', dept:'device', domain:'www.freemaxvape.com',
     ref:'nicotinebaby', ships:['US'], guess:1, platform:'woocommerce' },
   { key:'relxuk', name:'RELX UK', dept:'device', domain:'www.relxvape.co.uk',
-    ref:'nicotinebaby', ships:['UK'], platform:'shopify' },
+    ref:'nicotinebaby', ships:['UK'], platform:'shopify', currency:'GBP' },
 
   /* --- cigars --- */
   { key:'montero', name:'Montero Cigars', dept:'cigar', domain:'monterocigars.com',
@@ -388,7 +395,31 @@ async function get(url, ms = 12000) {
    on most storefronts now; ?page= is widely ignored, which is why a
    4,000-product shop reports exactly 250 and looks complete. When we
    see a clean 250 boundary we walk collections instead. */
+/* Shopify's products.json carries NO currency field, so every Shopify
+   store was defaulting to USD — Snus O'Clock priced in GBP and
+   Europesnus in EUR both rendered with a dollar sign, and the cart
+   summed them as if they were the same money.
+
+   /meta.json is public on every Shopify storefront and returns the
+   shop's currency. One request per store, cached for the instance. */
+const SHOP_CUR = new Map()
+async function shopifyCurrency(st) {
+  if (st.currency) return st.currency
+  if (SHOP_CUR.has(st.key)) return SHOP_CUR.get(st.key)
+  let cur = 'USD'
+  try {
+    const r = await get(`https://${st.domain}/meta.json`, 6000)
+    if (r.ok) {
+      const m = await r.json()
+      if (m && typeof m.currency === 'string' && m.currency.length === 3) cur = m.currency
+    }
+  } catch { /* fall back to USD */ }
+  SHOP_CUR.set(st.key, cur)
+  return cur
+}
+
 async function shopifyProducts(st) {
+  const currency = await shopifyCurrency(st)
   const out = []
   for (let page = 1; page <= 10; page++) {
     if (outOfTime(4000)) break
@@ -410,7 +441,7 @@ async function shopifyProducts(st) {
         out.push(row(st, {
           brand: pr.vendor, title: pr.title, variant: v.title,
           tags: Array.isArray(pr.tags) ? pr.tags.join(' ') : pr.tags,
-          price: v.price, compareAt: v.compare_at_price,
+          price: v.price, compareAt: v.compare_at_price, currency,
           available: v.available !== false, image: img, url,
           desc: pr.body_html, vid: v.id,
         }))
@@ -422,6 +453,7 @@ async function shopifyProducts(st) {
 }
 
 async function shopifyCollection(st) {
+  const currency = await shopifyCurrency(st)
   const res = await get(`https://${st.domain}/collections/all/products.json?limit=250`)
   if (!res.ok) throw new Error('collections HTTP ' + res.status)
   const data = await res.json()
@@ -433,7 +465,7 @@ async function shopifyCollection(st) {
       out.push(row(st, {
         brand: pr.vendor, title: pr.title, variant: v.title,
         tags: Array.isArray(pr.tags) ? pr.tags.join(' ') : pr.tags,
-        price: v.price, compareAt: v.compare_at_price,
+        price: v.price, compareAt: v.compare_at_price, currency,
         available: v.available !== false, image: img, url,
         desc: pr.body_html, vid: v.id,
       }))
@@ -756,9 +788,14 @@ export default async function handler(req, res) {
   const q = req.query || {}
   const fresh = 'refresh' in q
 
+  /* Must go through respond(). Returning CACHE.payload directly meant a
+     warm instance ignored ?summary, ?dept and ?debug entirely and shipped
+     the whole catalogue every time — which silently defeated the entire
+     progressive-load design, because the manifest request WAS the full
+     2,950-item payload. */
   if (!fresh && CACHE.payload && Date.now() - CACHE.at < TTL) {
     res.setHeader('X-Cache', 'HIT')
-    return res.status(200).json(CACHE.payload)
+    return respond(res, CACHE.payload, q)
   }
 
   DEADLINE = Date.now() + BUDGET_MS

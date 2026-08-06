@@ -49,6 +49,36 @@ export const STORES = [
     ref:'nicotinebaby', ships:['US'], platform:'woocommerce', featured:1,
     cartPath:'/store/', shipFlat:5.99, shipFree:55 },
 
+  /* EightVape. AWIN 86487 applied, scraping meanwhile — so `ref` is
+     empty on purpose and buildAff() omits the param entirely rather
+     than sending ?ref= with nothing after it.
+
+     Their Store API is CLOSED, which is why this carries `cats`: the
+     category pages are the source and wooCategoryWalk() reads them.
+
+     Categories audited against their own nav. The five top-level ones
+     are Disposables, Juice, Kits, Pouches, Accessories; Coils/Pods/
+     Tanks/Mods sit under hardware. Everything else linked on the site
+     is a merchandising bucket (new-arrivals, flash-sale, *-clearance,
+     buy-1-get-1-free) or a brand shelf (geek-bar, dojo, foger,
+     smok-novo…) that only re-lists products already in the real
+     categories — walking them costs requests and returns duplicates.
+
+     This one store spans FOUR of our departments, which is the whole
+     reason deptMap exists. It is currently our only source of US
+     nicotine pouches AND our only source of e-liquid at all. */
+  { key:'eightvape', name:'EightVape', dept:'disposable', domain:'www.eightvape.com',
+    ref:'', ships:['US'], guess:1, platform:'woocommerce', awin:86487,
+    cats:['disposable-vape','kits','vape-mods','vape-pods','vape-tanks',
+          'vape-coils','vape-accessories','juice','nicotine-pouch',
+          'nicotine-free-vape'],
+    deptMap:{ 'disposable-vape':'disposable', 'nicotine-free-vape':'disposable',
+              'juice':'liquid', 'vape-juice-clearance':'liquid',
+              'nicotine-pouch':'pouch',
+              'kits':'device', 'vape-mods':'device', 'vape-pods':'device',
+              'vape-tanks':'device', 'vape-coils':'device',
+              'vape-accessories':'gear' } },
+
   /* --- devices, pods, hardware --- */
   { key:'vaporesso', name:'Vaporesso', dept:'device', domain:'store.vaporesso.com',
     ref:'nicotinebaby', ships:['US','INTL'], guess:1, featured:1, platform:'shopify' },
@@ -70,6 +100,87 @@ export const STORES = [
      stick, so a $199 humidor read "$199.00 per stick". */
   { key:'xifei', name:'XIFEI', dept:'gear', domain:'xifeicigaraccessory.com',
     ref:'nicotinebaby', ships:['US','INTL'], guess:1, platform:'shopify' },
+
+  /* ==========================================================
+     NOT LIVE YET — uncomment as each one is approved.
+     ----------------------------------------------------------
+     To bring one online: paste the tracked ref (or the AWIN link)
+     into `ref`, uncomment the entry, and deploy. Nothing else to do
+     — the front end reads the registry from this file.
+
+     Terms are recorded here because they decide PLACEMENT, not just
+     whether to take the deal: a 45-day cookie earns a spot on a
+     research-heavy page, a 7-day one only converts on impulse.
+     ---------------------------------------------------------- */
+
+  /* ---- GoAffPro, self-serve. Apply and you generally get a link the
+     same day, so these are the fastest to bring online. ---- */
+
+  // Jake's Mint Chew — tobacco-free mint chew. Not a pouch, but the
+  // closest US smokeless product with an affiliate programme, and it
+  // fills a department that is otherwise entirely EU. perPack:1
+  // because it is priced per tin, not per portion.
+  // { key:'jakes', name:"Jake's Mint Chew", dept:'pouch', domain:'jakesmintchew.com',
+  //   ref:'nicotinebaby', ships:['US'], guess:1, platform:'shopify', perPack:1 },   // 10%, 7-day
+
+  // { key:'snusbb', name:'Snus BB', dept:'pouch', domain:'snusbb.com',
+  //   ref:'', ships:['US'], guess:1, platform:'shopify', perPack:20 },              // $2 flat/sale, 7-day — low rate, but US pouch stock
+  // { key:'brusco', name:'Brusco Cigars', dept:'cigar', domain:'bruscocigars.com',
+  //   ref:'', ships:['US'], guess:1, platform:'shopify' },                          // 10%, 30-day — best cigar rate x cookie found
+  // { key:'onestoppipe', name:'One Stop Pipe Shop', dept:'gear', domain:'www.onestoppipeshop.com',
+  //   ref:'', ships:['US'], guess:1, platform:'shopify' },                          // 12%, 10-day
+  // { key:'threeavape', name:'3AVAPE', dept:'device', domain:'3avape.myshopify.com',
+  //   ref:'', ships:['US','INTL'], guess:1, platform:'shopify' },                   // 10%, 45-DAY — longest vape cookie on the list
+  // { key:'bimovape', name:'Bimo Vape', dept:'device', domain:'bimovape.com',
+  //   ref:'', ships:['US'], guess:1, platform:'shopify' },                          // 15%, 7-day
+  // { key:'yllvape', name:'YLL Vape', dept:'device', domain:'yllvape.com',
+  //   ref:'', ships:['US'], guess:1, platform:'shopify' },                          // 15%, 7-day
+  // { key:'iecigbest', name:'iEcigBest', dept:'device', domain:'iecigbest.com',
+  //   ref:'', ships:['US'], guess:1, platform:'shopify' },                          // 15%, 7-day
+  // { key:'vapeschoice', name:'Vapes Choice', dept:'device', domain:'vapeschoice.com',
+  //   ref:'', ships:['US'], guess:1, platform:'shopify' },                          // 10%, 7-day
+
+  /* ---- Applied, awaiting response ---- */
+
+  // SnusCore — Shopify at pouchy-europe.myshopify.com serving an EU root
+  // and a US market at /en-us from ONE catalogue. Both are walked and
+  // each product is tagged with the markets that carry it, so a Swedish
+  // snus that cannot legally reach the US is never shown to a US
+  // shopper. `markets` drives itemReaches() in the front end.
+  // Storefront token fa5367e9f729ddb0ee4dcf6f1146e544 if products.json closes.
+  // { key:'snuscore', name:'SnusCore', dept:'pouch', domain:'snuscore.com',
+  //   ref:'', ships:['US','EU'], platform:'shopify', perPack:20,
+  //   markets:[{code:'US',path:'/en-us'},{code:'ROW',path:''}],
+  //   cats:['all','nicotine-pouches','energy-pouches','aroma-pouches',
+  //         'cream-energy-pouches','hardy-energy-pouches','xqs-caffeine'] },
+
+  /* ---- AWIN, applied. Flip `ref` to the tracked link on approval.
+     For platform:'feedcsv' the AWIN product feed URL goes in `domain`
+     — a feed skips scraping entirely: no WAF, no 250-product ceiling.
+     That path is NOT implemented yet; see CLAUDE.md §7. ---- */
+
+  // { key:'jones', name:'Jones', dept:'pouch', domain:'quitwithjones.com',
+  //   ref:'', ships:['US'], guess:1, platform:'shopify', awin:63308, perPack:1 },
+  //   // Mint nicotine LOZENGES, 30-day, feed, 84% approval, $2.14 EPC.
+  //   // Positioned as a quit-vaping aid — cessation language is accurate
+  //   // here and NOWHERE else on the site. See the hard rules in CLAUDE.md.
+  // { key:'trgt', name:'TRGT', dept:'pouch', domain:'taketrgt.com',
+  //   ref:'', ships:['US'], guess:1, platform:'shopify', awin:126721, perPack:20 },
+  //   // NICOTINE-FREE performance pouches, US. New programme, no EPC history.
+  // { key:'smokecartel', name:'Smoke Cartel', dept:'device', domain:'smokecartel.com',
+  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:77378 },              // 365-day cookie, 15%+, 5k products, $110 AOV
+  // { key:'relxglobal', name:'RELX', dept:'device', domain:'relxnow.com',
+  //   ref:'', ships:['US','INTL'], guess:1, platform:'feedcsv', awin:82289 },       // 100% approval, feed. Replaces RELX UK's 1% for US traffic
+  // { key:'fruitia', name:'FRUITIA', dept:'liquid', domain:'fruitia.shop',
+  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:108248 },             // states 20%, 60-day
+  // { key:'vapejuicedepot', name:'Vape Juice Depot', dept:'liquid', domain:'vapejuicedepot.com',
+  //   ref:'', ships:['US'], guess:1, platform:'shopify', awin:96141 },              // states 10%, 90-day. NO feed — scrape it
+  // { key:'kindjuice', name:'Kind Juice', dept:'liquid', domain:'www.kindjuice.com',
+  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:89381 },              // states 10%, 90-day, organic/PG-free
+  // { key:'humidors', name:'1st Class Humidors', dept:'gear', domain:'www.1stclasshumidors.com',
+  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:105497 },             // 90-day, fills the accessory gap beside XIFEI
+  // { key:'bnbtobacco', name:'BnB Tobacco', dept:'cigar', domain:'www.bnbtobacco.com',
+  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:87969 },              // feed, 100% approval, 8.5% conversion
 ]
 
 /* Only these fields ever reach a browser. */
@@ -161,9 +272,14 @@ function sizeImage(src, w = 500) {
   return src + (src.includes('?') ? '&' : '?') + 'width=' + w
 }
 
+/* No ref yet (EightVape is scraping while its AWIN application sits in
+   the queue) means no ?ref= at all. Appending an empty param is worse
+   than omitting it: some carts treat ref= as an explicit empty
+   attribution and clear a cookie set earlier in the session. */
 function buildAff(st, url) {
-  if (!url) return `https://${st.domain}/?ref=${st.ref || ''}`
-  return url + (url.includes('?') ? '&' : '?') + 'ref=' + (st.ref || '')
+  const base = url || `https://${st.domain}/`
+  if (!st.ref) return base
+  return base + (base.includes('?') ? '&' : '?') + 'ref=' + st.ref
 }
 
 function row(st, o) {
@@ -172,7 +288,9 @@ function row(st, o) {
   return {
     id: `${st.key}-${o.vid || url}`,
     key: st.key,
-    dept: classify(st, blob),
+    /* A category page knows better than a regex does. When the walk
+       hands us a dept from the store's own deptMap it wins outright. */
+    dept: o.dept || classify(st, blob),
     brand: o.brand || st.name,
     title: o.title || '',
     variant: o.variant === 'Default Title' ? '' : (o.variant || ''),
@@ -309,6 +427,85 @@ async function wooStoreApi(st) {
   return out
 }
 
+/* ---- WooCommerce category walk ----
+   EightVape runs WooCommerce with the Store API closed, so its category
+   pages are the source. Their markup is generous: each card carries a
+   product-title link, a wishlist button holding data-id, a clean
+   data-product_image, a woocommerce-Price-amount, and an outofstock
+   class when it applies.
+
+   The id matters as much as the price — it is what makes
+   /cart/?add-to-cart=<id> fill their basket at checkout. */
+function lastMatch(text, re) {
+  let m, last = ''
+  while ((m = re.exec(text)) !== null) last = m[1]
+  return last
+}
+
+function wooCards(st, html, dept, seen) {
+  const out = []
+  const re = /<h3[^>]*class="[^"]*product-title[^"]*"[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi
+  let m
+  while ((m = re.exec(html)) !== null) {
+    const url = m[1]
+    if (!url.includes('/product/')) continue
+    if (seen.has(url)) continue
+    seen.add(url)
+
+    const title = m[2].replace(/<[^>]+>/g, '').replace(/&amp;/g, '&')
+      .replace(/&#\d+;/g, '').replace(/\s+/g, ' ').trim()
+    if (!title) continue
+
+    /* price sits just after the title; a variable product shows a range
+       and the low end is the honest "from" figure */
+    const after = html.substr(m.index, 2200)
+    const pm = after.match(/woocommerce-Price-currencySymbol">[^<]*<\/span>([\d,]+\.?\d*)/i)
+    const price = pm ? pm[1].replace(/,/g, '') : ''
+
+    /* id, image and stock sit in the block BEFORE the title. Take the
+       LAST match, not the first — a greedy backward search anchors on
+       the earliest candidate and silently shifts every id by one card. */
+    const back = html.substring(Math.max(0, m.index - 6000), m.index)
+    let img = lastMatch(back, /data-product_image="([^"]+)"/gi)
+    const pid = lastMatch(back, /data-id="(\d+)"/gi)
+    if (img) img = img.replace(/-\d+x\d+(\.(?:jpg|jpeg|png|webp))/i, '$1')
+    const oos = /class="[^"]*\boutofstock\b/i.test(back.slice(-2500))
+
+    out.push(row(st, {
+      brand: st.name, title, tags: title, dept,
+      price, available: !oos, image: img, url, vid: pid,
+    }))
+  }
+  return out
+}
+
+async function wooCategoryWalk(st) {
+  const cats = st.cats && st.cats.length ? st.cats.slice() : []
+  if (!cats.length) throw new Error('no cats configured for category walk')
+
+  const out = []
+  const seen = new Set()
+  for (const cat of cats) {
+    /* deptMap routes each category onto the right shelf. EightVape's
+       categories span four of ours, so the store's own dept is only a
+       fallback for anything unmapped. */
+    const dept = (st.deptMap && st.deptMap[cat]) || st.dept
+    for (let page = 1; page <= 12; page++) {
+      const url = `https://${st.domain}/product-category/${cat}/` + (page > 1 ? `page/${page}/` : '')
+      let res
+      try { res = await get(url) } catch { break }
+      if (!res.ok) break
+      const html = await res.text()
+      const got = wooCards(st, html, dept, seen)
+      out.push(...got)
+      if (!got.length) break
+      if (!html.includes(`/page/${page + 1}/`)) break
+    }
+  }
+  if (!out.length) throw new Error('category pages returned no cards')
+  return out
+}
+
 /* Themes emit <script type="application/ld+json"> Product objects.
    That markup exists so machines can read it — a published interface,
    not a workaround. Last resort for BigCommerce and custom carts. */
@@ -356,7 +553,7 @@ async function jsonLd(st) {
 
 const LADDERS = {
   shopify: [['products.json', shopifyProducts], ['collections', shopifyCollection], ['json-ld', jsonLd]],
-  woocommerce: [['woo store api', wooStoreApi], ['json-ld', jsonLd]],
+  woocommerce: [['woo store api', wooStoreApi], ['woo categories', wooCategoryWalk], ['json-ld', jsonLd]],
   bigcommerce: [['json-ld', jsonLd]],
   default: [['products.json', shopifyProducts], ['woo store api', wooStoreApi], ['json-ld', jsonLd]],
 }

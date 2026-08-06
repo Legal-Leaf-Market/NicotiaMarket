@@ -1,0 +1,30 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": null,
+  "installCommand": null,
+  "outputDirectory": "public",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/pouches",     "destination": "/index.html" },
+    { "source": "/disposables", "destination": "/index.html" },
+    { "source": "/devices",     "destination": "/index.html" },
+    { "source": "/e-liquid",    "destination": "/index.html" },
+    { "source": "/cigars",      "destination": "/index.html" },
+    { "source": "/gear",        "destination": "/index.html" }
+  ],
+  "redirects": [
+    { "source": "/(index.html)", "destination": "/", "permanent": true },
+    { "source": "/vape",         "destination": "/devices",     "permanent": true },
+    { "source": "/eliquid",      "destination": "/e-liquid",    "permanent": true },
+    { "source": "/disposable",   "destination": "/disposables", "permanent": true }
+  ],
+  "headers": [
+    { "source": "/api/(.*)",     "headers": [{ "key": "Cache-Control", "value": "public, s-maxage=600, stale-while-revalidate=3600" }] },
+    { "source": "/css/(.*)",     "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600" }] },
+    { "source": "/js/(.*)",      "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600" }] },
+    { "source": "/sitemap.xml",  "headers": [{ "key": "Content-Type", "value": "application/xml" }] },
+    { "source": "/(.*)",         "headers": [{ "key": "X-Content-Type-Options", "value": "nosniff" }] }
+  ]
+}

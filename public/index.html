@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nicotia Market — Pouches, Vape &amp; Cigars, Priced by the Unit</title>
+<meta name="description" content="Compare nicotine pouches, snus, disposables, e-liquid and cigars across every store we carry. Priced per pouch, per 1,000 puffs, per ml and per stick. Adults 21+.">
+<meta name="theme-color" content="#0b0f0d">
+<link rel="icon" href="/assets/mark.svg" type="image/svg+xml">
+<meta property="og:title" content="Nicotia Market — priced by the unit">
+<meta property="og:description" content="Pouches, disposables, e-liquid and cigars from every shop we carry, priced so packs and bundles finally compare honestly.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Same request Herbal-Leaf makes, deliberately: cache hit across sisters. -->
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Cormorant+Garamond:ital,wght@1,600&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<!-- The house mark. Both sisters carry an SVG glyph beside the wordmark
+     (Herbal-Leaf's lily, Legal-Leaf's leaf); this is ours — a tobacco
+     leaf with an ember at the base of the midrib. Same construction as
+     the lily: filled blades, stroked veins, one warm accent. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="leafIcon" viewBox="0 0 60 72">
+    <path d="M30 5 C47 16 53 37 44 55 C40 64 34 69 30 71 C26 69 20 64 16 55 C7 37 13 16 30 5 Z"
+          fill="#e0863f" opacity="0.22"/>
+    <path d="M30 5 C47 16 53 37 44 55 C40 64 34 69 30 71 C26 69 20 64 16 55 C7 37 13 16 30 5 Z"
+          fill="none" stroke="#e0863f" stroke-width="1.9" stroke-linejoin="round"/>
+    <path d="M30 8 L30 71" fill="none" stroke="#f0b93c" stroke-width="1.5" stroke-linecap="round"/>
+    <g fill="none" stroke="#4ade80" stroke-width="1.15" stroke-linecap="round" opacity="0.9">
+      <path d="M30 20 C24 22 20 27 19 33"/><path d="M30 20 C36 22 40 27 41 33"/>
+      <path d="M30 33 C23 35 18 41 17 48"/><path d="M30 33 C37 35 42 41 43 48"/>
+      <path d="M30 46 C25 48 21 53 20 58"/><path d="M30 46 C35 48 39 53 40 58"/>
+    </g>
+    <circle cx="30" cy="63" r="3.4" fill="#e0863f"/>
+    <circle cx="30" cy="63" r="1.5" fill="#f0b93c"/>
+  </symbol>
+</svg>
+
+<div id="gate" role="dialog" aria-modal="true" aria-labelledby="gt">
+  <div class="gc">
+    <svg class="gmark" viewBox="0 0 60 72"><use href="#leafIcon"></use></svg>
+    <p class="eyebrow">Nicotia Market</p>
+    <h1 id="gt">Are you <em>21</em><br>or older?</h1>
+    <p id="gsub">This site sells tobacco and vapour products for adults 21 and over who already use them. It is not for anyone under 21, and not for people who don't currently use tobacco or nicotine.</p>
+
+    <div class="glocwrap">
+      <div class="field" style="margin-bottom:10px">
+        <label for="gCountry">Where are you shopping from?</label>
+        <select id="gCountry"><option value="">Select a country</option></select>
+      </div>
+      <div class="field" id="gRegionWrap" style="display:none">
+        <label for="gRegion">State or province</label>
+        <select id="gRegion"><option value="">Select a state</option></select>
+      </div>
+      <p class="ghint">We only show what can actually be shipped to you. Some US states don't permit vape deliveries at all.</p>
+    </div>
+
+    <div class="gbtns">
+      <button id="gyes" type="button" disabled>Enter</button>
+      <button id="gno" type="button" class="ghost">No</button>
+      <button id="gcancel" type="button" class="ghost" hidden>Cancel</button>
+    </div>
+    <p id="gdeny">This site isn't for you. Please close this page.<br>Free help to stop: 1-800-QUIT-NOW.</p>
+    <div class="gwarn">Nicotine products: this product contains nicotine. Nicotine is an addictive chemical.<br>
+      Cigars: cigar smoking can cause cancers of the mouth and throat, even if you do not inhale.</div>
+  </div>
+</div>
+
+<div class="warnbar" id="warnbar"></div>
+
+<header class="top"><div class="top-in shell">
+  <a class="brand" href="#/">
+    <svg class="gmark" viewBox="0 0 60 72" aria-hidden="true"><use href="#leafIcon"></use></svg>
+    <span class="bwords"><span class="bname">Nicotia Market</span><small>priced by the unit</small></span>
+  </a>
+  <span class="live-pill" id="livePill"><span class="dot"></span>Live pricing</span>
+  <span class="spacer"></span>
+  <div class="searchbox">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input id="q" type="search" placeholder="Search brand, flavour, strength, store…" autocomplete="off" aria-label="Search products">
+  </div>
+  <button class="shipto" id="locPill" title="Change where you're shopping from">
+    <span class="lbl">Ship to</span><span class="locval" id="locVal">—</span>
+  </button>
+  <button class="nbtn" id="acctBtn"><span id="acctLabel">Sign in</span></button>
+  <button class="nbtn" id="openBoard"><span class="lbl-full">Saved</span>&#9734;<span class="count zero" id="nBoard">0</span></button>
+  <button class="nbtn" id="openList"><span class="lbl-full">Cart</span>&#128722;<span class="count zero" id="nList">0</span></button>
+</div></header>
+
+<nav class="depts"><div class="dept-in shell" id="depts">
+  <button class="dept" data-dept="all"        aria-pressed="true">Everything</button>
+  <button class="dept" data-dept="pouch"      aria-pressed="false">Pouches &amp; Snus <span id="c-pouch"></span></button>
+  <button class="dept" data-dept="disposable" aria-pressed="false">Disposables <span id="c-disposable"></span></button>
+  <button class="dept" data-dept="device"     aria-pressed="false">Devices &amp; Pods <span id="c-device"></span></button>
+  <button class="dept" data-dept="liquid"     aria-pressed="false">E-Liquid <span id="c-liquid"></span></button>
+  <button class="dept" data-dept="cigar"      aria-pressed="false">Cigars <span id="c-cigar"></span></button>
+  <button class="dept" data-dept="gear"       aria-pressed="false">Gear <span id="c-gear"></span></button>
+  <a class="dept spot" id="spotLink" href="#/store/beardedcigar" data-route hidden>Beard Cigars &#9733;</a>
+</div></nav>
+
+<div id="mallview">
+
+<section class="hero"><div class="hero-inner shell">
+  <span class="eyebrow">every store, one price you can compare</span>
+  <h1><span class="h-lead">what it actually</span>costs</h1>
+  <p class="hsub">Pouches, disposables, e-liquid and cigars from every shop we carry — priced
+    per pouch, per 1,000 puffs, per ml and per stick, so a five-can roll and a single tin
+    finally compare honestly.</p>
+  <div class="hstats" id="heroStats"></div>
+</div></section>
+
+<main class="shell">
+  <button class="nbtn ftoggle-btn" id="filterToggle">&#9881; <span>Filters</span></button>
+  <div class="fscrim" id="fscrim"></div>
+  <div class="filterwrap" id="filterwrap">
+    <div class="panel">
+      <div class="mf-head"><b>Filters</b><button id="mfClose" type="button" aria-label="Close filters">&times;</button></div>
+      <div class="frow r1">
+        <div class="field"><label for="f-store">Store</label>
+          <select id="f-store"><option value="all">All stores</option></select></div>
+        <div class="field"><label for="f-brand">Brand</label>
+          <select id="f-brand"><option value="all">All brands</option></select></div>
+        <div class="field"><label for="f-strength">Nicotine strength</label>
+          <select id="f-strength"><option value="all">Any strength</option></select></div>
+        <div class="field"><label for="f-price">Budget</label>
+          <select id="f-price">
+            <option value="all">Any price</option>
+            <option value="0-10">Under $10</option>
+            <option value="10-20">$10 – $20</option>
+            <option value="20-40">$20 – $40</option>
+            <option value="40-99999">$40 and up</option>
+          </select></div>
+      </div>
+      <div class="ftoggles">
+        <button class="chip deals" id="f-deals" aria-pressed="false">On sale</button>
+        <button class="chip" id="f-instock" aria-pressed="false">Ships today</button>
+        <button class="clearall" id="clear" hidden>Clear all</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="subbar">
+    <span class="cnt" id="rcount">&nbsp;</span>
+    <div class="meta">
+      <span id="stamp"></span>
+      <span class="sortmini"><label for="f-sort">Sort</label>
+        <select id="f-sort">
+          <option value="unit">Best value per unit</option>
+          <option value="price-asc">Price, low to high</option>
+          <option value="price-desc">Price, high to low</option>
+          <option value="name">Name A–Z</option>
+        </select></span>
+    </div>
+  </div>
+
+  <div id="notices"></div>
+
+  <section class="railsec" id="railsec" hidden>
+    <div class="railhead"><h2 id="railTitle">Best value right now</h2>
+      <small id="railSub">cheapest per unit across every store</small></div>
+    <div class="rail" id="rail"></div>
+  </section>
+
+  <section class="logorow" id="storeRow" hidden>
+    <div class="lrhead"><h2>Shop by store</h2>
+      <button class="lrclear" id="clearStores" hidden>Show all</button></div>
+    <div class="lrscroll" id="storeLogos"></div>
+  </section>
+
+  <section class="logorow" id="brandRow" hidden>
+    <div class="lrhead"><h2>Shop by brand</h2><small id="brandNote"></small>
+      <button class="lrclear" id="clearBrands" hidden>Show all</button></div>
+    <div class="lrscroll" id="brandLogos"></div>
+  </section>
+
+  <div id="mount"></div>
+</main>
+
+<section class="stores"><div class="shell">
+  <details class="storefold">
+    <summary><span>Shopping <b id="nstores">—</b> stores</span>
+      <small>who they are, where they ship</small></summary>
+    <p>We hold no stock. Every item ships from the store selling it, at that store's price,
+      under its own returns policy and age checks. Prices are shown per pouch, per 1,000 puffs,
+      per ml and per stick so packs, bundles and big-puff disposables compare honestly.</p>
+    <div class="slist" id="slist"></div>
+  </details>
+</div></section>
+
+</div><!-- /mallview -->
+
+<section id="spotview" class="spotview" hidden></section>
+
+<footer><div class="shell">
+  <div class="fwarns">
+    <div class="fw nic"><b>Pouches, disposables, devices and e-liquid</b> — Warning: this product contains nicotine. Nicotine is an addictive chemical.</div>
+    <div class="fw cigar"><b>Cigars</b> — Cigar smoking can cause cancers of the mouth and throat, even if you do not inhale. Cigars are not a safe alternative to cigarettes.
+      <em>Shown voluntarily. Federal cigar warning rules at 21 CFR 1143.3 and 1143.5 were vacated by the courts and are not currently enforced, and premium cigars sit outside the Deeming Rule. Age 21+ and state law still apply in full.</em></div>
+  </div>
+  <div class="fgrid">
+    <div><h4>How we make money</h4>
+      <p>We earn a commission when you buy through our links. It never changes your price. Ranking is by unit price, not by what pays us — that's the whole point of showing cost per pouch, per puff and per stick.</p></div>
+    <div><h4>Who can buy</h4>
+      <p>Adults 21 and over who already use tobacco or nicotine. If you don't, don't start.</p>
+      <p>Rules differ by country, state and city. Snus can't be sold in most of the EU outside Sweden. Some stores can't ship to your address whatever this page shows. The store verifies your age at checkout.</p></div>
+    <div><h4>No health claims</h4>
+      <p>Nothing here is a quit aid or a cessation product, and none of it is safe. We don't make comparative health claims between categories.</p>
+      <p>Free help to stop: 1-800-QUIT-NOW. We earn nothing from that call.</p></div>
+  </div>
+  <div class="sisters">
+    <h4>Sister markets</h4>
+    <a href="https://legal-leafmarket.com" rel="noopener">Legal-Leaf Market<span>Hemp &amp; cannabinoids</span></a>
+    <a href="https://herballeafmarket.com" rel="noopener">Herbal-Leaf Market<span>Botanicals</span></a>
+  </div>
+  <div class="fbot">
+    Nicotia Market · Independent · Not affiliated with, endorsed by or reviewed by the FDA<br>
+    Prices and stock come from each store and may lag · 21+ only · Void where prohibited
+  </div>
+</div></footer>
+
+<div class="scrim" id="scrim"></div>
+
+<div class="authwrap" id="authWrap">
+  <div class="authscrim" data-authclose></div>
+  <div class="authbox" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <button class="authx" data-authclose aria-label="Close">&times;</button>
+    <p class="eyebrow">Nicotia Market</p>
+    <h3 id="authTitle">Create your account</h3>
+    <p class="authsub" id="authSub">No password. Your email is your account.</p>
+    <div class="authfield" id="authNameRow">
+      <label for="authName">Name</label>
+      <input id="authName" type="text" placeholder="Your name" autocomplete="name">
+    </div>
+    <div class="authfield">
+      <label for="authEmail">Email</label>
+      <input id="authEmail" type="email" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <div class="autherr" id="authErr"></div>
+    <button class="authgo" id="authSubmit">Create account and continue</button>
+    <p class="authtoggle" id="authToggle"></p>
+    <p class="authfine">Free. We use it to keep your cart together while you check out
+      with each store separately, and to send order help if you ask. 21+ only.</p>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<aside class="drawer" id="board" role="dialog" aria-modal="true" aria-label="Saved items">
+  <div class="dhead"><h2>Saved</h2><button data-close aria-label="Close">&times;</button></div>
+  <div class="dbody" id="boardBody"></div>
+</aside>
+
+<aside class="drawer" id="list" role="dialog" aria-modal="true" aria-label="Shopping cart">
+  <div class="dhead"><h2>Your cart</h2><button data-close aria-label="Close">&times;</button></div>
+  <div class="dbody" id="listBody"></div>
+  <div class="dfoot">
+    <p class="dnote">You can't check out here. We group your list by store and hand each group off to that store's own basket, where you pay them directly.</p>
+    <div id="listCta"></div>
+  </div>
+</aside>
+
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

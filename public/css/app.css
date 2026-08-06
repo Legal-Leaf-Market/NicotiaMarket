@@ -1,0 +1,698 @@
+/* ============================================================
+   app.css - Nicotia Market components.
+   Design tokens live in tokens.css; load that FIRST.
+   ============================================================ */
+
+/* ============================================================
+   NICOTIA MARKET
+   ------------------------------------------------------------
+   House style inherited from the sister sites:
+     legal-leafmarket.com   --bg:#0b120d  --gold:#f0b93c  --red:#ef5350
+                            labelled pill filters, glass panel, per-unit
+                            price chip on the card, nav pills with counts
+     herballeafmarket.com   Fraunces / Cormorant Garamond / Jost,
+                            sticky header with a 2px accent underline,
+                            SVG mark + wordmark + italic tagline,
+                            live-inventory pill, filled chips
+
+   What is ours: tobacco ember instead of leaf green, and the
+   department hues (pouch / vape / liquid / cigar).
+   ============================================================ */
+*{box-sizing:border-box}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+  font-size:16px;line-height:1.6;font-weight:400;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(circle at 12% 4%,rgba(224,134,63,.08),transparent 42%),
+                   radial-gradient(circle at 88% 12%,rgba(74,222,128,.055),transparent 44%)}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:4px}
+.shell{width:var(--shell);margin:0 auto}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* the family's glass panel, lifted verbatim from Legal-Leaf */
+.panel{background:var(--glass);border:1px solid var(--glass-line);border-radius:var(--r-lg);
+  padding:20px 22px;backdrop-filter:blur(10px);box-shadow:var(--shadow)}
+
+/* eyebrow: Herbal-Leaf's, and the reason the mono font is gone.
+   Letterspaced Jost says "considered". Letterspaced mono says "log output". */
+.eyebrow{display:inline-block;font-family:var(--sans);font-weight:500;
+  text-transform:uppercase;font-size:.72rem;letter-spacing:.38em;color:var(--dim)}
+
+/* live pill — the shared "we are actually checking" signal */
+.live-pill{display:inline-flex;align-items:center;gap:6px;font-size:.7rem;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--sage);
+  background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);
+  border-radius:999px;padding:5px 11px;font-weight:600;white-space:nowrap}
+.live-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--sage);
+  box-shadow:0 0 8px var(--sage);animation:livePulse 2s infinite}
+@keyframes livePulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ============================================================
+   AGE GATE
+   ============================================================ */
+#gate{position:fixed;inset:0;z-index:999;background:#070a08;display:flex;
+  align-items:center;justify-content:center;padding:24px;overflow-y:auto}
+#gate[hidden]{display:none}
+.gc{max-width:540px;width:100%;text-align:center;background:var(--panel);
+  border:1px solid var(--glass-line);border-radius:var(--r-lg);padding:34px 30px;
+  backdrop-filter:blur(14px);box-shadow:var(--shadow)}
+.gc .gmark{width:44px;height:53px;margin:0 auto 14px;display:block}
+.gc h1{font-family:var(--display);font-weight:900;font-size:clamp(30px,6vw,46px);
+  line-height:.98;letter-spacing:-.02em;margin:0 0 10px}
+.gc h1 em{font-family:var(--script);font-style:italic;font-weight:600;color:var(--ember)}
+.gc p{color:var(--muted);font-size:14.5px;margin:0 0 8px}
+.glocwrap{margin:22px 0 0;text-align:left}
+.ghint{font-size:12px;line-height:1.6;color:var(--dim);margin:8px 0 0}
+.gbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:24px 0 0}
+.gbtns button{font-family:var(--sans);font-weight:700;font-size:13.5px;letter-spacing:.04em;
+  padding:14px 28px;border-radius:999px;cursor:pointer;border:1px solid var(--sage);
+  background:var(--sage);color:#0b120d;transition:filter .16s}
+.gbtns button:hover:not([disabled]){filter:brightness(1.08)}
+.gbtns button.ghost{background:transparent;color:var(--muted);border-color:var(--line)}
+.gbtns button.ghost:hover{color:var(--text);border-color:var(--glass-line)}
+.gbtns button[disabled]{opacity:.38;cursor:not-allowed}
+#gdeny{display:none;margin-top:18px;color:#f0a2a2;font-size:14px}
+.gwarn{margin-top:22px;border:1px solid var(--glass-line);border-radius:var(--r-sm);
+  padding:12px 14px;font-size:11.5px;line-height:1.65;color:var(--muted)}
+
+/* ============================================================
+   WARNING BAR + HEADER
+   ============================================================ */
+.warnbar{background:#070a08;border-bottom:1px solid rgba(224,150,66,.14);
+  font-size:11px;letter-spacing:.02em;text-align:center;padding:9px 16px;color:var(--muted)}
+.warnbar b{color:var(--text);font-weight:600}
+.warnbar em{font-style:normal;color:var(--dim)}
+
+/* Herbal-Leaf's header, retuned: sticky, blurred, 2px accent underline. */
+header.top{position:sticky;top:0;z-index:50;
+  background:linear-gradient(180deg,rgba(8,12,10,.98),rgba(8,12,10,.94));
+  backdrop-filter:blur(16px) saturate(1.5);
+  border-bottom:2px solid var(--ember);box-shadow:0 2px 24px rgba(224,134,63,.18)}
+.top-in{display:flex;align-items:center;gap:14px;padding:12px 0}
+.brand{display:flex;align-items:center;gap:11px;flex:none}
+.brand .gmark{width:34px;height:41px;flex:none}
+.brand .bwords{display:block;line-height:1}
+.brand .bname{font-family:var(--display);font-weight:900;font-size:1.24rem;
+  letter-spacing:.04em;text-transform:uppercase;color:var(--text);display:block}
+.brand small{display:block;font-family:var(--script);font-style:italic;font-weight:600;
+  font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ember);margin-top:1px}
+.spacer{flex:1}
+
+.searchbox{display:flex;align-items:center;gap:9px;background:var(--panel2);
+  border:1px solid var(--line);border-radius:999px;padding:9px 16px;
+  flex:1;min-width:180px;max-width:420px;transition:border-color .16s}
+.searchbox:focus-within{border-color:var(--sage)}
+.searchbox svg{flex:none;color:var(--dim)}
+.searchbox input{border:0;outline:0;background:transparent;font-family:var(--sans);
+  font-size:.95rem;width:100%;color:var(--text);caret-color:var(--sage);min-width:0}
+.searchbox input::placeholder{color:var(--dim)}
+
+/* nav pills with counts — Legal-Leaf's .nbtn */
+.nbtn{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:999px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:var(--text);
+  font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .16s}
+.nbtn:hover{background:rgba(255,255,255,.13);border-color:var(--glass-line)}
+.nbtn .count{background:var(--sage-dk);color:#04140a;border-radius:999px;font-size:11px;
+  font-weight:800;padding:1px 8px;min-width:20px;text-align:center;line-height:1.5}
+.nbtn .count.zero{background:rgba(255,255,255,.12);color:var(--dim)}
+.nbtn.pulse{animation:cartPulse .5s ease}
+@keyframes cartPulse{0%{transform:scale(1)}35%{transform:scale(1.14)}70%{transform:scale(.96)}100%{transform:scale(1)}}
+
+/* ship-to pill */
+.shipto{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--glass-line);
+  background:var(--chip);border-radius:999px;padding:8px 15px;cursor:pointer;
+  white-space:nowrap;transition:all .16s;color:var(--text)}
+.shipto:hover{border-color:var(--gold);background:rgba(240,185,60,.08)}
+.shipto.unset{border-color:var(--gold);animation:pillNudge 2s ease 1s 2}
+@keyframes pillNudge{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.shipto .lbl{font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:500}
+.shipto .locval{font-weight:700;font-size:13px}
+
+@media(max-width:900px){
+  .top-in{flex-wrap:wrap;gap:10px}
+  .searchbox{order:5;flex-basis:100%;max-width:none}
+  .spacer{display:none}
+  .brand small{display:none}
+}
+@media(max-width:560px){
+  .nbtn{padding:8px 12px;font-size:12.5px}
+  .nbtn .lbl-full{display:none}
+  .shipto .lbl{display:none}
+}
+
+/* ============================================================
+   DEPARTMENT TABS
+   ============================================================ */
+.depts{border-bottom:1px solid var(--line);background:rgba(11,15,13,.6);
+  position:sticky;top:63px;z-index:45;backdrop-filter:blur(10px)}
+.dept-in{display:flex;gap:0;overflow-x:auto;scrollbar-width:none}
+.dept-in::-webkit-scrollbar{display:none}
+.dept{font-family:var(--sans);font-weight:600;font-size:13.5px;letter-spacing:.02em;
+  padding:14px 20px;border:none;background:none;color:var(--dim);cursor:pointer;
+  white-space:nowrap;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+.dept:hover{color:var(--text)}
+.dept[aria-pressed="true"]{color:var(--text)}
+.dept[data-dept="all"][aria-pressed="true"]{border-bottom-color:var(--gold)}
+.dept[data-dept="pouch"][aria-pressed="true"]{border-bottom-color:var(--pouch)}
+.dept[data-dept="disposable"][aria-pressed="true"]{border-bottom-color:var(--disposable)}
+.dept[data-dept="device"][aria-pressed="true"]{border-bottom-color:var(--device)}
+.dept[data-dept="liquid"][aria-pressed="true"]{border-bottom-color:var(--liquid)}
+.dept[data-dept="cigar"][aria-pressed="true"]{border-bottom-color:var(--cigar)}
+.dept[data-dept="gear"][aria-pressed="true"]{border-bottom-color:var(--gear)}
+.dept span{font-size:11px;color:var(--dim);margin-left:7px;font-weight:400}
+.dept.spot{color:var(--ember);display:inline-flex;align-items:center;gap:6px}
+.dept.spot:hover{color:var(--gold)}
+.dept.spot[aria-current="page"]{border-bottom-color:var(--ember);color:var(--gold)}
+@media(max-width:900px){.depts{top:auto;position:static}}
+
+/* ============================================================
+   HERO — short on purpose. Both sisters open with a statement;
+   ours has to make its promise and get out of the grid's way.
+   ============================================================ */
+.hero{position:relative;overflow:hidden;padding:42px 0 30px;text-align:center}
+.hero::before{content:"";position:absolute;inset:-40% -10% auto;height:340px;pointer-events:none;
+  background:radial-gradient(60% 100% at 50% 0,rgba(224,134,63,.16),transparent 70%)}
+.hero-inner{position:relative;z-index:2}
+.hero h1{margin:12px 0 0;font-family:var(--display);font-weight:900;
+  font-size:clamp(2.6rem,7vw,5.2rem);line-height:.9;letter-spacing:-.03em;
+  background:linear-gradient(96deg,var(--text) 0%,var(--gold) 46%,var(--ember) 88%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  color:var(--gold)}
+.hero .h-lead{display:block;font-family:var(--script);font-style:italic;font-weight:600;
+  font-size:clamp(1.3rem,3.4vw,2.1rem);color:var(--ember);line-height:1;
+  margin-bottom:-.1em;-webkit-text-fill-color:var(--ember)}
+.hero .hsub{color:var(--muted);font-size:1.02rem;line-height:1.6;max-width:56ch;
+  margin:18px auto 0}
+.hstats{display:flex;gap:30px;flex-wrap:wrap;justify-content:center;margin-top:24px}
+.hstats div b{display:block;font-family:var(--display);font-weight:900;font-size:1.5rem;
+  letter-spacing:-.02em;color:var(--text)}
+.hstats div span{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+@media(max-width:560px){.hero{padding:26px 0 20px}.hstats{gap:20px}}
+/* ============================================================
+   FILTERS
+   ------------------------------------------------------------
+   This is Legal-Leaf's filter panel, near enough verbatim: a glass
+   panel of labelled fields, gold uppercase labels, pill controls.
+
+   The old bar was four bare <select>s floating in pills with no
+   labels and a chip that said "Ignore shipping limits". A shopper
+   cannot tell what an unlabelled dropdown filters until they open
+   it, and nobody outside this repo knows what a shipping limit is.
+   Every control now says what it does in words a customer uses.
+   ============================================================ */
+.filterwrap{position:relative;z-index:2;margin:18px 0 0}
+.frow{display:grid;gap:14px 16px;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.frow.r1{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:700;letter-spacing:.09em;
+  color:var(--gold);text-transform:uppercase;margin:0 0 7px 4px}
+.field input,.field select{width:100%;padding:12px 15px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);background:rgba(6,12,9,.55);color:var(--text);
+  font-family:var(--sans);font-size:14px;outline:none;appearance:none}
+.field select{padding-right:40px;cursor:pointer;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239fb6a6' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat:no-repeat;background-position:right 16px center}
+.field input:focus,.field select:focus{border-color:var(--sage)}
+.field select option{background:#0e1a14;color:var(--text);font-weight:500}
+.field select option:checked{background:var(--sage-dk);color:#04140a}
+
+/* toggles live under the fields, as chips — Herbal-Leaf's shape */
+.ftoggles{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:4px}
+.chip{cursor:pointer;font-family:var(--sans);font-size:.86rem;font-weight:600;
+  letter-spacing:.02em;padding:8px 17px;border-radius:6px;
+  border:1.5px solid rgba(74,222,128,.2);background:rgba(15,24,17,.9);
+  color:var(--muted);transition:all .18s}
+.chip:hover{border-color:var(--sage);color:var(--sage)}
+.chip.active{background:var(--sage);color:#0b120d;border-color:var(--sage);
+  font-weight:700;box-shadow:0 4px 14px rgba(74,222,128,.3)}
+.chip.deals{border-color:rgba(240,185,60,.25);color:var(--gold)}
+.chip.deals.active{background:var(--gold);color:#0b120d;border-color:var(--gold);
+  box-shadow:0 4px 14px rgba(240,185,60,.3)}
+/* Only rendered when PREVIEW_MODE is on. A shopper never sees it. */
+.chip.preview{border-color:rgba(224,134,63,.4);color:var(--ember)}
+.chip.preview.active{background:var(--ember);color:#160c06;border-color:var(--ember)}
+.clearall{background:none;border:none;color:var(--gold);font-size:12px;
+  letter-spacing:.04em;cursor:pointer;text-decoration:underline;padding:0 4px}
+
+/* the filter drawer on mobile, Legal-Leaf's pattern */
+.ftoggle-btn{display:none}
+@media(max-width:820px){
+  .ftoggle-btn{display:inline-flex;align-items:center;gap:8px;margin:16px 0 0}
+  .filterwrap{position:fixed;top:0;left:0;bottom:0;margin:0;width:88vw;max-width:360px;
+    z-index:130;overflow-y:auto;transform:translateX(-100%);
+    transition:transform .28s cubic-bezier(.4,0,.2,1)}
+  body.filters-open .filterwrap{transform:translateX(0)}
+  .filterwrap .panel{border:none;border-right:1px solid var(--glass-line);border-radius:0;
+    background:#0c1210;backdrop-filter:none;box-shadow:none;min-height:100%;padding:0 16px 40px}
+  .frow{grid-template-columns:1fr}
+  .mf-head{display:flex;position:sticky;top:0;z-index:5;align-items:center;
+    justify-content:space-between;padding:16px 0 12px;margin-bottom:8px;
+    background:#0c1210;border-bottom:1px solid var(--glass-line)}
+  .mf-head b{font-family:var(--display);font-size:17px;font-weight:900;color:#fff}
+  .mf-head button{background:none;border:0;color:var(--dim);font-size:24px;cursor:pointer;line-height:1}
+  .fscrim{position:fixed;inset:0;background:rgba(4,8,6,.62);z-index:120;
+    opacity:0;pointer-events:none;transition:opacity .2s}
+  body.filters-open .fscrim{opacity:1;pointer-events:auto}
+}
+@media(min-width:821px){.mf-head{display:none}.fscrim{display:none}}
+
+/* ============================================================
+   RESULTS BAR — Legal-Leaf's .subbar, one line, no stacking
+   ============================================================ */
+.subbar{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;padding:20px 0 14px}
+.subbar .cnt{font-family:var(--display);font-size:15px;font-weight:900;letter-spacing:-.01em}
+.subbar .cnt b{color:var(--sage);font-weight:900}
+.subbar .cnt em{font-style:normal;color:var(--dim);font-weight:400;
+  font-family:var(--sans);font-size:13.5px;margin-left:8px}
+.subbar .meta{display:flex;align-items:center;gap:14px;color:var(--dim);font-size:12.5px;flex-wrap:wrap}
+.subbar .meta .how{cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.sortmini{display:flex;align-items:center;gap:7px;font-weight:600;color:var(--gold);font-size:12.5px}
+.sortmini select{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);
+  color:var(--text);font-family:var(--sans);font-size:13px;font-weight:600;
+  padding:7px 30px 7px 12px;border-radius:999px;cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239fb6a6' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat:no-repeat;background-position:right 12px center}
+.sortmini select:hover{background-color:rgba(255,255,255,.12)}
+.sortmini select option{background:#0e1a14;color:var(--text);font-weight:500}
+
+/* a caveat that only appears where it bites, e.g. a flavour-ban state */
+.caveat{border:1px solid rgba(240,185,60,.28);background:rgba(240,185,60,.06);
+  border-radius:var(--r-sm);padding:11px 15px;font-size:13.5px;color:var(--muted);
+  margin-bottom:18px;line-height:1.55}
+.caveat b{color:var(--gold);font-weight:600}
+.previewbar{border:1px solid rgba(224,134,63,.4);background:rgba(224,134,63,.09);
+  border-radius:var(--r-sm);padding:10px 15px;font-size:12.5px;color:var(--ember);
+  margin-bottom:18px;font-weight:500}
+
+/* ============================================================
+   RAIL — the best-unit-price strip
+   ============================================================ */
+.railsec{padding:4px 0 8px}
+.railhead{display:flex;align-items:baseline;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.railhead h2{font-family:var(--display);font-weight:900;font-size:19px;
+  letter-spacing:-.02em;margin:0}
+.railhead small{font-size:12px;color:var(--dim)}
+.rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,1fr);gap:14px;
+  overflow-x:auto;padding-bottom:14px;scroll-snap-type:x proximity;scrollbar-width:thin}
+.rail::-webkit-scrollbar{height:5px}
+.rail::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
+.rail>*{scroll-snap-align:start}
+
+/* ============================================================
+   LOGO STRIPS
+   ------------------------------------------------------------
+   "The logos are key." Two things were wrong:
+
+   1. A failed store logo hit BOTH `.limg` (white plate) and the
+      generic `.noimg` rule further down the sheet, which repainted
+      the plate dark — then drew the fallback letter in #0C0E0D on
+      top of it. Invisible. The product placeholder is renamed
+      `.shot-empty` so the two can never collide again.
+   2. Brand "logos" were product photos cropped into circles, which
+      reads as a badly-cut logo rather than a product. Brands now use
+      a rounded square, which is honestly a product shot.
+   ============================================================ */
+.logorow{padding:14px 0 4px}
+.lrhead{display:flex;align-items:baseline;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.lrhead h2{font-family:var(--display);font-weight:900;font-size:13.5px;
+  letter-spacing:.06em;text-transform:uppercase;margin:0}
+.lrhead small{font-size:11.5px;color:var(--dim)}
+.lrclear{margin-left:auto;background:none;border:none;color:var(--gold);cursor:pointer;
+  font-size:11.5px;letter-spacing:.04em;text-decoration:underline;padding:0}
+.lrscroll{display:flex;gap:10px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:thin}
+.lrscroll::-webkit-scrollbar{height:4px}
+.lrscroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
+
+.lchip{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:8px;
+  width:104px;padding:13px 8px 11px;border:1px solid var(--line);background:var(--panel);
+  border-radius:var(--r);cursor:pointer;transition:all .16s;position:relative}
+.lchip:hover{border-color:var(--glass-line);transform:translateY(-2px)}
+.lchip.on{border-color:var(--gold);background:rgba(240,185,60,.07)}
+.lchip.on::after{content:"\2713";position:absolute;top:6px;right:8px;color:var(--gold);
+  font-size:11px;font-weight:700}
+
+/* stores: circular white plate, because a brand mark is drawn for
+   light backgrounds and disappears on ours */
+.limg{width:54px;height:54px;border-radius:50%;background:#fff;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;flex:none;
+  box-shadow:0 2px 10px rgba(0,0,0,.28)}
+.limg img{width:100%;height:100%;object-fit:contain;padding:7px}
+/* monogram fallback: a real letter on a real plate, tinted per store
+   so a logo-less row still reads as distinct shops */
+.limg.mono{background:linear-gradient(150deg,var(--mono-a,#2b3630),var(--mono-b,#1a221d))}
+.limg.mono::after{content:attr(data-letter);font-family:var(--display);font-weight:900;
+  font-size:22px;color:#fff;letter-spacing:.02em}
+/* brands: rounded square, not a circle. It is a product photo and
+   should look like one. */
+.lchip.brand .limg{border-radius:12px;background:#fff}
+.lchip.brand .limg img{object-fit:cover;padding:0}
+.lname{font-family:var(--sans);font-weight:600;font-size:11.5px;line-height:1.25;
+  text-align:center;color:var(--muted);max-width:100%;overflow:hidden;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.lchip.on .lname{color:var(--text)}
+.lcount{font-size:10px;letter-spacing:.04em;color:var(--dim)}
+.lchip.on .lcount{color:var(--gold)}
+@media(max-width:560px){
+  .lchip{width:86px;padding:11px 6px 9px}
+  .limg{width:46px;height:46px}
+  .limg.mono::after{font-size:19px}
+}
+/* ============================================================
+   PRODUCT CARD
+   ------------------------------------------------------------
+   The flip stays — it is the best thing about the current design.
+   What changed:
+     - the unit price is now a CHIP, not a line of small text. It is
+       Legal-Leaf's `.perg` badge, and it goes gold when this is the
+       cheapest per pouch / per stick / per 1,000 puffs anywhere on
+       the site. That badge IS the product.
+     - Add to cart is the last thing in the card and full width;
+       Details is a quiet text button above it.
+     - cards got wider (215 -> 240) so two-line titles stop wrapping
+       to three at common breakpoints.
+   ============================================================ */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px;
+  padding-bottom:40px;align-items:stretch}
+
+/* No fixed height. The card is a grid item, so it stretches to the row
+   and the row sizes to its tallest member. The flip needs an absolutely
+   positioned back, so the FRONT stays in normal flow and is what gives
+   the card its intrinsic height. */
+.card{perspective:1400px;display:flex;flex-direction:column;cursor:pointer}
+.card-in{position:relative;flex:1;display:flex;transform-style:preserve-3d;
+  transition:transform .6s cubic-bezier(.22,.72,.24,1)}
+.card.on .card-in{transform:rotateY(180deg)}
+.face{border-radius:var(--r);overflow:hidden;
+  -webkit-backface-visibility:hidden;backface-visibility:hidden;
+  display:flex;flex-direction:column}
+.front{position:relative;flex:1;background:linear-gradient(180deg,#111a15,#0c130f);
+  border:1px solid var(--line);transition:border-color .18s,box-shadow .18s}
+.back{position:absolute;inset:0}
+.front:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+.card:hover .front{border-color:var(--sage-dk);box-shadow:0 12px 30px rgba(0,0,0,.4)}
+.card.best .front{border-color:var(--gold);
+  box-shadow:0 0 0 1px rgba(240,185,60,.3),0 12px 30px rgba(240,185,60,.1)}
+
+.shot{height:206px;flex:none;background:#fff;position:relative;overflow:hidden}
+.shot img{width:100%;height:100%;object-fit:contain;padding:12px;transition:opacity .18s}
+/* renamed from .noimg — see the logo-strip note above */
+.shot-empty{width:100%;height:100%;background:var(--chip);display:flex;
+  align-items:center;justify-content:center;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--dim)}
+.badge{position:absolute;top:9px;left:9px;font-size:9.5px;letter-spacing:.07em;
+  text-transform:uppercase;padding:4px 9px;border-radius:99px;font-weight:700;z-index:2}
+.badge.best{background:linear-gradient(90deg,#f0c74c,#e0a92a);color:#0b120d}
+.badge.off{background:var(--red);color:#fff}
+.badge.multi{background:rgba(11,15,13,.86);color:var(--text);border:1px solid var(--glass-line)}
+.save{position:absolute;top:9px;right:9px;width:32px;height:32px;border-radius:99px;z-index:3;
+  border:1px solid var(--glass-line);background:rgba(11,15,13,.76);color:var(--muted);
+  cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;
+  transition:all .15s}
+.save:hover,.save.on{color:var(--gold);border-color:var(--gold)}
+.oos{position:absolute;inset:0;background:rgba(11,15,13,.74);display:flex;
+  align-items:center;justify-content:center;font-size:11px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--muted);z-index:2}
+/* store name over the shot, Legal-Leaf's .storepill */
+.storepill{position:absolute;left:9px;bottom:9px;z-index:2;font-size:10px;font-weight:700;
+  letter-spacing:.05em;padding:4px 10px;border-radius:99px;
+  background:rgba(11,15,13,.82);border:1px solid var(--glass-line);color:var(--text);
+  max-width:calc(100% - 18px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.cbody{padding:13px 14px 14px;display:flex;flex-direction:column;gap:7px;flex:1;min-height:0}
+/* two-line box whether the title needs it or not, so every title in a
+   row starts and ends on the same line and the dropdowns below line up */
+.ctitle{font-family:var(--display);font-weight:600;font-size:15px;line-height:1.25;margin:0;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  min-height:calc(2 * 1.25em)}
+.cselects{display:flex;flex-direction:column;gap:5px}
+.cvar{font-size:11.5px;color:var(--dim)}
+.vsel{width:100%;font-family:var(--sans);font-size:12.5px;color:var(--text);
+  background:var(--chip);border:1px solid var(--glass-line);border-radius:var(--r-sm);
+  padding:9px 28px 9px 11px;cursor:pointer;appearance:none;font-weight:500;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23f0b93c' stroke-width='2.6'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center}
+.vsel:hover,.vsel:focus{border-color:var(--gold);outline:0}
+.vsel.flav{border-color:rgba(74,222,128,.32);color:var(--pouch)}
+.vsel.flav:hover,.vsel.flav:focus{border-color:var(--sage)}
+.vsel option{background:#0e1a14;color:var(--text)}
+
+.cprice{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:8px}
+.cprice b{font-family:var(--display);font-weight:900;font-size:20px;
+  letter-spacing:-.02em;color:var(--sage)}
+.cprice s{font-size:12px;color:var(--dim)}
+.cprice .noprice{font-size:12.5px;color:var(--dim);font-style:italic}
+/* THE badge. Legal-Leaf's .perg, doing the same job for a different unit. */
+.unitchip{font-size:11.5px;color:var(--muted);margin-left:auto;background:var(--chip);
+  padding:4px 10px;border-radius:6px;font-weight:700;white-space:nowrap}
+.unitchip.best{color:#0b120d;background:linear-gradient(90deg,#f0c74c,#e0a92a)}
+.unitchip .u{font-weight:500;opacity:.75}
+
+.cfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:2px}
+.turn{font-size:11.5px;letter-spacing:.02em;background:none;border:0;color:var(--dim);
+  cursor:pointer;padding:2px 0;text-decoration:underline;text-underline-offset:3px;
+  display:inline-flex;align-items:center;gap:5px;transition:color .16s}
+.card:hover .turn{color:var(--ember)}
+.turn .ico{font-size:12px;line-height:1;transition:transform .3s}
+.card:hover .turn .ico{transform:rotate(180deg)}
+.addcart{width:100%;font-family:var(--sans);font-weight:700;font-size:12.5px;
+  letter-spacing:.02em;padding:12px;border-radius:8px;border:0;
+  background:linear-gradient(90deg,var(--sage-dk),var(--sage));color:#04140a;
+  cursor:pointer;transition:filter .16s,box-shadow .16s;
+  box-shadow:0 4px 14px rgba(34,197,94,.2)}
+.addcart:hover{filter:brightness(1.08);box-shadow:0 6px 20px rgba(34,197,94,.35)}
+.addcart:disabled{background:var(--chip);color:var(--dim);cursor:not-allowed;box-shadow:none}
+
+/* back: espresso, so a turned card reads instantly against the grid */
+.back{transform:rotateY(180deg);
+  background:linear-gradient(158deg,#1c1410 0%,#120d09 60%,#0a0706 100%);
+  border:1px solid rgba(224,134,63,.3);color:#f2eae0}
+.backin{padding:16px 16px 6px;flex:1;overflow-y:auto;scrollbar-width:thin}
+.backin::-webkit-scrollbar{width:3px}
+.backin::-webkit-scrollbar-thumb{background:rgba(224,134,63,.3);border-radius:99px}
+.back .bstore{font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ember);margin-bottom:7px;font-weight:600}
+.back h4{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:-.02em;
+  margin:0 0 10px;color:#fff7ee;line-height:1.25}
+.bdesc{font-size:12.5px;line-height:1.6;color:#d9ccbd;margin:0 0 13px}
+.bdesc.dim{color:#9a8b7c;font-style:italic}
+.bspec{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin:0;font-size:11px;
+  border-top:1px solid rgba(224,134,63,.18);padding-top:11px}
+.bspec dt{color:#9a8b7c;letter-spacing:.05em;text-transform:uppercase;font-size:9.5px;
+  align-self:center}
+.bspec dd{margin:0;color:#f2eae0;text-align:right;font-weight:600}
+.backfoot{padding:11px 14px 14px;display:flex;gap:8px;align-items:center;
+  border-top:1px solid rgba(224,134,63,.18)}
+.buy{flex:1;text-align:center;font-family:var(--sans);font-weight:700;font-size:12px;
+  letter-spacing:.02em;padding:11px 8px;border-radius:8px;border:0;cursor:pointer;
+  background:var(--ember);color:#160c06;transition:background .16s;white-space:nowrap}
+.buy:hover{background:var(--gold)}
+.turn-back{font-size:13px;background:none;cursor:pointer;
+  border:1px solid rgba(224,134,63,.35);color:#c9b49c;border-radius:99px;
+  padding:9px 13px;line-height:1;transition:all .16s}
+.turn-back:hover{border-color:var(--gold);color:var(--gold)}
+
+/* No 3D for anyone who asked not to have it — cross-fade instead. */
+@media (prefers-reduced-motion:reduce){
+  .card-in{transition:none}
+  .card.on .card-in{transform:none}
+  .face{transition:opacity .18s}
+  .back{transform:none;opacity:0;pointer-events:none}
+  .card.on .front{opacity:0;pointer-events:none}
+  .card.on .back{opacity:1;pointer-events:auto}
+}
+@media(max-width:560px){
+  .grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+  .shot{height:152px}
+  .rail{grid-auto-columns:minmax(168px,1fr)}
+  .cprice b{font-size:18px}
+  .unitchip{font-size:10.5px;padding:3px 8px}
+}
+
+/* ============================================================
+   STATES
+   ============================================================ */
+.state{border:1px dashed var(--line);border-radius:var(--r);padding:46px 26px;
+  text-align:center;color:var(--muted);margin-bottom:40px;background:var(--panel)}
+.state b{display:block;font-family:var(--display);font-weight:900;font-size:19px;
+  color:var(--text);margin-bottom:8px}
+.state code{font-size:12.5px;background:var(--chip);padding:2px 6px;border-radius:4px}
+.skel{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}
+.sk{border:1px solid var(--line);border-radius:var(--r);height:330px;
+  background:linear-gradient(100deg,var(--panel) 30%,#1b241e 50%,var(--panel) 70%);
+  background-size:220% 100%;animation:sweep 1.4s ease-in-out infinite}
+@keyframes sweep{0%{background-position:180% 0}100%{background-position:-40% 0}}
+.loadmore{display:block;margin:0 auto 46px;font-family:var(--sans);font-weight:700;
+  font-size:13px;letter-spacing:.02em;padding:13px 30px;border-radius:999px;
+  border:1px solid var(--line);background:var(--chip);color:var(--text);cursor:pointer}
+.loadmore:hover{border-color:var(--gold)}
+/* ============================================================
+   DRAWERS
+   ============================================================ */
+.scrim{position:fixed;inset:0;background:rgba(4,8,6,.62);z-index:80;opacity:0;
+  pointer-events:none;transition:opacity .2s}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(430px,92vw);background:var(--panel2);
+  border-left:1px solid var(--glass-line);z-index:90;transform:translateX(100%);
+  transition:transform .22s cubic-bezier(.2,.7,.3,1);display:flex;flex-direction:column;
+  backdrop-filter:blur(18px)}
+.drawer.on{transform:translateX(0)}
+.dhead{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;
+  border-bottom:1px solid var(--line)}
+.dhead h2{font-family:var(--display);font-weight:900;font-size:18px;margin:0;letter-spacing:-.01em}
+.dhead button{background:none;border:none;color:var(--dim);font-size:24px;cursor:pointer;line-height:1}
+.dbody{flex:1;overflow-y:auto;padding:16px 20px}
+.dempty{text-align:center;color:var(--dim);padding:56px 10px}
+.dempty b{display:block;font-family:var(--display);color:var(--text);font-size:16px;margin-bottom:6px}
+.ditem{display:flex;gap:11px;padding:12px 0;border-bottom:1px solid var(--line)}
+.ditem img{width:54px;height:54px;object-fit:contain;background:#fff;border-radius:8px;flex:none}
+.dnoimg{width:54px;height:54px;flex:none;border-radius:8px;background:var(--chip)}
+.ditem .m{flex:1;min-width:0}
+.ditem .t{font-family:var(--display);font-weight:600;font-size:13.5px;line-height:1.3}
+.ditem .s{font-size:11px;color:var(--dim);margin-top:3px}
+.ditem .p{font-family:var(--display);font-weight:700;font-size:14px;margin-top:4px}
+.ditem .x{background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px;align-self:start}
+.ditem .lt{font-family:var(--display);font-weight:700;font-size:13.5px;flex:none}
+.ditem .qty{display:flex;align-items:center;gap:5px;margin-top:6px}
+.ditem .qty button{width:24px;height:24px;border-radius:6px;border:1px solid var(--line);
+  background:var(--chip);color:var(--text);cursor:pointer;font-size:12px;line-height:1}
+.ditem .qty button:hover{border-color:var(--gold);color:var(--gold)}
+.ditem .qty input{width:34px;text-align:center;border:1px solid var(--line);border-radius:6px;
+  padding:3px 0;background:var(--chip);color:var(--text);font-size:11.5px;font-family:var(--sans)}
+.ditem .qty .rm{width:auto;padding:0 8px;font-size:10px;letter-spacing:.03em;
+  color:var(--dim);border-color:transparent}
+.ditem .qty .rm:hover{color:var(--red);border-color:var(--red)}
+.dfoot{border-top:1px solid var(--line);padding:16px 20px}
+.dnote{font-size:11.5px;color:var(--dim);line-height:1.6;margin-bottom:12px}
+.dgroup{margin-bottom:18px}
+.dgroup h3{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:0 0 8px}
+.dcheckout{display:block;width:100%;text-align:center;font-family:var(--sans);font-weight:700;
+  font-size:12.5px;letter-spacing:.02em;padding:12px;border-radius:8px;border:0;cursor:pointer;
+  background:var(--gold);color:#0b120d;margin-bottom:8px}
+.dcheckout:hover{filter:brightness(1.07)}
+.dbd{margin:10px 0 0;padding:10px 12px;background:var(--chip);border-radius:var(--r-sm);font-size:12px}
+.dbd .r{display:flex;justify-content:space-between;gap:10px;padding:3px 0;color:var(--muted)}
+.dbd .r i{font-style:normal;color:var(--gold);font-size:10.5px}
+.dbd .r.save{color:var(--sage)}
+.dbd .r .free{color:var(--sage);font-weight:700}
+.dbd .r.otd{margin-top:5px;padding-top:7px;border-top:1px dashed var(--line);
+  font-family:var(--display);font-weight:700;color:var(--text);font-size:13.5px}
+.dgrand{background:var(--chip);border:1px solid var(--glass-line);border-radius:var(--r-sm);
+  padding:14px;margin:16px 0 10px}
+.dgrand .r{display:flex;justify-content:space-between;font-family:var(--display);
+  font-weight:700;font-size:15px}
+.dgrand .r.sm{font-family:var(--sans);font-weight:400;font-size:12.5px;color:var(--muted);margin-bottom:3px}
+.dgrand .r.sm.save{color:var(--sage)}
+.dlogin,.dfine{font-size:11.5px;line-height:1.65;color:var(--dim);margin:12px 0}
+.dlogin{color:var(--gold)}
+.dclear{width:100%;background:none;border:1px solid var(--line);color:var(--dim);
+  padding:10px;border-radius:var(--r-sm);cursor:pointer;font-size:11.5px;letter-spacing:.06em;
+  text-transform:uppercase}
+.dclear:hover{border-color:var(--red);color:var(--red)}
+
+/* ============================================================
+   AUTH + TOAST
+   ============================================================ */
+.authwrap{position:fixed;inset:0;z-index:120;display:none}
+.authwrap.on{display:block}
+.authscrim{position:absolute;inset:0;background:rgba(4,8,6,.7);backdrop-filter:blur(4px)}
+.authbox{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:min(410px,92vw);background:var(--panel2);border:1px solid var(--glass-line);
+  border-radius:var(--r-lg);padding:34px 30px;text-align:center;backdrop-filter:blur(18px)}
+.authx{position:absolute;top:12px;right:15px;background:none;border:0;color:var(--dim);
+  font-size:22px;cursor:pointer;line-height:1}
+.authbox h3{font-family:var(--display);font-weight:900;font-size:24px;letter-spacing:-.02em;margin:0 0 6px}
+.authsub{color:var(--muted);font-size:13.5px;margin:0 0 22px}
+.authfield{text-align:left;margin-bottom:13px}
+.authfield label{display:block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--gold);font-weight:700;margin-bottom:6px}
+.authfield input{width:100%;border:1px solid var(--line);border-radius:999px;padding:12px 16px;
+  background:var(--chip);color:var(--text);font-family:var(--sans);font-size:14.5px}
+.authfield input:focus{outline:0;border-color:var(--sage)}
+.autherr{display:none;color:var(--red);font-size:12.5px;margin-bottom:10px;text-align:left}
+.authgo{width:100%;background:var(--sage);color:#04140a;border:0;cursor:pointer;padding:13px;
+  border-radius:8px;font-family:var(--sans);font-weight:700;font-size:13.5px}
+.authgo:hover{filter:brightness(1.08)}
+.authtoggle{font-size:12.5px;color:var(--muted);margin:14px 0 0}
+.authtoggle a{color:var(--gold);text-decoration:underline}
+.authfine{font-size:11px;line-height:1.65;color:var(--dim);margin:16px 0 0}
+#toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(14px);
+  z-index:140;background:var(--panel2);border:1px solid var(--glass-line);color:var(--text);
+  font-size:13.5px;padding:12px 20px;border-radius:999px;opacity:0;pointer-events:none;
+  transition:opacity .25s,transform .25s;backdrop-filter:blur(14px);max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ============================================================
+   STORES FOLD + FOOTER
+   ============================================================ */
+.stores{border-top:1px solid var(--line);padding:36px 0}
+.storefold summary{cursor:pointer;list-style:none;display:flex;align-items:baseline;gap:12px;
+  flex-wrap:wrap;font-family:var(--display);font-weight:900;font-size:16px}
+.storefold summary::-webkit-details-marker{display:none}
+.storefold summary::after{content:"+";color:var(--dim);margin-left:auto;font-weight:400}
+.storefold[open] summary::after{content:"\2212"}
+.storefold summary small{font-size:11.5px;letter-spacing:.04em;color:var(--dim);font-weight:400;
+  font-family:var(--sans)}
+.storefold summary:hover{color:var(--gold)}
+.storefold p{color:var(--muted);font-size:14px;margin:16px 0 18px;max-width:64ch}
+.slist{display:flex;gap:8px;flex-wrap:wrap}
+.schip{border:1px solid var(--line);background:var(--chip);border-radius:999px;padding:8px 15px;
+  font-family:var(--sans);font-weight:600;font-size:12.5px;transition:border-color .15s;
+  color:var(--text);cursor:pointer}
+.schip:hover{border-color:var(--glass-line)}
+.schip i{font-style:normal;width:7px;height:7px;border-radius:99px;display:inline-block;margin-right:7px}
+.schip small{font-size:10.5px;color:var(--dim);margin-left:7px}
+.schip.away{opacity:.4}
+.schip.away small{color:var(--red)}
+
+footer{border-top:1px solid var(--line);padding:38px 0 30px;color:var(--muted);font-size:13.5px}
+.fwarns{display:grid;gap:8px;margin-bottom:26px}
+.fw{border:1px solid var(--line);border-left:2px solid var(--dim);border-radius:var(--r-sm);
+  padding:11px 14px;font-size:11.5px;letter-spacing:.01em;line-height:1.6;color:var(--muted)}
+.fw b{color:var(--text);font-weight:600}
+.fw.nic{border-left-color:var(--pouch)} .fw.cigar{border-left-color:var(--cigar)}
+.fw em{font-style:normal;color:var(--dim);display:block;margin-top:5px;font-size:11px}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:32px;
+  padding-bottom:26px;border-bottom:1px solid var(--line)}
+footer h4{font-family:var(--display);font-weight:700;color:var(--text);font-size:12.5px;
+  letter-spacing:.06em;text-transform:uppercase;margin:0 0 10px}
+footer p{margin:0 0 9px;line-height:1.6}
+/* the sister strip, the one bit of chrome all three sites share */
+.sisters{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:22px 0 0;
+  border-top:1px solid var(--line);margin-top:26px}
+.sisters h4{margin:0 14px 0 0}
+.sisters a{border:1px solid var(--line);background:var(--chip);border-radius:999px;
+  padding:9px 16px;font-family:var(--sans);font-weight:600;font-size:12.5px;
+  color:var(--text);transition:all .15s}
+.sisters a:hover{border-color:var(--sage);color:var(--sage)}
+.sisters a span{font-size:10.5px;color:var(--dim);margin-left:8px}
+.fbot{padding-top:22px;font-size:11px;letter-spacing:.02em;line-height:1.9;color:var(--dim)}
+
+/* ============================================================
+   SPOTLIGHT
+   ============================================================ */
+.spotview{padding:0 0 60px}
+.sbacklink{display:inline-block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--dim);padding:26px 0 0}
+.sbacklink:hover{color:var(--text)}
+.shero{padding:30px 0 40px;border-bottom:1px solid var(--line);margin-bottom:32px}
+.shero h1{font-family:var(--display);font-weight:900;letter-spacing:-.03em;
+  font-size:clamp(38px,7vw,72px);line-height:.94;margin:12px 0 18px}
+.sblurb{color:var(--muted);font-size:17px;line-height:1.6;max-width:56ch;margin:0}
+.sstats{display:flex;gap:34px;flex-wrap:wrap;margin-top:30px}
+.sstats div b{display:block;font-family:var(--display);font-weight:900;font-size:26px;letter-spacing:-.03em}
+.sstats div span{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.sdeal{margin-top:26px;border:1px dashed rgba(224,134,63,.45);border-radius:var(--r-sm);
+  padding:12px 16px;font-size:14px;color:var(--ember);display:inline-block}
+.sdeal b{color:var(--gold)}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:18px;align-items:stretch}
+.sfoot{margin-top:42px;padding-top:28px;border-top:1px solid var(--line)}
+.sfoot p{color:var(--dim);font-size:13px;margin:16px 0 0;max-width:60ch;line-height:1.6}
+.sfoot .btn{cursor:pointer;font-family:var(--sans);font-weight:700;font-size:12.5px;
+  padding:12px 20px;border-radius:999px;border:1px solid var(--line);background:var(--chip);
+  color:var(--text)}
+.sfoot .btn:hover{border-color:var(--gold);color:var(--gold)}
+.sfoot .btn+.btn{margin-left:8px}
+@media(max-width:560px){.sgrid{grid-template-columns:1fr}.sstats{gap:22px}}

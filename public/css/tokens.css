@@ -1,0 +1,70 @@
+/* ============================================================
+   tokens.css — the Leaf Market family design system
+   ------------------------------------------------------------
+   These values are NOT invented. They were read off the two live
+   sister sites so all three read as one house:
+
+     legal-leafmarket.com   :root { --bg:#0b120d; --gold:#f0b93c;
+                             --red:#ef5350; --leaf:#4ade80;
+                             --chip:#1a271f; --radius:16px }
+                            plus the .panel glass card, the labelled
+                            pill filters, and the per-unit price chip.
+
+     herballeafmarket.com   Fraunces (display 900) / Cormorant Garamond
+                            (italic accents) / Jost (UI sans);
+                            --sage:#4ade80  --gold:#f0b93c
+                            --terracotta:#e06b42
+                            sticky header with a 2px accent underline,
+                            SVG mark + wordmark + italic tagline.
+
+   SHARED ACROSS ALL THREE — do not drift these:
+     --gold  --red  --sage  --sage-dk  and the three font families.
+
+   OURS ALONE:
+     --ember (tobacco amber, where Legal-Leaf uses leaf green and
+     Herbal-Leaf uses terracotta) and the six department hues.
+
+   If you change a shared token here, change it on the sister sites
+   too or the family stops looking like a family.
+   ============================================================ */
+
+:root{
+  /* --- shared with both sisters --- */
+  --gold:#f0b93c;  --gold-dk:#c8922a;
+  --red:#ef5350;
+  --sage:#4ade80;  --sage-dk:#22c55e;
+
+  /* --- ours --- */
+  --bg:#0b0f0d;    --bg2:#0f1512;
+  --panel:rgba(17,24,20,.72);
+  --panel2:rgba(11,16,13,.9);
+  --glass:rgba(14,22,18,.42);
+  --glass-line:rgba(224,150,66,.20);
+  --line:#202a24;
+  --chip:#161f1a;
+  --text:#eaf3ec;  --muted:#9fb6a6;  --dim:#7d9488;
+  --ember:#e0863f; --ember-dk:#c8632a;
+
+  /* --- one hue per department ---
+     Disposables get the loudest because they are the volume shelf.
+     Gear gets the quietest because nobody browses humidors, they
+     arrive at them. */
+  --pouch:#4ade80;
+  --disposable:#f0679b;
+  --device:#7b93ff;
+  --liquid:#c879e8;
+  --cigar:#e0a33d;
+  --gear:#8fa39a;
+
+  /* --- type ---
+     Same Google Fonts request Herbal-Leaf makes, deliberately: the
+     browser gets a cache hit crossing between sister sites. */
+  --display:'Fraunces',Georgia,serif;
+  --script:'Cormorant Garamond',Georgia,serif;
+  --sans:'Jost',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+
+  /* --- metrics --- */
+  --shell:min(1500px,94vw);
+  --r:16px; --r-sm:10px; --r-lg:22px;
+  --shadow:0 10px 40px rgba(0,0,0,.35);
+}

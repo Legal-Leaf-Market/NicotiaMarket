@@ -311,6 +311,36 @@ function row(st, o) {
 }
 
 /* ============================================================
+   TIME BUDGET
+   ------------------------------------------------------------
+   A serverless function is killed at maxDuration with no warning and
+   no partial result — unlike Apps Script, which was resumable across
+   6-minute chunks and picked up where it stopped. So every loop that
+   could run long checks the clock and returns what it already has.
+
+   Partial data beats a 504. A store that yields 40 of its 200
+   products still renders; a timed-out function renders nothing for
+   ANY store, because they all share the one invocation.
+   ============================================================ */
+let DEADLINE = Infinity
+const outOfTime = (margin = 0) => Date.now() > DEADLINE - margin
+
+/* Small concurrency pool. Categories run in parallel, but not all at
+   once — ten simultaneous requests to one shop is how you get rate
+   limited by the very store you are trying to read. */
+async function pool(items, limit, fn) {
+  const out = []
+  let i = 0
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (i < items.length) {
+      const idx = i++
+      try { out.push(...(await fn(items[idx]))) } catch { /* one category failing is not fatal */ }
+    }
+  }))
+  return out
+}
+
+/* ============================================================
    FETCH
    ============================================================ */
 async function get(url, ms = 12000) {
@@ -342,6 +372,7 @@ async function get(url, ms = 12000) {
 async function shopifyProducts(st) {
   const out = []
   for (let page = 1; page <= 10; page++) {
+    if (outOfTime(4000)) break
     const res = await get(`https://${st.domain}/products.json?limit=250&page=${page}`)
     if (res.status === 403) throw new Error('403 blocked at edge')
     if (res.status === 404) throw new Error('404 endpoint off')
@@ -399,6 +430,7 @@ async function shopifyCollection(st) {
 async function wooStoreApi(st) {
   const out = []
   for (let page = 1; page <= 20; page++) {
+    if (outOfTime(4000)) break
     const res = await get(`https://${st.domain}/wp-json/wc/store/v1/products?per_page=100&page=${page}`)
     if (!res.ok) {
       if (page === 1) throw new Error('woo API HTTP ' + res.status)
@@ -479,29 +511,39 @@ function wooCards(st, html, dept, seen) {
   return out
 }
 
+const MAX_CAT_PAGES = 6   // 6 x ~12 cards is plenty per category
+
 async function wooCategoryWalk(st) {
   const cats = st.cats && st.cats.length ? st.cats.slice() : []
   if (!cats.length) throw new Error('no cats configured for category walk')
 
-  const out = []
+  /* `seen` is shared across the pool. Sets are safe here because Node
+     is single-threaded — nothing preempts between the has() and the
+     add(), so two categories carrying the same product cannot both
+     add it. */
   const seen = new Set()
-  for (const cat of cats) {
+
+  const out = await pool(cats, 3, async (cat) => {
     /* deptMap routes each category onto the right shelf. EightVape's
        categories span four of ours, so the store's own dept is only a
        fallback for anything unmapped. */
     const dept = (st.deptMap && st.deptMap[cat]) || st.dept
-    for (let page = 1; page <= 12; page++) {
+    const rows = []
+    for (let page = 1; page <= MAX_CAT_PAGES; page++) {
+      if (outOfTime(4000)) break
       const url = `https://${st.domain}/product-category/${cat}/` + (page > 1 ? `page/${page}/` : '')
       let res
-      try { res = await get(url) } catch { break }
+      try { res = await get(url, 8000) } catch { break }
       if (!res.ok) break
       const html = await res.text()
       const got = wooCards(st, html, dept, seen)
-      out.push(...got)
+      rows.push(...got)
       if (!got.length) break
       if (!html.includes(`/page/${page + 1}/`)) break
     }
-  }
+    return rows
+  })
+
   if (!out.length) throw new Error('category pages returned no cards')
   return out
 }
@@ -604,6 +646,10 @@ async function scrapeStore(st) {
 let CACHE = { at: 0, payload: null }
 const TTL = 30 * 60 * 1000
 
+/* Must stay below vercel.json's maxDuration with room to serialise the
+   response. If you raise one, raise the other. */
+const BUDGET_MS = 45000
+
 export default async function handler(req, res) {
   const q = req.query || {}
   const fresh = 'refresh' in q
@@ -613,6 +659,7 @@ export default async function handler(req, res) {
     return res.status(200).json(CACHE.payload)
   }
 
+  DEADLINE = Date.now() + BUDGET_MS
   const active = STORES.filter(s => !s.pending)
 
   /* The whole point of leaving Apps Script: every store at once,
@@ -624,17 +671,23 @@ export default async function handler(req, res) {
   const items = results.flatMap(r => r.items)
   const meta = results.map(({ key, result, count, detail }) => ({ key, result, count, detail }))
 
+  const truncated = outOfTime()
   const payload = {
     ok: true,
     stores: publicStores(),
     meta,
     count: items.length,
+    truncated,
     updated: new Date().toISOString(),
     items,
   }
 
-  CACHE = { at: Date.now(), payload }
+  /* Don't sit on a short read for the full half hour. If the clock cut
+     the scrape short, cache it briefly so the next visitor triggers a
+     retry rather than inheriting the gap. */
+  CACHE = { at: truncated ? Date.now() - (TTL - 3 * 60 * 1000) : Date.now(), payload }
   res.setHeader('X-Cache', fresh ? 'BYPASS' : 'MISS')
+  if (truncated) res.setHeader('X-Scrape', 'truncated')
 
   if ('debug' in q) {
     return res.status(200).json({

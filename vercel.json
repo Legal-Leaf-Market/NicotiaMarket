@@ -6,6 +6,9 @@
   "outputDirectory": "public",
   "cleanUrls": true,
   "trailingSlash": false,
+  "functions": {
+    "api/products.js": { "maxDuration": 60 }
+  },
   "rewrites": [
     { "source": "/pouches",     "destination": "/index.html" },
     { "source": "/disposables", "destination": "/index.html" },

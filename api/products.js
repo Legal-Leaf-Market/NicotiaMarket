@@ -53,8 +53,15 @@ export const STORES = [
      empty on purpose and buildAff() omits the param entirely rather
      than sending ?ref= with nothing after it.
 
-     Their Store API is CLOSED, which is why this carries `cats`: the
-     category pages are the source and wooCategoryWalk() reads them.
+     Their Store API is OPEN — 1,074 products and 4,925 variations,
+     verified Aug 2026. The old Code.gs note saying it was closed sent
+     this store down the category walk, which is slower, capped, and
+     returns no flavours at all. wooStoreApi() is first on the Woo
+     ladder so it now uses the API automatically; `cats` stays as the
+     documented fallback because that endpoint HAS been closed before.
+
+     deptMap is still doing its job either way: the API path maps
+     `categories[].slug` through it, the walk maps the walked cat.
 
      Categories audited against their own nav. The five top-level ones
      are Disposables, Juice, Kits, Pouches, Accessories; Coils/Pods/
@@ -282,31 +289,43 @@ function buildAff(st, url) {
   return base + (base.includes('?') ? '&' : '?') + 'ref=' + st.ref
 }
 
+/* Rows are built full and serialised slim. JSON.stringify omits
+   undefined, so every falsy field simply disappears from the wire
+   rather than shipping `"markets":""` on 8,000 rows.
+
+   Dropped entirely and rebuilt in the browser:
+     id   = key + '-' + (vid || url)
+     aff  = url + '?ref=' + store.ref
+   Both are pure functions of data already present, and together they
+   were about a third of the payload. */
 function row(st, o) {
   const blob = [o.title, o.variant, o.tags, o.desc].filter(Boolean).join(' ')
-  const url = o.url || ''
+  const strength = guessStrength(blob)
+  const puffs = guessPuffs(blob)
+  const desc = cleanDesc(o.desc)
+  const variant = o.variant === 'Default Title' ? '' : (o.variant || '')
+  const brand = o.brand || st.name
+  const cur = o.currency || 'USD'
   return {
-    id: `${st.key}-${o.vid || url}`,
-    key: st.key,
-    /* A category page knows better than a regex does. When the walk
-       hands us a dept from the store's own deptMap it wins outright. */
+    k: st.key,
+    /* The store's own category knows better than a regex does. When a
+       strategy supplies a dept it wins outright. */
     dept: o.dept || classify(st, blob),
-    brand: o.brand || st.name,
+    brand: brand === st.name ? undefined : brand,   // default = store name
     title: o.title || '',
-    variant: o.variant === 'Default Title' ? '' : (o.variant || ''),
-    strength: guessStrength(blob),
-    puffs: guessPuffs(blob),
-    price: o.price != null ? String(o.price) : '',
-    compareAt: o.compareAt != null ? String(o.compareAt) : '',
-    available: o.available !== false,
-    tobacco: isTobaccoSnus(blob),
-    image: sizeImage(o.image),
-    url,
-    currency: o.currency || 'USD',
-    desc: cleanDesc(o.desc),
-    vid: o.vid ? String(o.vid) : '',
-    markets: o.markets || '',
-    aff: buildAff(st, url),
+    variant: variant || undefined,
+    strength: strength === '' ? undefined : strength,
+    puffs: puffs === '' ? undefined : puffs,
+    price: o.price ? String(o.price) : undefined,
+    compareAt: o.compareAt ? String(o.compareAt) : undefined,
+    oos: o.available === false ? 1 : undefined,     // in stock is the norm
+    tobacco: isTobaccoSnus(blob) ? 1 : undefined,
+    image: sizeImage(o.image) || undefined,
+    url: o.url || '',
+    cur: cur === 'USD' ? undefined : cur,           // USD is the norm
+    desc: desc || undefined,
+    vid: o.vid ? String(o.vid) : undefined,
+    markets: o.markets || undefined,
   }
 }
 
@@ -424,38 +443,121 @@ async function shopifyCollection(st) {
   return out
 }
 
-/* WooCommerce Store API. Public and unauthenticated on most Woo shops,
-   and the single most likely rescue for anything that 404s on
-   products.json. This is what Wave Vape runs. */
-async function wooStoreApi(st) {
+/* ---- WooCommerce Store API ----
+   Public and unauthenticated on most Woo shops. Two sweeps, not one:
+
+   `/products` returns PARENTS. For a variable product that parent is
+   not purchasable — it carries has_options:true and the storefront
+   shows "Select options", not "Add to cart". Listing it was producing
+   a card whose checkout silently failed, because Woo cannot add a
+   variable product by parent id: ?add-to-cart=8064 just bounces back
+   to the product page.
+
+   `/products?type=variation` returns the real, buyable rows — each
+   with its own price, its own flavour image, its own stock, its own
+   add-to-cart id, and a ready-made `variation` string ("Flavor: White
+   Gummy"). Wave Vape: 40 parents hiding 132 variations. EightVape:
+   1,074 parents hiding 4,925.
+
+   So: keep simple products, DROP variable parents, add every variation. */
+function wooPrice(prices, field = 'price') {
+  if (!prices || prices[field] == null) return ''
+  const div = Math.pow(10, Number(prices.currency_minor_unit ?? 2))
+  return (Number(prices[field]) / div).toFixed(2)
+}
+
+/* Route a Woo product onto a shelf using the store's own category
+   slugs. This is what deptMap was written for — it just used to be fed
+   by the category walk. `categories[].slug` from the API does the same
+   job without scraping a single page. */
+function wooDept(st, p) {
+  if (!st.deptMap) return undefined
+  for (const c of p.categories || []) {
+    if (st.deptMap[c.slug]) return st.deptMap[c.slug]
+  }
+  return undefined
+}
+
+async function wooSweep(st, type) {
   const out = []
-  for (let page = 1; page <= 20; page++) {
-    if (outOfTime(4000)) break
-    const res = await get(`https://${st.domain}/wp-json/wc/store/v1/products?per_page=100&page=${page}`)
+  const qs = type ? `&type=${type}` : ''
+  for (let page = 1; page <= 60; page++) {
+    if (outOfTime(5000)) break
+    const res = await get(`https://${st.domain}/wp-json/wc/store/v1/products?per_page=100&page=${page}${qs}`)
     if (!res.ok) {
-      if (page === 1) throw new Error('woo API HTTP ' + res.status)
+      if (page === 1) throw new Error(`woo ${type || 'products'} HTTP ${res.status}`)
       break
     }
     let data
     try { data = await res.json() } catch { if (page === 1) throw new Error('woo API unparseable'); break }
-    if (!Array.isArray(data) || !data.length) { if (page === 1) throw new Error('woo API empty'); break }
-    for (const p of data) {
-      const minor = Number(p.prices?.currency_minor_unit ?? 2)
-      const div = Math.pow(10, minor)
-      const price = p.prices?.price != null ? (Number(p.prices.price) / div).toFixed(2) : ''
-      const reg = p.prices?.regular_price
-      const compareAt = reg && reg !== p.prices.price ? (Number(reg) / div).toFixed(2) : ''
-      out.push(row(st, {
-        brand: st.name, title: p.name, variant: '',
-        tags: (p.categories || []).map(c => c.name).join(' '),
-        price, compareAt, available: p.is_in_stock !== false,
-        image: p.images?.[0]?.src || '', url: p.permalink,
-        currency: p.prices?.currency_code || 'USD',
-        desc: p.short_description || p.description, vid: p.id,
-      }))
-    }
+    if (!Array.isArray(data) || !data.length) break
+    out.push(...data)
     if (data.length < 100) break
   }
+  return out
+}
+
+async function wooStoreApi(st) {
+  const parents = await wooSweep(st, '')
+  if (!parents.length) throw new Error('woo API empty')
+
+  /* parent id -> its own info, so a variation can inherit the bits it
+     does not carry (department, brand, and a fallback image) */
+  const byId = new Map(parents.map(p => [p.id, p]))
+  const out = []
+
+  /* Woo has no vendor field, so everything would land under the store
+     name and group into one enormous card. The category IS the brand
+     on these shops — Wave Vape files by Foger / Geek Bar, EightVape by
+     the manufacturer — so use the shallowest category as the brand and
+     the range groups correctly. */
+  const brandOf = (p) => {
+    const cats = (p?.categories || []).map(c => c.name).filter(Boolean)
+    if (!cats.length) return st.name
+    return cats.reduce((a, b) => (b.length < a.length ? b : a))
+  }
+
+  for (const p of parents) {
+    if (p.type === 'variable' || p.has_options) continue   // not purchasable
+    out.push(row(st, {
+      brand: brandOf(p), title: p.name, dept: wooDept(st, p),
+      tags: (p.categories || []).map(c => c.name).join(' '),
+      price: wooPrice(p.prices), compareAt: wooPrice(p.prices, 'regular_price'),
+      available: p.is_in_stock !== false,
+      image: p.images?.[0]?.src || '', url: p.permalink,
+      currency: p.prices?.currency_code || 'USD',
+      desc: p.short_description || p.description, vid: p.id,
+    }))
+  }
+
+  let variations = []
+  try { variations = await wooSweep(st, 'variation') } catch { /* simple-only shop */ }
+
+  for (const v of variations) {
+    const parent = byId.get(v.parent)
+    /* "Flavor: White Gummy" -> "White Gummy". Multiple attributes come
+       through comma-separated and are kept whole. */
+    const label = String(v.variation || '')
+      .split(',').map(s => s.split(':').slice(1).join(':').trim() || s.trim())
+      .filter(Boolean).join(' · ')
+    out.push(row(st, {
+      brand: brandOf(parent),
+      title: v.name || parent?.name || '',
+      variant: label,
+      dept: wooDept(st, parent || v),
+      tags: [(parent?.categories || []).map(c => c.name).join(' '), label].join(' '),
+      price: wooPrice(v.prices), compareAt: wooPrice(v.prices, 'regular_price'),
+      available: v.is_in_stock !== false,
+      image: v.images?.[0]?.src || parent?.images?.[0]?.src || '',
+      url: v.permalink || parent?.permalink,
+      currency: v.prices?.currency_code || 'USD',
+      /* no desc: a variation inherits its parent's, and carrying 4,925
+         copies of the same paragraph is most of the payload */
+      vid: v.id,
+    }))
+  }
+
+  if (!out.length) throw new Error('woo API returned no purchasable rows')
   return out
 }
 
@@ -624,7 +726,7 @@ async function scrapeStore(st) {
       const got = await fn(st)
       if (got && got.length) {
         const items = dedupe(got)
-        const inStock = items.filter(i => i.available).length
+        const inStock = items.filter(i => !i.oos).length
         const priced = items.filter(i => i.price && Number(i.price) > 0).length
         let detail = `via ${door} (${inStock}/${items.length} in stock)`
         if (!priced) detail += '  [WARNING: no prices — likely a brand site, not a storefront]'
@@ -678,6 +780,7 @@ export default async function handler(req, res) {
     meta,
     count: items.length,
     truncated,
+    byDept: items.reduce((a, i) => { a[i.dept] = (a[i.dept] || 0) + 1; return a }, {}),
     updated: new Date().toISOString(),
     items,
   }
@@ -688,12 +791,43 @@ export default async function handler(req, res) {
   CACHE = { at: truncated ? Date.now() - (TTL - 3 * 60 * 1000) : Date.now(), payload }
   res.setHeader('X-Cache', fresh ? 'BYPASS' : 'MISS')
   if (truncated) res.setHeader('X-Scrape', 'truncated')
+  return respond(res, payload, q)
+}
 
+/* ============================================================
+   RESPONSE MODES
+   ------------------------------------------------------------
+   The catalogue is scraped once and sliced on the way out, so a
+   department request costs no extra fetching — only less JSON.
+
+     ?summary        manifest only: stores, per-dept counts, meta.
+                     A few KB. The page renders its chrome from this
+                     while the products are still in flight.
+     ?dept=pouch     one shelf
+     (nothing)       everything
+     ?debug          human-readable per-store report
+   ============================================================ */
+function manifest(p) {
+  const { items, ...rest } = p
+  return rest
+}
+
+function respond(res, payload, q) {
   if ('debug' in q) {
     return res.status(200).json({
-      ok: true, updated: payload.updated, total: items.length,
-      stores: meta.map(m => `${m.key}: ${m.result} (${m.count}) — ${m.detail}`),
-      byDept: items.reduce((a, i) => { a[i.dept] = (a[i.dept] || 0) + 1; return a }, {}),
+      ok: true, updated: payload.updated, total: payload.count,
+      truncated: payload.truncated,
+      byDept: payload.byDept,
+      stores: payload.meta.map(m => `${m.key}: ${m.result} (${m.count}) — ${m.detail}`),
+    })
+  }
+  if ('summary' in q) return res.status(200).json(manifest(payload))
+  if (q.dept && q.dept !== 'all') {
+    const want = String(q.dept)
+    return res.status(200).json({
+      ...manifest(payload),
+      dept: want,
+      items: payload.items.filter(i => i.dept === want),
     })
   }
   return res.status(200).json(payload)

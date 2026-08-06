@@ -387,6 +387,33 @@ function loadSelv(){ try{SELV=JSON.parse(read_('nm_selv'))||{};}catch(e){SELV={}
   if(typeof SELV!=='object'||!SELV) SELV={}; }
 function saveSelv(){ store_('nm_selv',JSON.stringify(SELV)); }
 
+/* ONE CARD PER PRODUCT LINE. Thirty flavours of one device is one
+   card with thirty entries in the dropdown — never thirty cards.
+
+   Which key groups a line depends on how the store models it:
+
+     variant present  — the store already told us this is one product
+                        with options (a Woo variable parent, a Shopify
+                        product with variants). Group by TITLE, because
+                        every option shares it. Dojo's 30 flavours all
+                        carry title "Dojo …" and variant "Grape" etc,
+                        so they collapse to one card correctly.
+
+     no variant       — the flavour is baked into the title and each
+                        one is its own product row. Group by BRAND, so
+                        ZYN Citrus 6mg and ZYN Cool Mint 9mg share a
+                        card with flavour and strength as the two axes.
+
+   Mixing both inside one store is fine and expected: Wave Vape sells
+   35 flavours as individual products AND the same range as a variable
+   parent with 41 variations. */
+function groupKeyFor(it){
+  var dept=deptOf(it);
+  var brand=String(it.brand==null?'':it.brand).trim();
+  if(it.variant) return it.key+'|'+dept+'|t:'+nk(it.title);
+  return it.key+'|'+dept+'|b:'+nk(brand||it.title);
+}
+
 function buildGroups(items){
   var map={};
   /* A mall only lists what ships today. Out of stock is dropped here
@@ -394,11 +421,14 @@ function buildGroups(items){
   items.forEach(function(it){
     if(!it.available) return;
     var brand=String(it.brand==null?'':it.brand).trim();
-    var flav=flavourOf(brand,it.title)||it.title||'—';
+    /* the dropdown label: the store's own option name when it has one,
+       otherwise whatever distinguishes this title from its siblings */
+    var flav=it.variant || flavourOf(brand,it.title) || it.title || '—';
     if(!brand){ brand=flav; flav='—'; }
     var dept=deptOf(it);
-    var gid=it.key+'|'+dept+'|'+nk(brand);
+    var gid=groupKeyFor(it);
     var g=map[gid]||(map[gid]={gid:gid, key:it.key, dept:dept, brand:brand,
+                               line:it.variant?it.title:'',
                                currency:it.currency||'USD', flavours:{}, order:[]});
     var fk=nk(flav);
     if(!g.flavours[fk]){ g.flavours[fk]={name:flav, image:'', variants:[]}; g.order.push(fk); }
@@ -406,14 +436,6 @@ function buildGroups(items){
     if(!f.image&&it.image) f.image=it.image;
     f.variants.push(it);
   });
-
-  /* A brand-owned store — Vaporesso selling Vaporesso, or Wave Vape's
-     34 Foger flavours — puts everything under one brand and collapses
-     the catalogue into one card with a 34-entry dropdown. A dropdown is
-     a good way to choose between six flavours and a terrible way to
-     browse a range. Past this many, the brand splits into one card per
-     flavour. */
-  var MAX_FLAV=10;
 
   var built=Object.keys(map).map(function(k){
     var g=map[k];
@@ -439,22 +461,22 @@ function buildGroups(items){
       return a.name.localeCompare(b.name);
     });
     g.image=(g.flav[0]||{}).image||'';
-    g.title=g.brand;
+    /* A line grouped by title shows the product ("Foger Switch Pro 30K
+       Disposable Pods"); a line grouped by brand shows the brand
+       ("ZYN"), because there the individual titles ARE the options. */
+    g.title=g.line||g.brand;
     delete g.flavours; delete g.order;
     return g;
   }).filter(function(g){ return g.flav.length; });
 
-  var out=[];
-  built.forEach(function(g){
-    if(g.flav.length<=MAX_FLAV){ out.push(g); return; }
-    g.flav.forEach(function(f){
-      out.push({ gid:g.gid+'|'+nk(f.name), key:g.key, dept:g.dept,
-                 brand:g.brand, currency:g.currency,
-                 title:(g.brand+(f.name!=='—'?' '+f.name:'')).trim(),
-                 image:f.image, flav:[f], split:1 });
-    });
-  });
-  return out;
+  /* There used to be a MAX_FLAV=10 here that split any group with more
+     than ten flavours into one card per flavour — which would have
+     turned a 30-flavour range into 30 cards, the exact opposite of the
+     point. It existed to stop a brand-owned store collapsing into a
+     single card with a 300-entry dropdown, but that was a symptom of
+     grouping by brand alone. groupKeyFor() groups by product line now,
+     so the range stays one card and the store still shows many. */
+  return built;
 }
 
 function gsel(g){
@@ -1649,6 +1671,37 @@ function failed(msg){
   document.getElementById('rcount').textContent='';
 }
 
+/* The API ships rows slim: falsy fields are omitted, `id` and `aff`
+   are dropped entirely because both are pure functions of data already
+   present, and a few names are shortened. Rehydrate here so nothing
+   downstream has to know. */
+function hydrate(it){
+  var st=SMAP[it.k]||{};
+  var url=it.url||'';
+  return {
+    id: it.k+'-'+(it.vid||url),
+    key: it.k,
+    dept: it.dept||st.dept||'',
+    brand: it.brand||st.name||'',
+    title: it.title||'',
+    variant: it.variant||'',
+    strength: it.strength==null?'':it.strength,
+    puffs: it.puffs==null?'':it.puffs,
+    price: it.price||'',
+    compareAt: it.compareAt||'',
+    available: !it.oos,
+    tobacco: !!it.tobacco,
+    image: it.image||'',
+    url: url,
+    currency: it.cur||'USD',
+    desc: it.desc||'',
+    vid: it.vid||'',
+    markets: it.markets||'',
+    aff: (url && st.ref) ? url+(url.indexOf('?')>-1?'&':'?')+'ref='+st.ref
+       : (url || (st.domain?'https://'+st.domain+'/':''))
+  };
+}
+
 function received(res){
   if(!res){failed('No response');return;}
   /* Code.gs is the source of truth for the store list; the inline copy
@@ -1659,33 +1712,92 @@ function received(res){
   }
   if(res.ok===false){failed(res.error||'Unknown error');return;}
 
-  /* Normalise types once, here. Sheets returns numbers for
-     numeric-looking cells — a brand called "77" is a real Snus O'Clock
-     line — and one unexpected type used to take the whole render down.
-     `available`, `tobacco` and `strength` stay untouched: they are
-     booleans and numbers on purpose. */
-  var dropped=(res.items||[]).filter(function(it){return !it.available;}).length;
+  META=res.meta||META; UPDATED=res.updated||UPDATED;
+  BYDEPT=res.byDept||BYDEPT;
+
+  var live=(res.items||[])
+    .filter(function(it){ return !!SMAP[it.k]; })
+    .map(hydrate);
+  var dropped=live.filter(function(it){return !it.available;}).length;
   if(dropped) CONN=dropped.toLocaleString()+' out-of-stock rows hidden';
-  var live=(res.items||[]).map(function(it){
-    ['key','dept','brand','title','variant','price','compareAt','image','url',
-     'currency','desc','vid','aff','markets'].forEach(function(f){
-       it[f]=(it[f]==null?'':String(it[f])); });
-    return it;
-  }).filter(function(it){return !!SMAP[it.key];});
+
   var liveKeys={}; live.forEach(function(it){liveKeys[it.key]=1;});
   var filled=SEED.filter(function(it){return SMAP[it.key] && !liveKeys[it.key];});
+  filled.forEach(function(it,i){ it.id=it.id||(it.key+'-s'+i); it.seeded=true; });
 
-  var merged=live.concat(filled).map(function(it,i){
-    it.id=it.id||(it.key+'-'+i);
-    if((!it.dept||!DEPTS[it.dept])&&SMAP[it.key]) it.dept=SMAP[it.key].dept;
-    it.seeded=!liveKeys[it.key];
-    return it;});
-
-  META=res.meta||[]; UPDATED=res.updated||null;
+  var merged=live.concat(filled);
+  SRC={live:Object.keys(liveKeys).length, seeded:0};
   var sk={}; filled.forEach(function(it){sk[it.key]=1;});
-  SRC={live:Object.keys(liveKeys).length, seeded:Object.keys(sk).length};
-  if(!merged.length){ CONN='API reached OK, but the Inventory sheet is empty.'; apply(); return; }
+  SRC.seeded=Object.keys(sk).length;
+
+  if(!merged.length && !ALL.length){
+    CONN='API reached OK but returned no products.'; apply(); return;
+  }
   ingest(merged);
+}
+
+/* ------------------------------------------------------------
+   PROGRESSIVE LOAD
+   ------------------------------------------------------------
+   EightVape alone is ~6,000 rows once its 4,925 variations are in, so
+   waiting for one payload before painting anything is a bad trade.
+
+   Instead: fetch the manifest first (a few KB — store list, per-dept
+   counts, refresh report) and render the chrome from it immediately,
+   then pull the departments in parallel and merge each as it lands.
+   The shelf you are looking at is requested first.
+   ------------------------------------------------------------ */
+var BYDEPT={}, LOADED={};
+
+function mergeDept(res){
+  if(!res || res.ok===false) return;
+  var add=(res.items||[]).filter(function(it){ return !!SMAP[it.k]; }).map(hydrate);
+  if(!add.length) return;
+  var seen={}; ALL.forEach(function(it){ seen[it.id]=1; });
+  add.forEach(function(it){ if(!seen[it.id]){ seen[it.id]=1; ALL.push(it); } });
+  LOADED[res.dept||'all']=1;
+  ingest(ALL);
+}
+
+function loadCatalogue(){
+  var refresh = location.search.indexOf('refresh')>-1;
+  var q = function(extra){
+    return API_URL+'?'+extra+(refresh?'&refresh':'');
+  };
+  var asJson = function(r){
+    if(!r.ok) throw new Error('API returned HTTP '+r.status);
+    return r.json();
+  };
+
+  fetch(q('summary'),{redirect:'follow'}).then(asJson).then(function(sum){
+    if(sum.ok===false){ failed(sum.error||'Unknown error'); return; }
+    if(sum.stores && sum.stores.length){
+      STORES=sum.stores; SMAP={}; STORES.forEach(function(s){ SMAP[s.key]=s; });
+    }
+    META=sum.meta||[]; UPDATED=sum.updated||null; BYDEPT=sum.byDept||{};
+    renderStoreList(); stamp();
+
+    /* the open shelf first, then the rest by size — biggest last, so
+       the small departments are interactive while EightVape streams */
+    var order=DEPT_ORDER.filter(function(d){ return BYDEPT[d]; })
+      .sort(function(a,b){
+        if(a===F.dept) return -1; if(b===F.dept) return 1;
+        return (BYDEPT[a]||0)-(BYDEPT[b]||0);
+      });
+    if(!order.length){ CONN='API reached OK but returned no products.'; apply(); return; }
+
+    order.forEach(function(d){
+      fetch(q('dept='+encodeURIComponent(d)),{redirect:'follow'})
+        .then(asJson).then(mergeDept)
+        .catch(function(e){ CONN='Some departments failed to load: '+e.message; });
+    });
+  }).catch(function(e){
+    /* Manifest unavailable — fall back to the single full payload so an
+       older or simpler deployment still works. */
+    fetch(API_URL+(refresh?'?refresh':''),{redirect:'follow'})
+      .then(asJson).then(received)
+      .catch(function(){ failed(e.message||'Network error'); });
+  });
 }
 
 /* boot */
@@ -1694,19 +1806,8 @@ loadSelv(); loadCart(); badges(); accountUI(); setAuthMode('signup'); renderCart
 skeleton(); renderStoreList(); route();
 if(read_('nm_age')==='1' && hasLoc()) closeGate(); else openGate(false);
 
-/* One loader. The Apps Script google.script.run branch is gone — this
-   is a static page on Vercel now and the catalogue comes from the
-   serverless function in api/products.js.
-
-   ?refresh on the page URL is passed through to bypass the API's cache,
-   which is how you check a store fix without waiting out the TTL. */
-(function(){
-  var qs = (location.search.indexOf('refresh') > -1) ? '?refresh' : '';
-  fetch(API_URL + qs, {redirect:'follow'})
-    .then(function(r){
-      if(!r.ok) throw new Error('API returned HTTP ' + r.status);
-      return r.json();
-    })
-    .then(received)
-    .catch(function(e){ failed(e.message || 'Network error'); });
-})();
+/* The Apps Script google.script.run branch is gone — this is a static
+   page on Vercel and the catalogue comes from api/products.js.
+   ?refresh on the page URL bypasses the API cache, which is how you
+   check a store fix without waiting out the TTL. */
+loadCatalogue();

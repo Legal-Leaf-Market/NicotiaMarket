@@ -301,15 +301,15 @@ function unitPrice(it){
     return {value:price/((puffs*packs)/1000), label:d.unitLabel, count:puffs*packs};
   }
 
-  var count=parseCount(text);
-  if(d.unit==='pouch'){
-    var rolls=/rolls?\b/i.test(text)?parseCount(text):null;
-    if(rolls) count=rolls*(st.perPack||20);
-    else if(!count) count=st.perPack||20;
-  }
-  if(d.unit==='stick'&&!count) count=1;
-  if(!count||count<1) return null;
-  return {value:price/count,label:d.unitLabel,count:count};
+  /* Same packOf() the dropdown label uses. These used to parse the
+     title independently, so a "Bundle of 5" could be labelled 5 cans
+     while the per-pouch price was computed against 1 — the label and
+     the number disagreeing on the same card. */
+  var pack=packOf(it);
+  if(d.unit==='pouch') return {value:price/(pack.n*(st.perPack||20)),
+                               label:d.unitLabel, count:pack.n*(st.perPack||20)};
+  if(d.unit==='stick') return {value:price/pack.n, label:d.unitLabel, count:pack.n};
+  return null;
 }
 
 var SEED = [];   /* run exportSeed() in Apps Script and paste here */
@@ -367,19 +367,108 @@ function flavourOf(brand,title){
 }
 function nk(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,''); }
 
-function variantLabel(it){
-  var bits=[];
-  var ml=String(it.title||'').match(/(\d+(?:\.\d+)?)\s*ml\b/i);
-  if(ml) bits.push(ml[1]+' ml');
-  var pf=parsePuffs(it.title||'');
-  if(pf) bits.push((pf/1000)+'K puffs');
-  if(it.strength!==''&&it.strength!=null) bits.push(it.strength+' mg');
-  if(it.variant) bits.push(it.variant);
-  if(!bits.length){
-    var m=String(it.title||'').match(/\b(\d+\s*[- ]?(?:can|pack|ct|count)\w*)\b/i);
-    bits.push(m?m[1]:'Standard');
+/* ============================================================
+   CANONICAL PACK SIZE
+   ------------------------------------------------------------
+   Same discipline Legal-Leaf applies to weights: parse the messy text
+   into a NUMBER first, then render one house label. Never echo the
+   store's own wording into a dropdown.
+
+   Pouches are the clearest case. They ship as a single can or a roll,
+   and nothing else — but Snus O'Clock encodes that in the title
+   ("Bundle of 5: ZYN 11mg"), sets 93 of 100 variants to "Default
+   Title", and uses the variant axis for flavour mixes instead. So the
+   shopper was reading whatever fell out. Now every pouch option says
+   "1 can" or "5 cans", because that is how they come.
+
+   ONE source of truth: the same count feeds the dropdown label AND
+   unitPrice(), so the label and the per-pouch figure can never
+   disagree — which they could when each parsed the title separately.
+   ============================================================ */
+var PACK_RE=[
+  /\bbundle\s*of\s*(\d+)/i,
+  /\broll\s*of\s*(\d+)/i,
+  /\bbox\s*of\s*(\d+)/i,
+  /\bpack\s*of\s*(\d+)/i,
+  /(\d+)\s*[- ]?can\s*roll\b/i,
+  /(\d+)\s*[- ]?(?:cans?|tins?|rolls?)\b/i,
+  /(\d+)\s*[- ]?pack\b/i,
+  /(\d+)\s*[- ]?(?:ct|count|pcs?)\b/i,
+  /(\d+)\s*[- ]?(?:cigars?|sticks?)\b/i
+];
+
+/* Returns {n, noun} — how many retail units this row is.
+   `n` defaults to 1: a product with no pack wording is a single. */
+function packOf(it){
+  var text=[it.title,it.variant].filter(Boolean).join(' ');
+  /* Strength must never be read as a quantity. "AROMA Essence
+     Spearmint 20mg" is one can at 20mg, not twenty of anything, and
+     "13.50mg" must not surface a 50. Strip every mg/ml/puff token
+     before looking for a count. */
+  var safe=text.replace(/\d+(?:\.\d+)?\s*(?:mg|ml|mah)\b/gi,' ')
+               .replace(/\b\d{1,3}k\b/gi,' ')
+               .replace(/\b\d{3,7}\s*\+?\s*puffs?\b/gi,' ');
+  var n=null;
+  for(var i=0;i<PACK_RE.length;i++){
+    var m=safe.match(PACK_RE[i]);
+    if(m){ var v=Number(m[1]); if(v>0&&v<1000){ n=v; break; } }
   }
-  return bits.join(' · ');
+  var d=DEPTS[deptOf(it)]||{};
+  var noun = d.unit==='pouch' ? 'can'
+           : d.unit==='stick' ? 'cigar'
+           : 'pack';
+  return {n:n||1, noun:noun, explicit:n!==null};
+}
+
+function plural(n,noun){ return n+' '+noun+(n===1?'':'s'); }
+
+/* The dropdown string. One shape per department, always in the same
+   order, so a shopper scanning options compares like with like. */
+function optionLabel(it){
+  var dept=deptOf(it), d=DEPTS[dept]||{}, bits=[];
+  var mg=(it.strength!==''&&it.strength!=null&&!isNaN(Number(it.strength)))
+    ? Number(it.strength)+' mg' : '';
+
+  if(dept==='pouch'){
+    bits.push(plural(packOf(it).n,'can'));
+    if(mg) bits.push(mg);
+    if(it.variant && !/^default title$/i.test(it.variant) && !/^\d+(\.\d+)?\s*mg$/i.test(it.variant))
+      bits.push(it.variant);
+  } else if(dept==='disposable'){
+    if(it.variant) bits.push(it.variant);
+    var pf=parsePuffs([it.title,it.variant].join(' ')) || Number(it.puffs) || 0;
+    if(pf) bits.push((pf>=1000?(pf/1000)+'K':pf)+' puffs');
+    if(mg) bits.push(mg);
+  } else if(dept==='liquid'){
+    var ml=String(it.title||'').match(/(\d+(?:\.\d+)?)\s*ml\b/i);
+    if(ml) bits.push(ml[1]+' ml');
+    if(mg) bits.push(mg);
+    if(it.variant) bits.push(it.variant);
+  } else if(dept==='cigar'){
+    var p=packOf(it);
+    bits.push(p.n===1?'Single':plural(p.n,'cigar'));
+    if(it.variant) bits.push(it.variant);
+  } else {
+    /* devices and gear: the store's own option (a colour, a resistance)
+       is already the right words — just tidy the spacing. */
+    if(it.variant) bits.push(it.variant);
+    if(mg) bits.push(mg);
+  }
+  if(!bits.length) bits.push('Standard');
+  return bits.join(' · ').replace(/\s+/g,' ').trim();
+}
+
+/* kept as the old name so nothing else has to change */
+function variantLabel(it){ return optionLabel(it); }
+
+/* What the dropdown is FOR, in a word. An unlabelled select was a big
+   part of why the old filters read as engineering rather than shopping. */
+function optionNoun(dept){
+  return dept==='pouch'  ? 'Size'
+       : dept==='liquid' ? 'Bottle'
+       : dept==='cigar'  ? 'Quantity'
+       : dept==='disposable' ? 'Flavour'
+       : 'Option';
 }
 
 var SELV={};
@@ -724,12 +813,14 @@ function card(g){
         '<h3 class="ctitle">'+esc(g.title||g.brand)+'</h3>'+
         '<div class="cselects">'+
           (hasFlav
-            ? '<select class="vsel flav" aria-label="Choose flavour" data-flav="'+gid+'">'+flavOpts+'</select>'
+            ? '<label class="sellabel">Flavour</label>'+
+              '<select class="vsel flav" aria-label="Choose flavour" data-flav="'+gid+'">'+flavOpts+'</select>'
             : '')+
           (nStr>1||!hasFlav
-            ? '<select class="vsel str" aria-label="Choose option" data-str="'+gid+'">'+
-              strengthOptions(f,s.v)+'</select>'
-            : '<div class="cvar">'+esc(variantLabel(it))+'</div>')+
+            ? '<label class="sellabel">'+esc(optionNoun(deptOf(g)))+'</label>'+
+              '<select class="vsel str" aria-label="Choose '+esc(optionNoun(deptOf(g)).toLowerCase())+
+              '" data-str="'+gid+'">'+strengthOptions(f,s.v)+'</select>'
+            : '<div class="cvar">'+esc(optionLabel(it))+'</div>')+
         '</div>'+
         '<div class="cprice">'+priceHtml(it,cur,off,u,best)+'</div>'+
         '<div class="cfoot">'+

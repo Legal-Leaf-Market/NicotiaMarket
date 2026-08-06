@@ -443,7 +443,12 @@ header.top{position:sticky;top:0;z-index:50;
 .ctitle{font-family:var(--display);font-weight:600;font-size:15px;line-height:1.25;margin:0;
   overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
   min-height:calc(2 * 1.25em)}
-.cselects{display:flex;flex-direction:column;gap:5px}
+.cselects{display:flex;flex-direction:column;gap:3px}
+/* Legal-Leaf labels its card dropdown "Size / option"; an unlabelled
+   select is guesswork until you open it. */
+.sellabel{font-size:9.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--dim);margin:5px 0 1px 2px}
+.sellabel:first-child{margin-top:0}
 .cvar{font-size:11.5px;color:var(--dim)}
 .vsel{width:100%;font-family:var(--sans);font-size:12.5px;color:var(--text);
   background:var(--chip);border:1px solid var(--glass-line);border-radius:var(--r-sm);

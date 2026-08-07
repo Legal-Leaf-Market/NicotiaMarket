@@ -2754,6 +2754,95 @@ function loadCatalogue(){
     .catch(function(e){ failed(e.message||'Network error'); });
 }
 
+/* ============================================================
+   INSTALL AS AN APP
+   ------------------------------------------------------------
+   Apple's guideline 1.4.3 bars apps that encourage tobacco or vape
+   consumption or facilitate their sale, and Google Play restricts the
+   same, so the App Store was never a route for this catalogue. The
+   home-screen web app IS the app.
+
+   Which means the install prompt matters more here than it usually
+   would, and iOS gives us none: Safari has no beforeinstallprompt, so
+   without a hint nobody ever discovers Share -> Add to Home Screen.
+   ============================================================ */
+function isStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches ||
+         navigator.standalone === true;
+}
+/* iPadOS 13+ reports itself as a Mac, so the touch check is what
+   actually catches an iPad. */
+function isIOS(){
+  return /iphone|ipod|ipad/i.test(navigator.userAgent) ||
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+/* EVERY browser on iOS runs WebKit — Apple requires it — so Chrome,
+   Edge and Firefox can all add to the home screen since iOS 17. They
+   differ only in where the Share control lives, so name the right one
+   rather than telling a Chrome user to look in Safari. */
+function iosBrowser(){
+  var u=navigator.userAgent;
+  if(/CriOS/i.test(u))  return {name:'Chrome', where:'the ⋯ menu, top right'};
+  if(/EdgiOS/i.test(u)) return {name:'Edge',   where:'the ⋯ menu, bottom bar'};
+  if(/FxiOS/i.test(u))  return {name:'Firefox',where:'the ⋯ menu, address bar'};
+  return {name:'Safari', where:'the Share button in the bottom bar'};
+}
+
+function dismissInstall(){
+  store_('nm_install_hint','off');
+  var el=document.getElementById('installhint');
+  if(el) el.remove();
+}
+
+function maybeOfferInstall(){
+  if(isStandalone() || !isIOS()) return;          /* already an app, or not iOS */
+  if(read_('nm_install_hint')==='off') return;    /* they said no */
+  if(document.getElementById('installhint')) return;
+
+  var b=iosBrowser();
+  var el=document.createElement('div');
+  el.id='installhint'; el.className='installhint'; el.setAttribute('role','dialog');
+  el.innerHTML=
+    '<img src="/assets/apple-touch-icon.png" alt="" width="42" height="42">'+
+    '<div class="ih-copy"><b>Add Nicotia to your Home Screen</b>'+
+    '<span>Open '+esc(b.where)+', then choose <b>Add to Home Screen</b>.'+
+    (b.name!=='Safari'
+      ? ' Installing from Safari also enables price alerts later.'
+      : '')+'</span></div>'+
+    '<button class="ih-x" type="button" aria-label="Dismiss">&times;</button>';
+  document.body.appendChild(el);
+  el.querySelector('.ih-x').addEventListener('click',dismissInstall);
+}
+
+/* Android and desktop Chrome DO fire this, so take the real prompt when
+   it is offered instead of showing anyone the iOS instructions. */
+var DEFERRED_INSTALL=null;
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault(); DEFERRED_INSTALL=e;
+  var el=document.getElementById('installhint'); if(el) el.remove();
+  var bar=document.createElement('div');
+  bar.id='installhint'; bar.className='installhint';
+  bar.innerHTML='<img src="/assets/apple-touch-icon.png" alt="" width="42" height="42">'+
+    '<div class="ih-copy"><b>Install Nicotia</b><span>Keep the whole market one tap away.</span></div>'+
+    '<button class="ih-go" type="button">Install</button>'+
+    '<button class="ih-x" type="button" aria-label="Dismiss">&times;</button>';
+  document.body.appendChild(bar);
+  bar.querySelector('.ih-go').addEventListener('click',function(){
+    if(!DEFERRED_INSTALL) return;
+    DEFERRED_INSTALL.prompt(); DEFERRED_INSTALL=null; dismissInstall();
+  });
+  bar.querySelector('.ih-x').addEventListener('click',dismissInstall);
+});
+
+/* The worker caches the SHELL ONLY — never /api/products, because the
+   live-pricing promise and the "Checked N min ago" stamp both depend on
+   that request actually happening. See sw.js. */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('/sw.js').catch(function(){ /* non-fatal */ });
+  });
+}
+
 /* boot */
 loadLoc(); restoreUserLoc(); locPillUI(); setAgeCopy(); setWarn(); setNotices();
 loadSelv(); loadCart(); badges(); accountUI(); setAuthMode('signup'); renderCart();
@@ -2761,7 +2850,8 @@ loadSelv(); loadCart(); badges(); accountUI(); setAuthMode('signup'); renderCart
    opens on Pouches instead of dumping the visitor into Everything. */
 F.dept=deptFromPath()||'all'; syncDeptTabs(); setRouteMeta();
 skeleton(); renderStoreList(); route();
-if(read_('nm_age')==='1' && hasLoc()) closeGate(); else openGate(false);
+if(read_('nm_age')==='1' && hasLoc()){ closeGate(); maybeOfferInstall(); }
+else openGate(false);   /* never stack an install hint on top of the age gate */
 
 /* The Apps Script google.script.run branch is gone — this is a static
    page on Vercel and the catalogue comes from api/products.js.

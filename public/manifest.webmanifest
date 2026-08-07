@@ -1,0 +1,24 @@
+{
+  "name": "Nicotia Market — priced by the unit",
+  "short_name": "Nicotia",
+  "description": "Compare nicotine pouches, disposables, e-liquid and cigars across every store we carry — priced per pouch, per 1,000 puffs, per ml and per stick.",
+  "id": "/",
+  "start_url": "/?src=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#0b0f0d",
+  "theme_color": "#0b0f0d",
+  "categories": ["shopping", "lifestyle"],
+  "icons": [
+    { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Pouches & Snus", "url": "/pouches" },
+    { "name": "Disposables", "url": "/disposables" },
+    { "name": "E-Liquid", "url": "/e-liquid" }
+  ]
+}

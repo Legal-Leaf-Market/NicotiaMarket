@@ -7,6 +7,26 @@
 <meta name="description" content="Compare nicotine pouches, snus, disposables, e-liquid and cigars across every store we carry. Priced per pouch, per 1,000 puffs, per ml and per stick. Adults 21+.">
 <meta name="theme-color" content="#0b0f0d">
 <link rel="icon" href="/assets/mark.svg" type="image/svg+xml">
+
+<!-- ===== INSTALLABLE APP =====
+     There is no App Store route for this catalogue: Apple's guideline
+     1.4.3 bars apps that encourage tobacco or vape consumption OR
+     facilitate their sale, and Google Play restricts the same. So the
+     home-screen web app is not a fallback, it is the shipping vehicle.
+
+     iOS ignores the manifest's icons for the home screen and reads
+     apple-touch-icon instead, which must be PNG — an SVG here silently
+     produces a blank or screenshotted tile. -->
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="167x167" href="/assets/apple-touch-icon-167.png">
+<link rel="apple-touch-icon" sizes="152x152" href="/assets/apple-touch-icon-152.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<!-- black-translucent lets the page paint under the status bar; the
+     masthead is already dark, so the notch area matches it -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nicotia">
 <!-- Every department route rewrites to this same document. These are the
      HOMEPAGE defaults; setRouteMeta() in app.js rewrites title, description,
      canonical and og:* to the department's own values on load and on every

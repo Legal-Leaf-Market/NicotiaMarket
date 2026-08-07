@@ -67,6 +67,43 @@ export const STORES = [
     ref:'rjuntxyu', ships:['EU'], guess:1, perPack:20, platform:'shopify',
     currency:'EUR', from:'EU', days:'3–5 business days', ageCheck:'none' },
 
+  /* ==========================================================
+     NICOKICK — the US pouch problem, solved.
+     ----------------------------------------------------------
+     The operator notes recorded this as structurally impossible:
+     "The US pouch market is ZYN, on!, VELO and Rogue — all owned by
+     Swedish Match, Altria, BAT and Turning Point. None run affiliate
+     programmes." True of the BRANDS. Nicokick is the retailer that
+     carries all four, and it is on CJ.
+
+       Nicotine Pouches  410   ZYN 54 · Rogue 44 · FRE 58 · Lucy 35
+                               on! 30 · VELO 28 · Juice Head 14 · LIX 5
+       Nicotine Gum       15
+       Powerstep          57
+
+     Magento 2 with a wide-open GraphQL endpoint, so this is the
+     cleanest scrape on the site — real pagination, real stock status,
+     regular and final price both.
+
+     `cats` are Magento category UIDs, not slugs. NDQ= is Nicotine
+     Pouches; the gum and lozenge categories are deliberately left out
+     because a per-pouch price is meaningless for gum.
+
+     perPack 15 is ZYN and Rogue's can count, which is most of the
+     volume — VELO and on! are 20, and packOf() reads an explicit count
+     off the title when the store states one.
+
+     TO EARN ON THIS: set cjPid (your CJ publisher id) and cjAid (the
+     per-advertiser link id) from the CJ dashboard. Until both are set
+     the links still work but pay nothing, and the refresh report says
+     so in capitals. */
+  { key:'nicokick', name:'Nicokick', dept:'pouch', domain:'nicokick.com',
+    network:'cj', cjPid:'', cjAid:'', ref:'',
+    ships:['US'], platform:'magento', perPack:15, currency:'USD',
+    from:'US', days:'2–5 days', ageCheck:'id', featured:1,
+    cats:['NDQ='],
+    deptMap:{ 'NDQ=':'pouch' } },
+
   /* DENMARK ONLY. Their terms say it outright — "Vi leverer ikke til
      udlandet", including the Faroes and Greenland — while their
      checkout still renders a ~30-country dropdown. We were showing
@@ -400,14 +437,37 @@ function sizeImage(src, w = 500) {
   return src + (src.includes('?') ? '&' : '?') + 'width=' + w
 }
 
-/* No ref yet (EightVape is scraping while its AWIN application sits in
-   the queue) means no ?ref= at all. Appending an empty param is worse
-   than omitting it: some carts treat ref= as an explicit empty
-   attribution and clear a cookie set earlier in the session. */
+/* Three networks, three link shapes. Getting this wrong fails SILENTLY —
+   the link works, the customer buys, and the commission is zero.
+
+     GoAffPro / direct   ?ref=<code> appended to the product URL
+     AWIN feeds          the feed's aw_deep_link IS the tracked link,
+                         so nothing is appended (ref stays empty)
+     CJ Affiliate        the destination is WRAPPED, not appended:
+                         anrdoezrs.net/click-<PID>-<AID>?url=<encoded>
+
+   CJ is the odd one out and the reason this is a function rather than
+   a string concat. cjPid is your publisher id, cjAid is the per-
+   advertiser link id — both from the CJ dashboard. With either missing
+   we return the bare URL, and scrapeStore() flags the store as
+   unattributed in the refresh report rather than pretending. */
 function buildAff(st, url) {
   const base = url || `https://${st.domain}/`
+  if (st.network === 'cj') {
+    if (!st.cjPid || !st.cjAid) return base
+    return `https://www.anrdoezrs.net/click-${st.cjPid}-${st.cjAid}` +
+           `?url=${encodeURIComponent(base)}&sid=nicotia`
+  }
   if (!st.ref) return base
   return base + (base.includes('?') ? '&' : '?') + 'ref=' + st.ref
+}
+
+/* Does this store actually earn on a click? Used by the refresh report
+   so an unattributed store can never quietly sit in production. */
+function isAttributed(st, door) {
+  if (st.network === 'cj') return !!(st.cjPid && st.cjAid)
+  if (st.platform === 'feedcsv') return door === 'csv feed'
+  return !!st.ref
 }
 
 /* Rows are built full and serialised slim. JSON.stringify omits
@@ -834,6 +894,118 @@ async function wooCategoryWalk(st) {
 }
 
 /* ============================================================
+   MAGENTO 2 — public GraphQL
+   ------------------------------------------------------------
+   Magento 2 ships a GraphQL endpoint at /graphql that is public by
+   design: the storefront itself runs on it. That makes it the cleanest
+   door of any platform here — real pagination, real stock status,
+   regular AND final price, and the category tree to route departments.
+
+   Nicokick runs this, and it is how the site finally gets US pouches.
+   ZYN, on!, VELO and Rogue are owned by Swedish Match, Altria, BAT and
+   Turning Point, none of which run affiliate programmes — so the only
+   way to reach that inventory is through a retailer who does.
+
+   Note Magento's filter quirk: `price:{from:"0"}` matches NOTHING, so
+   filtering by category_uid is the reliable way to walk a catalogue.
+   ============================================================ */
+/* Brand decides the card. Items with no variant group BY BRAND, so a
+   miss here scatters a range into loose cards instead of one ZYN card
+   with 54 flavours in the dropdown.
+
+   Magento tags a product with every category it appears in, mixing
+   merchandising buckets ("Offers", "Advent"), flavour shelves ("Mint",
+   "Citrus") and the actual brand. Strip the first two and the most
+   specific survivor is the brand; if nothing survives, the leading
+   token of the title is — Nicokick titles all start with it.
+   Measured across all 409 pouches: 17 brands, 100% assigned. */
+const MAGENTO_GENERIC = /nicotine pouch|nicokick|offers?|acquisition|learn more|explore |powerstep|christmas|advent|metal nicotine|alternative nicotine|limited|mixpack|all products|all-non|bestseller|multipack|specials|better together|shop|^new$|^sale$/i
+const MAGENTO_FLAVOUR = /^(mint|wintergreen|spearmint|peppermint|menthol|citrus|coffee|berry|fruits?|flavou?rs?|cinnamon|apple|cherry|mango|melon|tropical|vanilla|smooth|bold|cool|ice|unflavou?red|sweet|sour)$/i
+
+/* The only brands here that are genuinely two words. Everything else is
+   one, so a blind "take two capitalised tokens" turns "FRE Wintergreen
+   9mg" into its own brand and splits FRE's 58 products across cards. */
+const MULTIWORD_BRAND = /^(juice head|zeo universe|white fox|killa switch)/i
+
+function magentoBrand(p) {
+  const cats = (p.categories || []).map(c => String(c.name || '').trim())
+    .filter(n => n && !MAGENTO_GENERIC.test(n) && !MAGENTO_FLAVOUR.test(n))
+  if (cats.length) return cats.reduce((a, b) => (b.length < a.length ? b : a))
+  const name = String(p.name || '').trim()
+  const multi = name.match(MULTIWORD_BRAND)
+  if (multi) return multi[0]
+  const m = name.match(/^([A-Za-z][\w'!-]*)/)
+  return m ? m[1] : ''
+}
+
+async function magentoGraphql(st) {
+  const cats = st.cats && st.cats.length ? st.cats : []
+  if (!cats.length) throw new Error('magento needs cats (category uids)')
+
+  const suffix = st.urlSuffix === undefined ? '' : st.urlSuffix
+  const out = []
+  const seen = new Set()
+
+  const query = (uid, page) => `{products(filter:{category_uid:{eq:"${uid}"}},pageSize:100,currentPage:${page}){
+    total_count
+    items{
+      name sku url_key stock_status
+      price_range{minimum_price{final_price{value currency} regular_price{value}}}
+      image{url}
+      categories{name url_key}
+    }
+  }}`
+
+  for (const uid of cats) {
+    const dept = (st.deptMap && st.deptMap[uid]) || st.dept
+    for (let page = 1; page <= 12; page++) {
+      if (outOfTime(4000)) break
+      let res
+      try {
+        res = await fetch(`https://${st.domain}/graphql`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'User-Agent': UA },
+          body: JSON.stringify({ query: query(uid, page) }),
+        })
+      } catch { break }
+      if (!res.ok) break
+      let j
+      try { j = await res.json() } catch { break }
+      if (j.errors && j.errors.length && !j.data) {
+        throw new Error('graphql: ' + j.errors[0].message)
+      }
+      const items = j.data?.products?.items || []
+      if (!items.length) break
+
+      for (const p of items) {
+        if (!p.url_key || seen.has(p.sku || p.url_key)) continue
+        seen.add(p.sku || p.url_key)
+        const min = p.price_range?.minimum_price
+        const price = min?.final_price?.value
+        const reg = min?.regular_price?.value
+        out.push(row(st, {
+          brand: magentoBrand(p),
+          title: p.name,
+          dept,
+          tags: (p.categories || []).map(c => c.name).join(' '),
+          price: price != null ? String(price) : '',
+          /* only a discount when regular actually exceeds final */
+          compareAt: reg != null && price != null && reg > price ? String(reg) : '',
+          available: p.stock_status !== 'OUT_OF_STOCK',
+          image: p.image?.url || '',
+          url: `https://${st.domain}/${p.url_key}${suffix}`,
+          currency: min?.final_price?.currency || st.currency || 'USD',
+          vid: p.sku,
+        }))
+      }
+      if (items.length < 100) break
+    }
+  }
+  if (!out.length) throw new Error('magento graphql returned no products')
+  return out
+}
+
+/* ============================================================
    CSV PRODUCT FEEDS (AWIN and anything else that serves a CSV)
    ------------------------------------------------------------
    A feed is strictly better than scraping: no WAF, no rate limit, no
@@ -1011,6 +1183,7 @@ const LADDERS = {
   shopify: [['products.json', shopifyProducts], ['collections', shopifyCollection], ['json-ld', jsonLd]],
   woocommerce: [['woo store api', wooStoreApi], ['woo categories', wooCategoryWalk], ['json-ld', jsonLd]],
   bigcommerce: [['json-ld', jsonLd]],
+  magento: [['magento graphql', magentoGraphql], ['json-ld', jsonLd]],
   /* A feed store still gets a scrape fallback: if the key is missing or
      AWIN has the feed offline, the storefront is better than nothing. */
   feedcsv: [['csv feed', feedCsv], ['products.json', shopifyProducts],
@@ -1049,10 +1222,11 @@ async function scrapeStore(st) {
            unattributed. That is worse than not carrying the store,
            and it is invisible from the front end — so say it loudly in
            the refresh report where it will actually be read. */
-        const attributed = !!st.ref || door === 'csv feed'
         let detail = `via ${door} (${inStock}/${items.length} in stock)`
-        if (!attributed) {
-          detail += st.feedId === 0
+        if (!isAttributed(st, door)) {
+          detail += st.network === 'cj'
+            ? '  [NO ATTRIBUTION — set cjPid and cjAid from the CJ dashboard or these clicks pay nothing]'
+            : st.feedId === 0
             ? '  [NO ATTRIBUTION — feedId is still 0; set it and AWIN_API_KEY or these clicks pay nothing]'
             : '  [NO ATTRIBUTION — no ref and no feed; these clicks pay nothing]'
         }

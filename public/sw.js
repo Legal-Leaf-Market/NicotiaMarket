@@ -66,6 +66,16 @@ self.addEventListener('fetch', function (e) {
   /* Live pricing stays live. See the note at the top. */
   if (url.pathname.indexOf('/api/') === 0) return;
 
+  /* Vercel's own edge routes — analytics and speed insights — are served
+     from /_vercel/*. The insights script is a same-origin GET, so
+     without this it would fall into the cache-first branch below and be
+     frozen at whatever version was current the day a visitor first
+     loaded the site: measurement that silently stops matching what
+     Vercel expects, which is worse than no measurement. Beacons are
+     POSTs and already skipped above, but the whole prefix is excluded so
+     nothing here is ever served from a cache. */
+  if (url.pathname.indexOf('/_vercel/') === 0) return;
+
   /* Navigations: network first, so a deploy is picked up on the next
      open rather than after a cache expiry, with the cached shell as the
      offline fallback. Department routes all resolve to the same

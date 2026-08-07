@@ -118,5 +118,12 @@
   });
 })();
 </script>
+
+<!-- Same analytics tags as the market — this page is the only route to
+     the app, so its traffic is exactly what is worth measuring. -->
+<script>
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

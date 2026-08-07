@@ -351,5 +351,23 @@
 
 <script src="/js/config.js"></script>
 <script src="/js/app.js"></script>
+
+<!-- VERCEL WEB ANALYTICS.
+     Vercel's dashboard hands out `import { Analytics } from
+     "@vercel/analytics/next"` because it assumes Next.js. This repo has
+     framework:null, no bundler and no node_modules by design (§2), so an
+     import statement has nothing to resolve it and adding the package
+     would mean adding the build step CLAUDE.md exists to prevent.
+
+     The no-framework form is these two tags. Enabling Analytics makes
+     Vercel serve /_vercel/insights/* from the edge, so there is nothing
+     to install. The first tag queues any event fired before the script
+     lands; the second is ~1.1kb, deferred.
+
+     Cookieless, so it needs no consent banner. -->
+<script>
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

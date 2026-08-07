@@ -1021,8 +1021,23 @@ var ALL=[],PGROUPS=[],VIEW=[],PAGE=0,PER=24,GROUPS={},BOARD={};
 var CONN='',META=[],SRC={live:0,seeded:0},UPDATED=null;
 var BESTUNIT={};   /* dept -> cheapest unit value ON THE SITE, in USD */
 
-var F={q:'',dept:'all',sub:'all',store:'all',brand:'all',strength:'all',price:'all',
-       sort:'unit',deals:false,instock:false,stores:{},brands:{}};
+/* `subs` is a SET, keyed "dept/sub", not a single value. Multi-select
+   because that is what a facet is, and department-qualified because the
+   keys collide otherwise: `pipe` is both pipe tobacco and pipe
+   accessories, `accessory` is both a device part and a cigar tool. */
+var F={q:'',dept:'all',subs:{},store:'all',brand:'all',strength:'all',price:'all',
+       sort:'unit',deals:false,stores:{},brands:{}};
+
+/* A subcategory chosen on one shelf is meaningless on another, so
+   switching department keeps only the keys that still belong. */
+function pruneSubs(dept){
+  if(dept==='all') return F.subs;
+  var out={};
+  Object.keys(F.subs).forEach(function(k){
+    if(k.indexOf(dept+'/')===0) out[k]=1;
+  });
+  return out;
+}
 
 /* The gold unit chip means "cheapest on the whole site for this
    department", not "cheapest of this brand" and not "cheapest in this
@@ -1196,7 +1211,10 @@ function card(g){
 function variantPasses(g,v,skip,q,st){
   if(!SHOW_ALL && !itemReaches(v)) return false;
   if(!SHOW_ALL && snusBlocked() && isTobaccoSnus(v)) return false;
-  if(skip!=='instock' && F.instock && !v.available) return false;
+  /* The "Ships today" toggle is gone — it filtered on `available`, which
+     is a stock flag and not a dispatch promise, so it was answering a
+     question it could not actually answer. Out-of-stock rows still carry
+     their own badge on the card. */
   if(skip!=='deals' && F.deals &&
      !(v.compareAt&&Number(v.compareAt)>Number(v.price))) return false;
   if(skip!=='price' && F.price && F.price!=='all'){
@@ -1224,9 +1242,13 @@ function passes(g,skip){
     if(legalFor(deptOf(g))[0]==='banned') return null;
   }
   if(skip!=='dept' && F.dept!=='all' && deptOf(g)!==F.dept) return null;
-  /* only ever narrows within a chosen department; the chip row is not
-     rendered on the combined shelf, where a "Coils" chip would be noise */
-  if(skip!=='sub' && F.dept!=='all' && F.sub!=='all' && subOf(gitem(g))!==F.sub) return null;
+  /* Sitewide now: the chips work on the combined shelf as well as inside
+     a department, so you can hold "Coils" and "Nic salts" at once
+     without first choosing a shelf. Empty set means no constraint. */
+  if(skip!=='sub'){
+    var ps2=Object.keys(F.subs);
+    if(ps2.length && !F.subs[deptOf(g)+'/'+subOf(gitem(g))]) return null;
+  }
   if(skip!=='store'){
     var ps=Object.keys(F.stores);
     if(ps.length){ if(!F.stores[g.key]) return null; }
@@ -1360,9 +1382,10 @@ function apply(reset){
     ' <em>'+nProd.toLocaleString()+' buyable options · '+
     Object.keys(live).length+' store'+(Object.keys(live).length===1?'':'s')+'</em>';
 
-  var on=F.q||F.dept!=='all'||F.store!=='all'||F.deals||F.instock||
+  var on=F.q||F.dept!=='all'||F.store!=='all'||F.deals||
     (F.strength&&F.strength!=='all')||(F.price&&F.price!=='all')||
     (F.brand&&F.brand!=='all')||
+    Object.keys(F.subs).length||
     Object.keys(F.stores).length||Object.keys(F.brands).length;
   document.getElementById('clear').hidden=!on;
 
@@ -1438,24 +1461,44 @@ function renderSubnav(){
   /* clear as well as hide — otherwise the previous shelf's chips stay in
      the DOM and reappear for an instant the next time the row is shown */
   var off=function(){ nav.hidden=true; box.innerHTML=''; };
-  if(F.dept==='all'){ off(); return; }
 
-  var counts={}, total=0;
+  /* Counted with the sub facet itself lifted — passes(g,'sub') — so
+     selecting one chip does not zero every other chip and strand you
+     with no way back except Clear. */
+  var counts={};
   PGROUPS.forEach(function(g){
     if(!passes(g,'sub')) return;
     var s=subOf(gitem(g)); if(!s) return;
-    counts[s]=(counts[s]||0)+1; total++;
+    var k=deptOf(g)+'/'+s;
+    counts[k]=(counts[k]||0)+1;
   });
-  var live=(SUBS[F.dept]||[]).filter(function(p){ return counts[p[0]]; });
+
+  /* Department order first, then the order within SUBS, so the two
+     shelves the front page argues for lead here too. On a department
+     shelf only that department's chips appear. */
+  var live=[];
+  DEPT_ORDER.forEach(function(d){
+    if(F.dept!=='all' && d!==F.dept) return;
+    (SUBS[d]||[]).forEach(function(p){
+      var k=d+'/'+p[0];
+      if(counts[k]) live.push({key:k,dept:d,label:p[1],n:counts[k]});
+    });
+  });
   if(live.length<2){ off(); return; }
 
+  var active=Object.keys(F.subs).length;
   nav.hidden=false;
   box.innerHTML=
-    '<button class="subchip'+(F.sub==='all'?' on':'')+'" data-sub="all">'+
-      'All <span>'+total+'</span></button>'+
-    live.map(function(p){
-      return '<button class="subchip'+(F.sub===p[0]?' on':'')+'" data-sub="'+esc(p[0])+'">'+
-        esc(p[1])+' <span>'+counts[p[0]]+'</span></button>';
+    (active?'<button class="subchip sc-clear" data-subclear="1">&times; Clear '+
+       active+'</button>':'')+
+    live.map(function(x){
+      /* the department hue rides on each chip, which is what makes a flat
+         row of 27 readable — "Coils" and "Snus" are obviously different
+         shelves at a glance rather than two similar words */
+      return '<button class="subchip'+(F.subs[x.key]?' on':'')+
+        '" data-sub="'+esc(x.key)+'" style="--sc:'+
+        esc((DEPTS[x.dept]||{}).accent||'var(--gold)')+'">'+
+        '<i class="scdot"></i>'+esc(x.label)+' <span>'+x.n+'</span></button>';
     }).join('');
 }
 
@@ -1836,7 +1879,7 @@ function syncDeptTabs(){
   });
 }
 window.addEventListener('popstate',function(){
-  F.dept=deptFromPath()||'all'; F.sub='all'; syncDeptTabs(); apply();
+  F.dept=deptFromPath()||'all'; F.subs=pruneSubs(F.dept); syncDeptTabs(); apply();
 });
 
 /* The headline number, and the one most easily made a liar.
@@ -2429,19 +2472,19 @@ document.getElementById('f-sort').addEventListener('change',function(e){
 document.getElementById('f-deals').addEventListener('click',function(){
   F.deals=!F.deals; this.classList.toggle('active',F.deals);
   this.setAttribute('aria-pressed',F.deals); apply();});
-document.getElementById('f-instock').addEventListener('click',function(){
-  F.instock=!F.instock; this.classList.toggle('active',F.instock);
-  this.setAttribute('aria-pressed',F.instock); apply();});
 document.getElementById('depts').addEventListener('click',function(e){
   var b=e.target.closest('.dept'); if(!b||b.tagName==='A') return;
   this.querySelectorAll('.dept').forEach(function(x){x.setAttribute('aria-pressed','false');});
   b.setAttribute('aria-pressed','true'); F.dept=b.getAttribute('data-dept');
-  /* a subcategory from the previous shelf means nothing on this one */
-  F.sub='all';
+  /* keep only the subcategories that still belong to this shelf */
+  F.subs=pruneSubs(F.dept);
   leaveSpotlight(); pushDeptPath(); apply();});
 document.getElementById('subchips').addEventListener('click',function(e){
   var b=e.target.closest('.subchip'); if(!b) return;
-  F.sub=b.getAttribute('data-sub')||'all'; apply();});
+  if(b.getAttribute('data-subclear')){ F.subs={}; apply(); return; }
+  var k=b.getAttribute('data-sub'); if(!k) return;
+  if(F.subs[k]) delete F.subs[k]; else F.subs[k]=1;   /* toggle, multi-select */
+  apply();});
 /* Shuffle only moves the strip — it must NOT run apply(), which would
    reset RAILP to 0 and land you back on the same twelve cards. */
 (function(){
@@ -2451,12 +2494,11 @@ document.getElementById('subchips').addEventListener('click',function(e){
 document.getElementById('clearStores').addEventListener('click',function(){F.stores={};apply();});
 document.getElementById('clearBrands').addEventListener('click',function(){F.brands={};apply();});
 document.getElementById('clear').addEventListener('click',function(){
-  F={q:'',dept:'all',sub:'all',store:'all',brand:'all',strength:'all',price:'all',
-     sort:'unit',deals:false,instock:false,stores:{},brands:{}};
+  F={q:'',dept:'all',subs:{},store:'all',brand:'all',strength:'all',price:'all',
+     sort:'unit',deals:false,stores:{},brands:{}};
   document.getElementById('q').value='';
   document.getElementById('f-sort').value='unit';
   document.getElementById('f-deals').classList.remove('active');
-  document.getElementById('f-instock').classList.remove('active');
   document.querySelectorAll('.dept').forEach(function(x){x.setAttribute('aria-pressed','false');});
   document.querySelector('.dept[data-dept="all"]').setAttribute('aria-pressed','true');
   leaveSpotlight(); pushDeptPath(); apply();});

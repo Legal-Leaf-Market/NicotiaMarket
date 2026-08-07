@@ -266,14 +266,30 @@ header.top{position:sticky;top:0;z-index:50;
 .subnav-in{display:flex;gap:8px;overflow-x:auto;padding:10px 0;
   scrollbar-width:none;-ms-overflow-style:none}
 .subnav-in::-webkit-scrollbar{display:none}
-.subchip{flex:none;cursor:pointer;font-family:var(--sans);font-size:12.5px;font-weight:600;
+.subchip{--sc:var(--gold);
+  flex:none;cursor:pointer;font-family:var(--sans);font-size:12.5px;font-weight:600;
   letter-spacing:.01em;padding:7px 14px;border-radius:999px;white-space:nowrap;
   border:1px solid var(--glass-line);background:var(--chip);color:var(--muted);
   display:inline-flex;align-items:center;gap:7px;transition:color .16s,border-color .16s}
-.subchip:hover{border-color:var(--gold);color:var(--text)}
+.subchip:hover{border-color:var(--sc);color:var(--text)}
 .subchip span{font-size:10.5px;font-weight:700;color:var(--dim)}
-.subchip.on{border-color:var(--gold);background:rgba(240,185,60,.12);color:var(--gold)}
-.subchip.on span{color:var(--gold);opacity:.8}
+/* the shelf this subcategory belongs to, as a dot in that department's
+   own hue. It is what makes a flat row of 27 chips scannable on the
+   combined shelf — "Coils" and "Snus" read as different shelves before
+   you have finished reading either word. */
+.subchip .scdot{width:7px;height:7px;border-radius:50%;background:var(--sc);
+  flex:none;opacity:.85}
+.subchip.on{border-color:var(--sc);color:var(--text);
+  background:color-mix(in srgb, var(--sc) 16%, transparent)}
+/* color-mix is recent; this is the fallback tint for anything older */
+@supports not (background: color-mix(in srgb, red 10%, transparent)){
+  .subchip.on{background:rgba(255,255,255,.08)}
+}
+.subchip.on span{color:var(--text);opacity:.7}
+.subchip.on .scdot{opacity:1;box-shadow:0 0 7px var(--sc)}
+/* clearing is an action, not a facet, so it does not carry a shelf hue */
+.subchip.sc-clear{border-color:rgba(239,83,80,.45);color:var(--red);font-weight:700}
+.subchip.sc-clear:hover{border-color:var(--red);color:var(--red)}
 
 .dept.spot{color:var(--ember);display:inline-flex;align-items:center;gap:6px}
 .dept.spot:hover{color:var(--gold)}

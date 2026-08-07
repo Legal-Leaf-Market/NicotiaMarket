@@ -10,12 +10,12 @@
     "api/products.js": { "maxDuration": 60 }
   },
   "rewrites": [
-    { "source": "/pouches",     "destination": "/index.html" },
-    { "source": "/disposables", "destination": "/index.html" },
-    { "source": "/devices",     "destination": "/index.html" },
-    { "source": "/e-liquid",    "destination": "/index.html" },
-    { "source": "/cigars",      "destination": "/index.html" },
-    { "source": "/gear",        "destination": "/index.html" }
+    { "source": "/pouches",     "destination": "/" },
+    { "source": "/disposables", "destination": "/" },
+    { "source": "/devices",     "destination": "/" },
+    { "source": "/e-liquid",    "destination": "/" },
+    { "source": "/cigars",      "destination": "/" },
+    { "source": "/gear",        "destination": "/" }
   ],
   "redirects": [
     { "source": "/(index.html)", "destination": "/", "permanent": true },

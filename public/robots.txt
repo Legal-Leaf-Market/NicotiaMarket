@@ -1,0 +1,11 @@
+# Nicotia Market — adults 21+ only.
+
+User-agent: *
+Allow: /
+
+# The catalogue endpoint. Nothing secret, but it is a 3,000-row JSON
+# payload that no crawler benefits from and every crawl of it costs a
+# live scrape against a dozen vendor storefronts.
+Disallow: /api/
+
+Sitemap: https://nicotiamarket.com/sitemap.xml

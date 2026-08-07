@@ -7,9 +7,55 @@
 <meta name="description" content="Compare nicotine pouches, snus, disposables, e-liquid and cigars across every store we carry. Priced per pouch, per 1,000 puffs, per ml and per stick. Adults 21+.">
 <meta name="theme-color" content="#0b0f0d">
 <link rel="icon" href="/assets/mark.svg" type="image/svg+xml">
+<!-- Every department route rewrites to this same document, so without a
+     canonical the six of them read as six duplicates of the homepage. -->
+<link rel="canonical" href="https://nicotiamarket.com/">
 <meta property="og:title" content="Nicotia Market — priced by the unit">
 <meta property="og:description" content="Pouches, disposables, e-liquid and cigars from every shop we carry, priced so packs and bundles finally compare honestly.">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://nicotiamarket.com/">
+<meta property="og:site_name" content="Nicotia Market">
+<meta property="og:image" content="https://nicotiamarket.com/assets/mark.svg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Nicotia Market — priced by the unit">
+<meta name="twitter:description" content="Compare pouches, disposables, e-liquid and cigars per pouch, per 1,000 puffs, per ml and per stick.">
+<meta name="rating" content="adult">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://nicotiamarket.com/#website",
+      "url": "https://nicotiamarket.com/",
+      "name": "Nicotia Market",
+      "description": "Nicotine pouches, disposables, e-liquid and cigars compared by unit price across every store we carry.",
+      "inLanguage": "en",
+      "publisher": { "@id": "https://nicotiamarket.com/#org" }
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://nicotiamarket.com/#org",
+      "name": "Nicotia Market",
+      "url": "https://nicotiamarket.com/",
+      "logo": "https://nicotiamarket.com/assets/mark.svg",
+      "sameAs": [
+        "https://legal-leafmarket.com",
+        "https://herballeafmarket.com"
+      ]
+    },
+    {
+      "@type": "CollectionPage",
+      "@id": "https://nicotiamarket.com/#page",
+      "url": "https://nicotiamarket.com/",
+      "name": "Nicotia Market — Pouches, Vape & Cigars, Priced by the Unit",
+      "isPartOf": { "@id": "https://nicotiamarket.com/#website" },
+      "about": "Comparison of nicotine pouches, snus, disposable vapes, devices, e-liquid and cigars by price per unit.",
+      "audience": { "@type": "PeopleAudience", "suggestedMinAge": 21 }
+    }
+  ]
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Same request Herbal-Leaf makes, deliberately: cache hit across sisters. -->
@@ -44,7 +90,11 @@
   <div class="gc">
     <svg class="gmark" viewBox="0 0 60 72"><use href="#leafIcon"></use></svg>
     <p class="eyebrow">Nicotia Market</p>
-    <h1 id="gt">Are you <em>21</em><br>or older?</h1>
+    <!-- Deliberately a paragraph, not a top-level heading. The gate is
+         the first thing in the document, so a heading here becomes the
+         page's primary one and a crawler reads the site as being about
+         being 21. It keeps its id so aria-labelledby still points at it. -->
+    <p class="gtitle" id="gt">Are you <em>21</em><br>or older?</p>
     <p id="gsub">This site sells tobacco and vapour products for adults 21 and over who already use them. It is not for anyone under 21, and not for people who don't currently use tobacco or nicotine.</p>
 
     <div class="glocwrap">

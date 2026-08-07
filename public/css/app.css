@@ -59,9 +59,10 @@ button{font-family:inherit}
   border:1px solid var(--glass-line);border-radius:var(--r-lg);padding:34px 30px;
   backdrop-filter:blur(14px);box-shadow:var(--shadow)}
 .gc .gmark{width:44px;height:53px;margin:0 auto 14px;display:block}
-.gc h1{font-family:var(--display);font-weight:900;font-size:clamp(30px,6vw,46px);
-  line-height:.98;letter-spacing:-.02em;margin:0 0 10px}
-.gc h1 em{font-family:var(--script);font-style:italic;font-weight:600;color:var(--ember)}
+/* .gtitle, not h1 — see the note in index.html. Styled identically. */
+.gc .gtitle{font-family:var(--display);font-weight:900;font-size:clamp(30px,6vw,46px);
+  line-height:.98;letter-spacing:-.02em;margin:0 0 10px;color:var(--text)}
+.gc .gtitle em{font-family:var(--script);font-style:italic;font-weight:600;color:var(--ember)}
 .gc p{color:var(--muted);font-size:14.5px;margin:0 0 8px}
 .glocwrap{margin:22px 0 0;text-align:left}
 .ghint{font-size:12px;line-height:1.6;color:var(--dim);margin:8px 0 0}

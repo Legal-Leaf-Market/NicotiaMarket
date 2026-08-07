@@ -449,6 +449,23 @@ function packOf(it){
 
 function plural(n,noun){ return n+' '+noun+(n===1?'':'s'); }
 
+/* Minimum order quantity, straight out of the title.
+   The checkout audit found Snus O'Clock rejecting hand-offs with
+   "Quantity must be in increments of Multiple of 10", and I recorded
+   that as unfixable without per-product data no endpoint exposes. It
+   turned out the store states it in plain English:
+
+     "ZVOL Citrus Lemon 6mg (minimum 10 cans)"
+     "SUPREME 25mg/g (discounted batch) minimum 10 cans"
+
+   So parse it, send that quantity, and say so on the card. Sending 1
+   against a 10-can minimum is what produced the dead-end checkout. */
+function minQtyOf(text){
+  var m=String(text||'').match(/\bmin(?:imum)?\.?\s*(\d{1,3})\s*(?:cans?|tins?|pcs?|units?|pack)?\b/i);
+  if(m){ var n=Number(m[1]); if(n>1&&n<=500) return n; }
+  return 1;
+}
+
 /* The dropdown string. One shape per department, always in the same
    order, so a shopper scanning options compares like with like. */
 function optionLabel(it){
@@ -1417,9 +1434,12 @@ function addParams(url, params){
 
    This is per STORE, not per product, so only set it where the rule
    genuinely applies to the whole catalogue. Left unset it is a no-op. */
-function stepQty(st, q){
-  var step=Number(st.qtyStep)||1;
-  if(step<2) return q;
+function stepQty(st, q, item){
+  /* A per-product minimum stated in the title beats any store-wide
+     rule, because it IS the store's rule for that product. */
+  var min=item?minQtyOf(item.title):1;
+  var step=Number(st.qtyStep)||min||1;
+  if(step<2) return Math.max(q,min);
   return Math.max(step, Math.ceil(q/step)*step);
 }
 
@@ -1427,7 +1447,7 @@ function checkoutUrl(st, items){
   var base='https://'+st.domain;
   if(st.platform==='shopify'){
     var parts=items.filter(function(x){return x.vid;})
-                   .map(function(x){return encodeURIComponent(x.vid)+':'+stepQty(st,x.qty);});
+                   .map(function(x){return encodeURIComponent(x.vid)+':'+stepQty(st,x.qty,x);});
     /* The cart permalink jumps straight to /cart, skipping any product
        page — so the affiliate cookie was never set on the way through
        and Shopify handoffs were tracking to nobody. ?ref= rides along
@@ -1451,10 +1471,10 @@ function checkoutUrl(st, items){
     var url;
     if(x.pid){
       url=addParams(base+path,{'add-to-cart':x.pid, variation_id:x.vid,
-                               quantity:stepQty(st,x.qty), ref:st.ref});
+                               quantity:stepQty(st,x.qty,x), ref:st.ref});
       if(x.attrs) url+='&'+x.attrs;      /* already url-encoded by the store */
     }else{
-      url=addParams(base+path,{'add-to-cart':x.vid, quantity:stepQty(st,x.qty), ref:st.ref});
+      url=addParams(base+path,{'add-to-cart':x.vid, quantity:stepQty(st,x.qty,x), ref:st.ref});
     }
     return url;
   }
@@ -1826,6 +1846,11 @@ function ingest(items){
   computeBestUnits();
   var sl=document.getElementById('spotLink');
   if(sl) sl.hidden = !ALL.some(function(i){return SPOTLIGHT[i.key];});
+  /* The cart renders on boot, before the API has returned, so SMAP is
+     still the inline fallback and any store missing from it fell back
+     to showing its KEY — "Checkout at eightvape" rather than
+     "EightVape". Re-render now that the real registry is in. */
+  renderCart(); badges();
   facets(); heroStats(); stamp(); route();
 }
 function facets(){ refreshFacets(); renderStoreList(); }
@@ -1937,45 +1962,33 @@ function mergeDept(res){
   ingest(ALL);
 }
 
+/* ONE request. This used to fan out into ?summary plus six ?dept=
+   calls in parallel, which was an outage waiting to happen and duly
+   became one:
+
+     - each is a DIFFERENT URL, so each is its own CDN cache entry
+     - each misses the per-instance in-memory cache
+     - so each kicks off a full scrape of every store
+
+   Seven concurrent full scrapes, none of which finish inside the
+   budget, and the page spins forever. Fetching a single URL means one
+   CDN entry and one scrape per s-maxage window, so only the first
+   visitor in ten minutes ever waits.
+
+   The real fix is a SHARED cache (Vercel KV, like Legal-Leaf's
+   overrides) so no visitor pays for a scrape at all — see CLAUDE.md.
+   Until then, one request is the honest trade: slower first paint,
+   but a page that actually loads. The slim row shape is what was
+   carrying the payload win anyway, not the fan-out. */
 function loadCatalogue(){
   var refresh = location.search.indexOf('refresh')>-1;
-  var q = function(extra){
-    return API_URL+'?'+extra+(refresh?'&refresh':'');
-  };
-  var asJson = function(r){
-    if(!r.ok) throw new Error('API returned HTTP '+r.status);
-    return r.json();
-  };
-
-  fetch(q('summary'),{redirect:'follow'}).then(asJson).then(function(sum){
-    if(sum.ok===false){ failed(sum.error||'Unknown error'); return; }
-    if(sum.stores && sum.stores.length){
-      STORES=sum.stores; SMAP={}; STORES.forEach(function(s){ SMAP[s.key]=s; });
-    }
-    META=sum.meta||[]; UPDATED=sum.updated||null; BYDEPT=sum.byDept||{};
-    renderStoreList(); stamp();
-
-    /* the open shelf first, then the rest by size — biggest last, so
-       the small departments are interactive while EightVape streams */
-    var order=DEPT_ORDER.filter(function(d){ return BYDEPT[d]; })
-      .sort(function(a,b){
-        if(a===F.dept) return -1; if(b===F.dept) return 1;
-        return (BYDEPT[a]||0)-(BYDEPT[b]||0);
-      });
-    if(!order.length){ CONN='API reached OK but returned no products.'; apply(); return; }
-
-    order.forEach(function(d){
-      fetch(q('dept='+encodeURIComponent(d)),{redirect:'follow'})
-        .then(asJson).then(mergeDept)
-        .catch(function(e){ CONN='Some departments failed to load: '+e.message; });
-    });
-  }).catch(function(e){
-    /* Manifest unavailable — fall back to the single full payload so an
-       older or simpler deployment still works. */
-    fetch(API_URL+(refresh?'?refresh':''),{redirect:'follow'})
-      .then(asJson).then(received)
-      .catch(function(){ failed(e.message||'Network error'); });
-  });
+  fetch(API_URL+(refresh?'?refresh':''),{redirect:'follow'})
+    .then(function(r){
+      if(!r.ok) throw new Error('API returned HTTP '+r.status);
+      return r.json();
+    })
+    .then(received)
+    .catch(function(e){ failed(e.message||'Network error'); });
 }
 
 /* boot */

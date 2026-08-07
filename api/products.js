@@ -415,11 +415,29 @@ function guessPuffs(text) {
    product's own signals win and the store's dept is only a fallback. */
 function classify(st, blob) {
   const t = String(blob || '').toLowerCase()
+  /* UNAMBIGUOUS CIGAR WORDS GO FIRST, because the pouch rule below
+     matches the bare word "pouches" — and that matches PACKAGING, not
+     product. Cigarillos ship in resealable foil pouches, so BnB
+     Tobacco's "Good Times Diamond Cigarillos", whose own description
+     mentions its pouch, classified as a nicotine pouch, was then priced
+     against the 20-per-can default, and $11.99 became $0.013 per pouch
+     — the cheapest pouch on the site, and the number in the homepage
+     headline.
+
+     It could not even correct itself further down: \bcigar\b never
+     matched "cigarillo", because the trailing boundary fails on the
+     "illo". Fixed in the cigar rule below too.
+
+     Only words a nicotine pouch would never carry are listed here.
+     "cigar" itself is NOT one of them — pouch marketing copy says
+     "alternative to cigarettes and cigars" often enough to matter — so
+     it stays in the later, lower-priority rule. */
+  if (/\b(cigarillos?|robustos?|churchill|maduro|belicoso|torpedo)\b/.test(t)) return 'cigar'
   if (/\b(nicotine pouch|snus|pouches|lozenge|mint chew)\b/.test(t)) return 'pouch'
   if (/\b(disposable|puffs?|\d{1,3}k\b)/.test(t) && !/coil|tank|replacement pod/.test(t)) return 'disposable'
   if (/\b(e-?liquid|vape juice|shortfill|\d+\s*ml)\b/.test(t) && !/disposable/.test(t)) return 'liquid'
   if (/\b(humidor|cutter|lighter|ashtray|case|grinder|torch|hygrometer)\b/.test(t)) return 'gear'
-  if (/\b(cigar|robusto|toro|churchill|maduro)\b/.test(t)) return 'cigar'
+  if (/\b(cigars?|cigarillos?|robustos?|toro|churchill|maduro)\b/.test(t)) return 'cigar'
   if (/\b(coil|tank|mod|pod kit|atomiser|atomizer|battery|charger)\b/.test(t)) return 'device'
   return st.dept
 }

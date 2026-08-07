@@ -152,16 +152,28 @@ var STORES = [
   {key:'relxuk',name:'RELX UK',dept:'device',domain:'www.relxvape.co.uk',
    ref:'nicotinebaby',ships:['UK'],platform:'shopify',
    from:'GB',days:'2–4 days',ageCheck:'dob'},
+  {key:'relxglobal',name:'RELX',dept:'device',domain:'relxnow.com',
+   ref:'',ships:['US','INTL'],guess:1,platform:'feedcsv',from:'CN',ageCheck:'dob'},
+
+  /* --- e-liquid --- */
+  {key:'fruitia',name:'FRUITIA',dept:'liquid',domain:'fruitia.shop',
+   ref:'',ships:['US'],guess:1,platform:'feedcsv',from:'US'},
+  {key:'kindjuice',name:'Kind Juice',dept:'liquid',domain:'www.kindjuice.com',
+   ref:'',ships:['US'],guess:1,platform:'feedcsv',from:'US'},
 
   /* --- cigars --- */
   {key:'montero',name:'Montero Cigars',dept:'cigar',domain:'monterocigars.com',
    ref:'nicotinebaby',ships:['US'],guess:1,platform:'shopify',
    from:'US',days:'2–5 days',ageCheck:'id'},
+  {key:'bnbtobacco',name:'BnB Tobacco',dept:'cigar',domain:'www.bnbtobacco.com',
+   ref:'',ships:['US'],guess:1,platform:'feedcsv',from:'US'},
 
   /* --- gear --- */
   {key:'xifei',name:'XIFEI',dept:'gear',domain:'xifeicigaraccessory.com',
    ref:'nicotinebaby',ships:['US','INTL'],guess:1,platform:'shopify',
-   from:'CN',days:'3–7 US / 15–30 intl',ageCheck:'none'}
+   from:'CN',days:'3–7 US / 15–30 intl',ageCheck:'none'},
+  {key:'humidors',name:'1st Class Humidors',dept:'gear',domain:'www.1stclasshumidors.com',
+   ref:'',ships:['US'],guess:1,platform:'feedcsv',from:'US'}
 ];
 var SMAP = {};
 STORES.forEach(function(s){ SMAP[s.key]=s; });
@@ -578,9 +590,20 @@ function packOf(it){
      Spearmint 20mg" is one can at 20mg, not twenty of anything, and
      "13.50mg" must not surface a 50. Strip every mg/ml/puff token
      before looking for a count. */
+  /* A MINIMUM ORDER QUANTITY IS NOT A PACK SIZE. Snus O'Clock states
+     theirs in the title — "ZVOL Citrus Lemon 6mg (minimum 10 cans)" —
+     and PACK_RE's "N cans" rule read that 10 as ten cans in the box.
+     The row is ONE can you are obliged to buy ten of, so £0.50 was
+     divided by 200 pouches instead of 20: £0.0025, which is the
+     £0.003 the homepage was headlining while this store's own shelf
+     showed £0.03. Strip it, and the two agree.
+
+     minQtyOf() below already reads this exact phrase for the checkout
+     hand-off. Two readers, one string — they must not disagree. */
   var safe=text.replace(/\d+(?:\.\d+)?\s*(?:mg|ml|mah)\b/gi,' ')
                .replace(/\b\d{1,3}k\b/gi,' ')
-               .replace(/\b\d{3,7}\s*\+?\s*puffs?\b/gi,' ');
+               .replace(/\b\d{3,7}\s*\+?\s*puffs?\b/gi,' ')
+               .replace(/\bmin(?:imum)?\.?\s*\d{1,3}\s*(?:cans?|tins?|pcs?|units?|packs?)?/gi,' ');
   var n=null;
   for(var i=0;i<PACK_RE.length;i++){
     var m=safe.match(PACK_RE[i]);

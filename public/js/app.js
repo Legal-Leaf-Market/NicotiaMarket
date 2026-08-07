@@ -1765,7 +1765,11 @@ function reachNotice(){
   bits.push('<b>'+nHere+' of '+nAll+' stores</b> deliver to '+esc(where));
   bits.push(reach.toLocaleString()+' of '+PGROUPS.length.toLocaleString()+' listings can reach you');
   var bl=Object.keys(banned).map(function(d){ return (DEPTS[d]||{}).label||d; });
-  if(bl.length) bits.push('<b>'+esc(bl.join(' and '))+'</b> cannot be sold where you are');
+  if(bl.length){
+    /* "A and B and C" reads like a stutter; commas until the last one */
+    var list=bl.length>1 ? bl.slice(0,-1).join(', ')+' and '+bl[bl.length-1] : bl[0];
+    bits.push('<b>'+esc(list)+'</b> cannot be sold where you are');
+  }
 
   return '<div class="reachbar">'+bits.join(' · ')+
     ' <button type="button" class="reachbtn" data-shipto>Change destination</button></div>';

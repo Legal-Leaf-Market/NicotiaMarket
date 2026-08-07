@@ -209,9 +209,36 @@ function legalFor(dept){
   return c[LEGAL_CLASS[dept]||'gear']||['ok'];
 }
 function storeShipsHere(st){
-  if(!st||!st.ships||!st.ships.length) return true;
+  if(!st) return true;
+  /* A store can be narrower than its zone. NikoPouches sits in the EU
+     zone but its own terms say Denmark only — "Vi leverer ikke til
+     udlandet" — while its checkout still offers a 30-country dropdown.
+     We were showing it to every EU shopper, which is an order that
+     cannot be fulfilled. `only` is checked BEFORE the zone. */
+  if(st.only && st.only.length) return st.only.indexOf(LOC.country)>-1;
+  if(!st.ships||!st.ships.length) return true;
   var z=zoneOf();
   return st.ships.indexOf(z)>-1 || st.ships.indexOf('INTL')>-1;
+}
+
+/* How this store verifies age at ITS OWN checkout. Nicotia's gate is
+   ours; this is theirs, and they range from a real identity check to
+   nothing at all. Aggregating ten vendors behind ten identical Buy
+   buttons implies they are interchangeable on this, and they are not —
+   so say which is which, at the point the shopper is about to leave. */
+var AGE_CHECK={
+  id:       {label:'Verifies ID',        tone:'good',
+             detail:'This store checks a government ID or verified identity before it ships.'},
+  signature:{label:'Adult signature',    tone:'good',
+             detail:'An adult signature and ID are required at the door.'},
+  dob:      {label:'Asks date of birth', tone:'soft',
+             detail:'This store asks you to state your age. It is not verified.'},
+  none:     {label:'No age check',       tone:'warn',
+             detail:'This store publishes no age verification at its checkout.'}
+};
+function ageBadge(st){
+  var a=AGE_CHECK[st&&st.ageCheck]; if(!a) return '';
+  return '<span class="agechip '+a.tone+'" title="'+esc(a.detail)+'">'+esc(a.label)+'</span>';
 }
 function itemReaches(v){
   if(!v || !v.markets) return true;
@@ -1518,7 +1545,14 @@ function renderCart(){
 
     var auto=(st.platform==='shopify');
     var multiWoo=(st.platform==='woocommerce'&&items.length>1);
+    /* Everything the shopper needs to judge this hand-off, immediately
+       above the button that performs it: who checks age, where it ships
+       from, and how long it takes. */
+    var facts=[ageBadge(st)];
+    if(st.days) facts.push('<span class="shipchip">'+esc(st.days)+'</span>');
+    if(st.from&&st.from!=='US') facts.push('<span class="shipchip">Ships from '+esc(st.from)+'</span>');
     html+='<div class="dgroup"><h3>'+esc(st.name)+'</h3>'+rows+bd+
+      '<div class="dfacts">'+facts.filter(Boolean).join('')+'</div>'+
       '<button class="dcheckout" data-checkout="'+esc(sk)+'">Checkout at '+
         esc(st.name)+' →</button>'+
       '<p class="dnote">'+(multiWoo

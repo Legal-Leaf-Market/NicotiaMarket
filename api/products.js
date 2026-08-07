@@ -24,23 +24,58 @@ const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' +
 /* ============================================================
    THE REGISTRY — the only thing you routinely edit.
    Lives server-side so commission notes never reach a browser.
-     ref     the affiliate code that store issued you
-     ships   US | UK | EU | INTL   (INTL means anywhere)
-     guess   1 = inferred, not verified against their shipping policy
-     perPack pouches per can, for the per-pouch price
-     cartPath Woo carts are not all at /cart/ — see Wave Vape
+
+     ref       the affiliate code that store issued you
+     ships     US | UK | EU | INTL   (INTL means anywhere)
+     only      ISO country codes, when the store is narrower than its
+               zone. NikoPouches sits in the EU zone but publishes
+               Denmark-only delivery, so only:['DK'].
+     guess     1 = inferred, NOT read off their shipping policy
+     perPack   pouches per can, for the per-pouch price
+     cartPath  Woo carts are not all at /cart/ — see Wave Vape
+     from      where it physically ships from, which sets the wait
+     days      published delivery window, shown before the hand-off
+     ageCheck  how the STORE verifies age at its own checkout:
+                 id        government ID / verified identity service
+                 signature adult signature required at the door
+                 dob       self-declared date of birth
+                 none      nothing published
+               Surfaced in the cart. A shopper handing money to ten
+               different vendors should be told which of them actually
+               check, rather than being shown ten identical Buy buttons.
+
+   `ships`, `only`, `from`, `days` and `ageCheck` below were read off
+   each vendor's own published policy in Aug 2026. Re-check quarterly.
    ============================================================ */
 export const STORES = [
   /* --- pouches & snus --- */
   /* `currency` pins what the store actually charges in. It is fetched
      from /meta.json when absent, but pinning the known ones means a
      blocked meta.json can never silently relabel £4.45 as $4.45. */
+  /* Ships internationally with NO published exclusions and NO age check
+     at checkout — the weakest compliance posture of the ten. Left at EU
+     rather than INTL deliberately: their willingness to ship somewhere
+     is not evidence it is legal to receive it there, and LEGAL[] in the
+     browser is what should decide that. */
   { key:'snusoclock', name:"Snus O'Clock", dept:'pouch', domain:'snusoclock.com',
-    ref:'nicotinebaby', ships:['EU'], guess:1, perPack:20, platform:'shopify', currency:'GBP' },
+    ref:'nicotinebaby', ships:['EU'], guess:1, perPack:20, platform:'shopify',
+    currency:'GBP', from:'GB', days:'3–7 days', ageCheck:'none' },
+
+  /* ~150 destinations accepted at checkout, no excluded-country list,
+     no age step. Mon–Fri processing; customs paperwork case-by-case. */
   { key:'europesnus', name:'Europesnus', dept:'pouch', domain:'europesnus.com',
-    ref:'rjuntxyu', ships:['EU'], guess:1, perPack:20, platform:'shopify', currency:'EUR' },
+    ref:'rjuntxyu', ships:['EU'], guess:1, perPack:20, platform:'shopify',
+    currency:'EUR', from:'EU', days:'3–5 business days', ageCheck:'none' },
+
+  /* DENMARK ONLY. Their terms say it outright — "Vi leverer ikke til
+     udlandet", including the Faroes and Greenland — while their
+     checkout still renders a ~30-country dropdown. We were showing
+     this store to every EU shopper, which is an order that cannot be
+     fulfilled. `only` narrows it to the country the policy actually
+     names. Best age gate of the ten: MitID via VerifyID.dk. */
   { key:'nikopouches', name:'NikoPouches.dk', dept:'pouch', domain:'nikopouches.dk',
-    ref:'idtzhxpu', ships:['EU'], guess:1, perPack:20, platform:'shopify', currency:'DKK' },
+    ref:'idtzhxpu', ships:['EU'], only:['DK'], perPack:20, platform:'shopify',
+    currency:'DKK', from:'DK', days:'1–3 days', ageCheck:'id' },
 
   /* --- disposables ---
      Wave Vape: GoAffPro 10%, shop id 4QTSbUnS3TvZ. Foger 35 + Geek Bar 5.
@@ -48,9 +83,15 @@ export const STORES = [
      cartPath is load-bearing: their basket is /cart-2/, not /cart/, and
      their own buttons post to /store/?add-to-cart= — the default Woo
      handoff 404s without it. */
+  /* Age policy is solid — AgeChecker.net 21+ with ID-upload fallback,
+     orders held until verified. But the page labelled "Shipping Policy"
+     is a mislabelled returns/warranty page with no destination content
+     at all, so there is no published state-exclusion list and no PACT
+     Act adult-signature disclosure. days is our own estimate. */
   { key:'wavevape', name:'Wave Vape', dept:'disposable', domain:'wavevape.shop',
     ref:'nicotinebaby', ships:['US'], platform:'woocommerce', featured:1,
-    cartPath:'/store/', shipFlat:5.99, shipFree:55 },
+    cartPath:'/store/', shipFlat:5.99, shipFree:55,
+    from:'US', days:'3–7 days', ageCheck:'id' },
 
   /* EightVape. AWIN 86487 applied, scraping meanwhile — so `ref` is
      empty on purpose and buildAff() omits the param entirely rather
@@ -81,8 +122,13 @@ export const STORES = [
      redirect is where the Store API sweep was dying — it fell all the
      way down the ladder to JSON-LD and returned 41 rows with zero
      variants instead of 1,074 products and 4,925 variations. */
+  /* The most rigorous US policy of the ten: 21+ adult signature and ID
+     check at the door, ships from Las Vegas to the 50 states "where
+     deliverable", military/APO excluded. Matches PACT Act expectations,
+     though the excluded states are not named. */
   { key:'eightvape', name:'EightVape', dept:'disposable', domain:'eightvape.com',
     ref:'', ships:['US'], guess:1, platform:'woocommerce', awin:86487,
+    from:'US', days:'3–8 days', ageCheck:'signature',
     cats:['disposable-vape','kits','vape-mods','vape-pods','vape-tanks',
           'vape-coils','vape-accessories','juice','nicotine-pouch',
           'nicotine-free-vape'],
@@ -94,26 +140,59 @@ export const STORES = [
               'vape-accessories':'gear' } },
 
   /* --- devices, pods, hardware --- */
+  /* Ships worldwide from a Chinese warehouse, ePacket or DHL. The
+     shipping policy names no excluded countries and says nothing about
+     age; checkout does prompt for date of birth. */
   { key:'vaporesso', name:'Vaporesso', dept:'device', domain:'store.vaporesso.com',
-    ref:'nicotinebaby', ships:['US','INTL'], guess:1, featured:1, platform:'shopify' },
+    ref:'nicotinebaby', ships:['US','INTL'], guess:1, featured:1, platform:'shopify',
+    from:'CN', days:'7–30 days', ageCheck:'dob' },
+
+  /* COMPLIANCE FLAG — see CLAUDE.md. Their policy states US orders ship
+     via "USPS or UPS". The PACT Act's 2021 ENDS amendment bars USPS
+     from delivering vapour products to consumers. Either the policy
+     text is stale or the practice is non-compliant; worth raising with
+     them before this store carries real US volume. */
   { key:'geekvape', name:'Geekvape', dept:'device', domain:'store.geekvape.com',
-    ref:'nicotinebaby', ships:['US','INTL'], guess:1, featured:1, platform:'shopify' },
+    ref:'nicotinebaby', ships:['US','INTL'], guess:1, featured:1, platform:'shopify',
+    from:'CN', days:'7–21 days', ageCheck:'none' },
+
   { key:'freemax', name:'Freemax', dept:'device', domain:'www.freemaxvape.com',
-    ref:'nicotinebaby', ships:['US'], guess:1, platform:'woocommerce' },
+    ref:'nicotinebaby', ships:['US'], guess:1, platform:'woocommerce',
+    from:'US', ageCheck:'none' },
+
+  /* UK addresses only; NI and the Scottish Highlands are slower. Age
+     check is weak by construction — the policy says drivers "might"
+     verify 18+, not that they must.
+     COMPLIANCE FLAG: the UK banned sale of single-use disposables from
+     June 2025, and their "MaxGO 12K/33K Final Clearance" SKUs are
+     branded and puff-rated like disposables. Many brands rebadged to
+     refillable post-ban; whether these particular SKUs did is not
+     answerable from the policy text. See CLAUDE.md. */
   { key:'relxuk', name:'RELX UK', dept:'device', domain:'www.relxvape.co.uk',
-    ref:'nicotinebaby', ships:['UK'], platform:'shopify', currency:'GBP' },
+    ref:'nicotinebaby', ships:['UK'], platform:'shopify', currency:'GBP',
+    from:'GB', days:'2–4 days', ageCheck:'dob' },
 
   /* --- cigars --- */
+  /* The most legally careful vendor of the ten: Bluecheck electronic
+     21+ verification before an order ships, signature on delivery, no
+     PO boxes, ships only to the cardholder's billing address, explicit
+     FAA restriction on lighters. */
   { key:'montero', name:'Montero Cigars', dept:'cigar', domain:'monterocigars.com',
-    ref:'nicotinebaby', ships:['US'], guess:1, featured:1, platform:'shopify' },
+    ref:'nicotinebaby', ships:['US'], guess:1, featured:1, platform:'shopify',
+    from:'US', days:'2–5 days', ageCheck:'id' },
+
   { key:'beardedcigar', name:'Beard Cigars', dept:'cigar', domain:'beardcigars.com',
-    ref:'nicotinebaby', ships:['US'], guess:1, platform:'bigcommerce' },
+    ref:'nicotinebaby', ships:['US'], guess:1, platform:'bigcommerce', from:'US' },
 
   /* --- gear & accessories ---
      XIFEI is cigar ACCESSORIES. Filed under 'cigar' it was priced per
      stick, so a $199 humidor read "$199.00 per stick". */
+  /* Accessories only — no nicotine, so no age gate is expected and the
+     legal exposure is low. Torch and jet lighters do hit state and
+     airline restrictions their two-line policy never mentions. */
   { key:'xifei', name:'XIFEI', dept:'gear', domain:'xifeicigaraccessory.com',
-    ref:'nicotinebaby', ships:['US','INTL'], guess:1, platform:'shopify' },
+    ref:'nicotinebaby', ships:['US','INTL'], guess:1, platform:'shopify',
+    from:'CN', days:'3–7 US / 15–30 intl', ageCheck:'none' },
 
   /* ==========================================================
      NOT LIVE YET — uncomment as each one is approved.
@@ -201,7 +280,8 @@ export const STORES = [
 function publicStores() {
   return STORES.filter(s => !s.pending).map(s => ({
     key: s.key, name: s.name, dept: s.dept, domain: s.domain,
-    ref: s.ref, ships: s.ships, guess: s.guess ? 1 : 0,
+    ref: s.ref, ships: s.ships, only: s.only || null, guess: s.guess ? 1 : 0,
+    from: s.from || '', days: s.days || '', ageCheck: s.ageCheck || '',
     perPack: s.perPack || 0, platform: s.platform || '',
     cartPath: s.cartPath || '', logo: s.logo || '',
     coupon: s.coupon || '', off: Number(s.off) || 0,

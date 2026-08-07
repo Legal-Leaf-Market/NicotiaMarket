@@ -133,6 +133,57 @@ sleeping between doors on a 6-minute clock.
 
 ---
 
+## 7b. Vendor shipping & age-verification audit (Aug 2026)
+
+Every vendor's published policy was read directly. `ships`, `only`, `from`,
+`days` and `ageCheck` in the registry come from that, not from inference —
+anything still inferred keeps `guess: 1`. **Re-check quarterly.**
+
+**Age verification is wildly inconsistent**, and that inconsistency is itself
+the liability: aggregating ten vendors behind ten identical Buy buttons implies
+they are interchangeable on age control, and they are not. Hence the `ageCheck`
+chip in the cart, shown immediately above each store's checkout button.
+
+| Store | Ships | Age check at their checkout |
+|---|---|---|
+| Montero | US + intl w/ disclaimers | **ID** — Bluecheck 21+, signature, billing address only, no PO boxes |
+| NikoPouches | **Denmark only** | **ID** — MitID via VerifyID.dk |
+| Wave Vape | US | **ID** — AgeChecker.net 21+, ID-upload fallback |
+| EightVape | US 50 states, no APO | **Signature** — 21+ ID at the door, ships from Las Vegas |
+| RELX UK | UK only | **DOB** — drivers "might" verify 18+, not must |
+| Vaporesso | Worldwide | **DOB** — prompted at checkout, not in policy |
+| Snus O'Clock | "Internationally", no exclusions | **None** |
+| Europesnus | ~150 destinations, no exclusions | **None** |
+| Geekvape | Worldwide | **None** |
+| XIFEI | US + intl | **None** — accessories, no nicotine |
+
+### Two open compliance questions — not code, needs a human
+
+1. **Geekvape / PACT Act.** Their policy says US orders ship via "USPS or UPS".
+   The PACT Act's 2021 ENDS amendment bars **USPS** from delivering vapour
+   products to consumers. Either the policy text is stale or the practice is
+   non-compliant. Raise it with them before this store carries real US volume.
+
+2. **RELX UK / disposables ban.** The UK banned sale of single-use disposable
+   vapes from June 2025. Their "MaxGO 12K/33K Final Clearance" SKUs are branded
+   and puff-rated like disposables. Many brands rebadged to refillable
+   post-ban; whether these particular SKUs did is not answerable from the
+   policy text. Confirm before featuring them.
+
+### Fixed as a result
+
+`nikopouches` was `ships:['EU']`, so it was offered to every EU shopper —
+while its own terms say *"Vi leverer ikke til udlandet"* (no delivery abroad,
+Faroes and Greenland included). The `only:['DK']` field exists for exactly
+this: a store narrower than its zone. `storeShipsHere()` checks `only` first.
+
+Note the general pattern: **a vendor's willingness to ship somewhere is not
+evidence that it is legal to receive it there.** Several ship to large
+unrestricted country lists covering places where these products are banned.
+Their buyer-assumes-all-risk disclaimers do not transfer that exposure to us,
+which is why `LEGAL[]` in the browser — not the vendor's dropdown — decides
+what a shopper is shown.
+
 ## 8. PREVIEW MODE
 
 `js/config.js` → `previewMode`. While `true` the site ignores shipping limits and local

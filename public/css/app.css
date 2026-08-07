@@ -596,6 +596,14 @@ header.top{position:sticky;top:0;z-index:50;
 .dnote{font-size:11.5px;color:var(--dim);line-height:1.6;margin-bottom:12px}
 .dgroup{margin-bottom:18px}
 .dgroup h3{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:0 0 8px}
+/* vendor facts, directly above the checkout button */
+.dfacts{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 8px}
+.agechip,.shipchip{font-size:10.5px;font-weight:600;letter-spacing:.02em;
+  padding:4px 9px;border-radius:5px;white-space:nowrap;cursor:default}
+.shipchip{background:var(--chip);color:var(--muted);border:1px solid var(--line)}
+.agechip.good{background:rgba(74,222,128,.14);color:var(--sage);border:1px solid rgba(74,222,128,.3)}
+.agechip.soft{background:rgba(240,185,60,.12);color:var(--gold);border:1px solid rgba(240,185,60,.28)}
+.agechip.warn{background:rgba(239,83,80,.12);color:var(--red);border:1px solid rgba(239,83,80,.3)}
 .dcheckout{display:block;width:100%;text-align:center;font-family:var(--sans);font-weight:700;
   font-size:12.5px;letter-spacing:.02em;padding:12px;border-radius:8px;border:0;cursor:pointer;
   background:var(--gold);color:#0b120d;margin-bottom:8px}

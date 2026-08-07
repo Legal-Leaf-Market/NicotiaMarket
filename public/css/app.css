@@ -251,6 +251,20 @@ header.top{position:sticky;top:0;z-index:50;
 .ih-x:hover{color:var(--text)}
 @media(min-width:700px){.installhint{left:auto;right:16px;max-width:390px}}
 
+/* Why the shelf is thinner than the catalogue. Amber rather than red:
+   this is an enforced rule working correctly, not an error. */
+.reachbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  border:1px solid rgba(240,185,60,.34);background:rgba(240,185,60,.07);
+  border-radius:var(--r-sm);padding:11px 14px;margin:0 0 14px;
+  font-size:13px;line-height:1.5;color:var(--muted)}
+.reachbar b{color:var(--gold);font-weight:700}
+.reachbtn{margin-left:auto;flex:none;cursor:pointer;font-family:var(--sans);
+  font-size:12px;font-weight:700;letter-spacing:.02em;white-space:nowrap;
+  border:1px solid var(--gold);background:transparent;color:var(--gold);
+  border-radius:999px;padding:7px 14px;transition:background .16s,color .16s}
+.reachbtn:hover{background:var(--gold);color:#160c06}
+@media(max-width:560px){.reachbtn{margin-left:0;width:100%}}
+
 /* The items a store's URL scheme could not carry, each as its own tap.
    Shown only when the hand-off genuinely cannot take them. */
 .drest{margin:8px 0 0;padding-top:9px;border-top:1px dashed var(--line);

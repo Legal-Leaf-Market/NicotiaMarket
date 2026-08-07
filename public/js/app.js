@@ -974,6 +974,10 @@ document.getElementById('gcancel').addEventListener('click',function(){
   closeGate(); locPillUI(); setAgeCopy(); setWarn();
 });
 document.getElementById('locPill').addEventListener('click',function(){ openGate(true); });
+/* the same door, opened from the reach notice */
+document.addEventListener('click',function(e){
+  if(e.target.closest&&e.target.closest('[data-shipto]')) openGate(true);
+});
 
 function locPillUI(){
   var el=document.getElementById('locVal');
@@ -1727,6 +1731,46 @@ function setWarn(){
   if(F.dept==='all'){ el.innerHTML = eu ? EUALL : ALLWARN; return; }
   el.innerHTML = eu ? (EUWARN[F.dept]||EUALL) : (DEPTS[F.dept]||{}).warn||ALLWARN;
 }
+/* HOW MUCH OF THE MARKET CAN ACTUALLY REACH YOU.
+
+   With PREVIEW_MODE off, shipping limits and local law are enforced, and
+   for several destinations that removes most of the catalogue: Canada
+   sees 253 of 2,451 cards, the UK 273, a vape-ban US state loses every
+   vape shelf outright. Until now the page said NOTHING about it — you
+   got a thin shelf and no reason, which reads as a broken site rather
+   than an enforced rule. It is the single most alarming thing this
+   storefront can do while working exactly as designed.
+
+   Counted over PGROUPS with shipping and legality applied but the
+   shopper's OWN filters ignored, so the number answers "what can reach
+   me at all", not "what matches my current search". */
+function reachNotice(){
+  if(SHOW_ALL || !PGROUPS.length) return '';
+  var reach=0, hereStores={}, allStores={}, banned={};
+  PGROUPS.forEach(function(g){
+    allStores[g.key]=1;
+    var st=SMAP[g.key]||{};
+    if(!storeShipsHere(st)) return;
+    var d=deptOf(g);
+    if(legalFor(d)[0]==='banned'){ banned[d]=1; return; }
+    reach++; hereStores[g.key]=1;
+  });
+  var nHere=Object.keys(hereStores).length, nAll=Object.keys(allStores).length;
+  /* only speak up when a real share of the market is out of reach —
+     otherwise this is nagging */
+  if(!nAll || reach >= PGROUPS.length*0.75) return '';
+
+  var where=locLabel && LOC.country ? locLabel() : 'your destination';
+  var bits=[];
+  bits.push('<b>'+nHere+' of '+nAll+' stores</b> deliver to '+esc(where));
+  bits.push(reach.toLocaleString()+' of '+PGROUPS.length.toLocaleString()+' listings can reach you');
+  var bl=Object.keys(banned).map(function(d){ return (DEPTS[d]||{}).label||d; });
+  if(bl.length) bits.push('<b>'+esc(bl.join(' and '))+'</b> cannot be sold where you are');
+
+  return '<div class="reachbar">'+bits.join(' · ')+
+    ' <button type="button" class="reachbtn" data-shipto>Change destination</button></div>';
+}
+
 function setNotices(){
   var box=document.getElementById('notices'); if(!box) return;
   var html='';
@@ -1734,6 +1778,7 @@ function setNotices(){
     html+='<div class="previewbar">PREVIEW MODE — shipping limits and local law are '+
           'being ignored. Set <code>PREVIEW_MODE = false</code> before launch.</div>';
   }
+  html+=reachNotice();
   if(!SHOW_ALL){
     var cav = F.dept!=='all' ? regionCaveat(F.dept)
       : (regionCaveat('disposable')||regionCaveat('liquid'));

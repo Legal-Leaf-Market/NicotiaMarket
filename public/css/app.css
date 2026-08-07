@@ -41,13 +41,20 @@ button{font-family:inherit}
   text-transform:uppercase;font-size:.72rem;letter-spacing:.38em;color:var(--dim)}
 
 /* live pill — the shared "we are actually checking" signal */
+/* The whole pill pulses now, not just the dot. The animation moved up
+   to the parent rather than being added alongside the dot's own — two
+   nested opacity animations multiply, so the dot would have dipped to
+   .12 while the text sat at .35 and the two would have read as separate
+   things blinking. One animation on the parent keeps them in step. */
 .live-pill{display:inline-flex;align-items:center;gap:6px;font-size:.7rem;
   letter-spacing:.06em;text-transform:uppercase;color:var(--sage);
   background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);
-  border-radius:999px;padding:5px 11px;font-weight:600;white-space:nowrap}
+  border-radius:999px;padding:5px 11px;font-weight:600;white-space:nowrap;
+  animation:livePulse 2s infinite}
 .live-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--sage);
-  box-shadow:0 0 8px var(--sage);animation:livePulse 2s infinite}
+  box-shadow:0 0 8px var(--sage)}
 @keyframes livePulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media(prefers-reduced-motion:reduce){.live-pill{animation:none}}
 
 /* ============================================================
    AGE GATE

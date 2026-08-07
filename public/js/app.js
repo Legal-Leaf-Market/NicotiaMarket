@@ -1238,7 +1238,21 @@ function apply(reset){
   });
 
   var s=F.sort;
+  /* POUCHES LEAD THE GRID, whatever the sort. They are the flagship
+     shelf and the argument the site is built on — per-pouch pricing —
+     so they sit above the fold rather than behind whichever disposable
+     happens to win on value that minute.
+
+     Only applied on the combined shelf: a department view is already
+     one department, and pinning there would do nothing. The chosen sort
+     still orders WITHIN the pouches and within everything after them,
+     so this is a grouping, not an override of the sort. */
+  var pinPouch = (F.dept==='all');
   VIEW.sort(function(a,b){
+    if(pinPouch){
+      var pa=deptOf(a)==='pouch'?0:1, pb=deptOf(b)==='pouch'?0:1;
+      if(pa!==pb) return pa-pb;
+    }
     var ia=gitem(a), ib=gitem(b);
     if(s==='unit'){
       /* Ranked on the CONVERTED value. Grouping by currency was honest

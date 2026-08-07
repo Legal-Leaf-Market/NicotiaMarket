@@ -2024,7 +2024,29 @@ function stepQty(st, q, item){
   return Math.max(step, Math.ceil(q/step)*step);
 }
 
-function checkoutUrl(st, items){
+/* WHAT EACH PLATFORM'S URL SCHEME CAN ACTUALLY DO.
+
+     all  — one URL fills the whole basket
+     one  — one URL adds a single line; the rest have to be added there
+     none — no URL can fill their basket at all
+
+   This table is the difference between a working hand-off and the one
+   reported broken. Nicokick is Magento: it matched neither branch
+   below, fell to the final `return items[0].url`, and quietly opened
+   THE FIRST ITEM'S PRODUCT PAGE under a button reading "Checkout at
+   Nicokick →". Every feedcsv store and BigCommerce did the same.
+
+   Magento has required a form_key on /checkout/cart/add since 2.2, and
+   our Magento rows carry a SKU rather than the numeric entity id, so
+   there is no honest URL to build for it. Saying so plainly beats
+   pretending — the shopper can still open each item, and now the
+   drawer says that is what will happen. */
+var CHECKOUT_CAP={ shopify:'all', woocommerce:'one',
+                   magento:'none', feedcsv:'none', bigcommerce:'none' };
+
+/* Returns {cap, url, filled, rest} so the drawer can describe the
+   hand-off truthfully instead of every store getting one caption. */
+function checkoutPlan(st, items){
   var base='https://'+st.domain;
   if(st.platform==='shopify'){
     var parts=items.filter(function(x){return x.vid;})
@@ -2032,12 +2054,18 @@ function checkoutUrl(st, items){
     /* The cart permalink jumps straight to /cart, skipping any product
        page — so the affiliate cookie was never set on the way through
        and Shopify handoffs were tracking to nobody. ?ref= rides along
-       on the permalink itself. */
-    if(parts.length) return addParams(base+'/cart/'+parts.join(','),
-      {discount:st.coupon, ref:st.ref});
-    return st.coupon
-      ? addParams(base+'/discount/'+encodeURIComponent(st.coupon),{redirect:'/cart', ref:st.ref})
-      : addParams(base+'/cart',{ref:st.ref});
+       on the permalink itself.
+
+       return_to carries the shopper past the cart page and into the
+       checkout once the permalink has filled the basket, which is the
+       whole point of sending a basket at all. */
+    if(parts.length) return {cap:'all', filled:parts.length, rest:[],
+      url:addParams(base+'/cart/'+parts.join(','),
+        {discount:st.coupon, ref:st.ref, return_to:'/checkout'})};
+    return {cap:'none', filled:0, rest:items.slice(1),
+      url: st.coupon
+        ? addParams(base+'/discount/'+encodeURIComponent(st.coupon),{redirect:'/cart', ref:st.ref})
+        : addParams(base+'/cart',{ref:st.ref})};
   }
   /* WooCommerce takes ONE line per request — there is no core equivalent
      of Shopify's multi-item cart permalink. So we send the first item
@@ -2048,7 +2076,13 @@ function checkoutUrl(st, items){
      choose product options" and the cart lands empty. Woo wants the
      PARENT id, variation_id, and each attribute as its own param. */
   if(st.platform==='woocommerce' && items[0] && items[0].vid){
-    var x=items[0], path=st.cartPath||'/cart/';
+    var x=items[0];
+    /* add-to-cart is honoured on ANY page load, so pointing it at the
+       checkout page adds the line and lands there in one hop. Only used
+       where the path is KNOWN: Wave Vape's cart is not at /cart/, so
+       guessing its checkout would 404, and a 404 is worse than a cart
+       page. Set checkoutPath in the registry once verified. */
+    var path=st.checkoutPath||st.cartPath||'/cart/';
     var url;
     if(x.pid){
       url=addParams(base+path,{'add-to-cart':x.pid, variation_id:x.vid,
@@ -2057,9 +2091,15 @@ function checkoutUrl(st, items){
     }else{
       url=addParams(base+path,{'add-to-cart':x.vid, quantity:stepQty(st,x.qty,x), ref:st.ref});
     }
-    return url;
+    return {cap:'one', filled:1, rest:items.slice(1), url:url};
   }
-  return items[0] ? (items[0].aff||items[0].url) : addParams(base+'/',{ref:st.ref});
+
+  /* Nothing can fill this basket by URL. Open the first item where it
+     actually lives and hand the rest back, so the drawer can list them
+     as their own links instead of stranding the shopper on one product
+     page under a button that promised a checkout. */
+  return {cap:'none', filled:0, rest:items.slice(1),
+    url: items[0] ? (items[0].aff||items[0].url) : addParams(base+'/',{ref:st.ref})};
 }
 function checkoutStore(key){
   if(!isLoggedIn()) toast('One step first — we need an email to send your order details');
@@ -2067,14 +2107,11 @@ function checkoutStore(key){
     var st=SMAP[key]; if(!st) return;
     var items=itemsForStore(key); if(!items.length) return;
     if(st.coupon){ try{navigator.clipboard.writeText(st.coupon);}catch(e){} }
-    var url=checkoutUrl(st,items);
-    var auto=(st.platform==='shopify'&&items.some(function(x){return x.vid;}))||
-             (st.platform==='woocommerce'&&items[0]&&items[0].vid);
-    var partial=(st.platform==='woocommerce'&&items.length>1);
-    toast(partial ? ('Opening '+st.name+' with your first item — add the rest there')
-        : auto ? ('Cart sent to '+st.name+(st.coupon?' — code applied':''))
-               : ('Opening '+st.name+(st.coupon?' — code '+st.coupon+' copied':'')));
-    window.open(url,'_blank','noopener');
+    var plan=checkoutPlan(st,items);
+    /* SAME TAB. The cart lives in localStorage, so coming back is one
+       Back press — and a new tab per store meant the shopper lost track
+       of which of them they had actually paid. */
+    location.assign(plan.url);
   }, 'We send your basket straight to the store. Your email keeps the order '+
      'linked to you if anything needs sorting.');
 }
@@ -2144,24 +2181,50 @@ function renderCart(){
     bd+='<div class="r otd"><span>Est. total</span><span>'+
       money(after+(ship?ship.cost:0),cur)+'</span></div></div>';
 
-    var auto=(st.platform==='shopify');
-    var multiWoo=(st.platform==='woocommerce'&&items.length>1);
     /* Everything the shopper needs to judge this hand-off, immediately
        above the button that performs it: who checks age, where it ships
        from, and how long it takes. */
     var facts=[ageBadge(st)];
     if(st.days) facts.push('<span class="shipchip">'+esc(st.days)+'</span>');
     if(st.from&&st.from!=='US') facts.push('<span class="shipchip">Ships from '+esc(st.from)+'</span>');
+
+    /* The button now says what it will actually do. One caption for
+       every store is how "Checkout at Nicokick →" came to mean "open a
+       product page". */
+    var plan=checkoutPlan(st,items), n=items.length, code=st.coupon?' with code '+esc(st.coupon):'';
+    var label, note;
+    if(plan.cap==='all'){
+      label='Checkout at '+esc(st.name)+' →';
+      note='All '+n+' item'+(n===1?'':'s')+' go into '+esc(st.name)+"'s basket"+code+
+           ', and you land on their checkout.';
+    }else if(plan.cap==='one'){
+      label=(n>1?'Add first item at ':'Checkout at ')+esc(st.name)+' →';
+      note=n>1
+        ? esc(st.name)+' can only be sent one item per link, so this adds the first. '+
+          'The rest are one tap each below.'
+        : 'Your item goes straight into '+esc(st.name)+"'s basket"+code+'.';
+    }else{
+      label='Open at '+esc(st.name)+' →';
+      note=esc(st.name)+' cannot be sent a basket by link, so this opens '+
+           (n>1?'your first item':'your item')+' on their site'+
+           (st.coupon?', code '+esc(st.coupon)+' copied':'')+'.';
+    }
+
+    /* Anything the link could not carry, as its own tap. This is the
+       only honest way to "handle multiple items" at a store whose URL
+       scheme takes one or none. */
+    var rest=plan.rest.length
+      ? '<div class="drest"><span>Then add at '+esc(st.name)+':</span>'+
+        plan.rest.map(function(x){
+          return '<a href="'+esc(x.aff||x.url||'#')+'" rel="noopener nofollow">'+
+                 esc(x.title)+(x.variant?' — '+esc(x.variant):'')+'</a>';
+        }).join('')+'</div>'
+      : '';
+
     html+='<div class="dgroup"><h3>'+esc(st.name)+'</h3>'+rows+bd+
       '<div class="dfacts">'+facts.filter(Boolean).join('')+'</div>'+
-      '<button class="dcheckout" data-checkout="'+esc(sk)+'">Checkout at '+
-        esc(st.name)+' →</button>'+
-      '<p class="dnote">'+(multiWoo
-        ? 'Opens '+esc(st.name)+' with your first item in the basket — add the others there.'
-        : auto
-        ? 'Your basket fills automatically at '+esc(st.name)+
-          (st.coupon?' with code '+esc(st.coupon)+' applied':'')+'.'
-        : 'Opens '+esc(st.name)+(st.coupon?' with code '+esc(st.coupon)+' copied':'')+'.')+'</p></div>';
+      '<button class="dcheckout" data-checkout="'+esc(sk)+'">'+label+'</button>'+
+      '<p class="dnote">'+note+'</p>'+rest+'</div>';
   });
 
   var nStores=Object.keys(groups).length;

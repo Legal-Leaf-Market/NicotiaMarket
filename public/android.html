@@ -41,9 +41,10 @@
     <h2>1 · Add to your home screen</h2>
     <p>The fastest way, and it updates itself — no reinstalling when we ship a fix.</p>
     <button class="ga-btn" id="gaInstallBtn" hidden>Install now</button>
+    <!-- filled by install.js with the steps for THIS browser; the static
+         text is only what a visitor with JS off would read -->
     <p class="ga-steps" id="gaSteps">
-      Open this page in <b>Chrome</b>, tap the <b>&#8942; menu</b> (top right),
-      then <b>Add to Home screen</b>.
+      On your phone, open your browser's menu and choose <b>Add to Home Screen</b>.
     </p>
   </section>
 
@@ -81,6 +82,7 @@
   </p>
 </main>
 
+<script src="/js/install.js"></script>
 <script>
 /* If Chrome offers the real install prompt, use it and hide the manual
    steps — telling someone to hunt through a menu when the browser will
@@ -89,6 +91,20 @@
   var deferred=null;
   var btn=document.getElementById('gaInstallBtn');
   var steps=document.getElementById('gaSteps');
+
+  /* Steps for the browser actually being used. Same source as the hint
+     on the market, so the two can never disagree. */
+  if(window.NM_INSTALL){
+    var d=NM_INSTALL.detect();
+    if(d.os!=='desktop'){
+      steps.innerHTML=NM_INSTALL.steps();
+      /* iOS has no APK and no install prompt, so lead with the thing
+         that does work there and retitle the section honestly. */
+      if(d.os==='ios'){
+        document.querySelector('#gaInstall h2').textContent='Add to your Home Screen';
+      }
+    }
+  }
   window.addEventListener('beforeinstallprompt',function(e){
     e.preventDefault(); deferred=e;
     btn.hidden=false; steps.hidden=true;

@@ -2811,27 +2811,11 @@ function loadCatalogue(){
    would, and iOS gives us none: Safari has no beforeinstallprompt, so
    without a hint nobody ever discovers Share -> Add to Home Screen.
    ============================================================ */
-function isStandalone(){
-  return window.matchMedia('(display-mode: standalone)').matches ||
-         navigator.standalone === true;
-}
-/* iPadOS 13+ reports itself as a Mac, so the touch check is what
-   actually catches an iPad. */
-function isIOS(){
-  return /iphone|ipod|ipad/i.test(navigator.userAgent) ||
-         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
-/* EVERY browser on iOS runs WebKit — Apple requires it — so Chrome,
-   Edge and Firefox can all add to the home screen since iOS 17. They
-   differ only in where the Share control lives, so name the right one
-   rather than telling a Chrome user to look in Safari. */
-function iosBrowser(){
-  var u=navigator.userAgent;
-  if(/CriOS/i.test(u))  return {name:'Chrome', where:'the ⋯ menu, top right'};
-  if(/EdgiOS/i.test(u)) return {name:'Edge',   where:'the ⋯ menu, bottom bar'};
-  if(/FxiOS/i.test(u))  return {name:'Firefox',where:'the ⋯ menu, address bar'};
-  return {name:'Safari', where:'the Share button in the bottom bar'};
-}
+/* Detection and the per-browser wording both live in js/install.js,
+   because /android needs exactly the same answers and two copies of
+   "where is the Share button" would drift. */
+function isStandalone(){ return !!(window.NM_INSTALL && NM_INSTALL.isStandalone()); }
+function isIOS(){ return !!(window.NM_INSTALL && NM_INSTALL.isIOS()); }
 
 function dismissInstall(){
   store_('nm_install_hint','off');
@@ -2840,19 +2824,30 @@ function dismissInstall(){
 }
 
 function maybeOfferInstall(){
-  if(isStandalone() || !isIOS()) return;          /* already an app, or not iOS */
+  if(!window.NM_INSTALL) return;
+  if(isStandalone()) return;                      /* already an app */
   if(read_('nm_install_hint')==='off') return;    /* they said no */
   if(document.getElementById('installhint')) return;
 
-  var b=iosBrowser();
+  var d=NM_INSTALL.detect();
+  if(d.os==='desktop') return;                    /* nothing to add here */
+
+  /* On Android, Chrome fires a real install prompt — showing menu
+     instructions next to a one-tap button is worse than useless. Wait a
+     beat, and only hand-hold the browsers that never offer one
+     (Firefox, Samsung Internet, Opera). */
+  if(d.os==='android' && DEFERRED_INSTALL) return;
+
   var el=document.createElement('div');
   el.id='installhint'; el.className='installhint'; el.setAttribute('role','dialog');
+  /* steps() returns our own markup, not user input — inserted as HTML so
+     the control names can be emphasised. */
   el.innerHTML=
     '<img src="/assets/apple-touch-icon.png" alt="" width="42" height="42">'+
     '<div class="ih-copy"><b>Add Nicotia to your Home Screen</b>'+
-    '<span>Open '+esc(b.where)+', then choose <b>Add to Home Screen</b>.'+
-    (b.name!=='Safari'
-      ? ' Installing from Safari also enables price alerts later.'
+    '<span>'+NM_INSTALL.steps()+
+    (d.os==='ios' && d.name!=='Safari'
+      ? ' Installing from <b>Safari</b> also enables price alerts later.'
       : '')+'</span></div>'+
     '<button class="ih-x" type="button" aria-label="Dismiss">&times;</button>';
   document.body.appendChild(el);

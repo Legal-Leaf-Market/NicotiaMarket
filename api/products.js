@@ -1683,10 +1683,16 @@ function manifest(p) {
 
 function respond(res, payload, q) {
   if ('debug' in q) {
+    /* Hand-built rather than spread, so anything added to the payload has
+       to be added HERE too or it silently will not show. bySub and
+       dropped were missing for exactly that reason, and their absence
+       read as "the subcategory work never deployed" when it had. */
     return res.status(200).json({
       ok: true, updated: payload.updated, total: payload.count,
       truncated: payload.truncated,
+      dropped: payload.dropped,
       byDept: payload.byDept,
+      bySub: payload.bySub,
       stores: payload.meta.map(m => `${m.key}: ${m.result} (${m.count}) — ${m.detail}`),
     })
   }

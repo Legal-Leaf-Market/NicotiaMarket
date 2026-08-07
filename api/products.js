@@ -586,6 +586,39 @@ async function get(url, ms = 12000) {
    on most storefronts now; ?page= is widely ignored, which is why a
    4,000-product shop reports exactly 250 and looks complete. When we
    see a clean 250 boundary we walk collections instead. */
+/* ---- brand, when the vendor field is useless ----
+   Shopify's `vendor` is supposed to be the manufacturer. Plenty of
+   stores set it to themselves instead: 1,218 of Europesnus's 1,250
+   products carry vendor "Europesnus.com".
+
+   That is not cosmetic. Rows without a variant group BY BRAND, so one
+   worthless vendor value collapsed the entire store into a single card
+   holding 1,218 products — the giant-card failure the old MAX_FLAV
+   hack used to hide, which surfaced the moment that hack was removed.
+
+   The brand is in the title: "Pablo Silver Edition Blue Raspberry",
+   "Iceberg Watermelon 50mg". Taking the leading token yields 110 real
+   brands for Europesnus — Iceberg 133, Velo 51, Fedrs 50, Pablo 43,
+   Zyn 40 — instead of one. */
+const MULTIWORD = /^(juice head|zeo universe|white fox|killa switch|snus o'?clock|ice energy|loop mix)/i
+
+function looksLikeStore(vendor, st) {
+  if (!vendor) return true
+  const norm = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, '')
+  const v = norm(vendor)
+  return v === norm(st.name) || v === norm(st.domain) ||
+         v === norm(String(st.domain).replace(/^www\./, '').split('.')[0])
+}
+
+function brandFrom(st, vendor, title) {
+  if (!looksLikeStore(vendor, st)) return vendor
+  const name = String(title || '').trim()
+  const multi = name.match(MULTIWORD)
+  if (multi) return multi[0]
+  const m = name.match(/^([A-Za-z][\w'&!-]*)/)
+  return m ? m[1] : ''
+}
+
 /* Shopify's products.json carries NO currency field, so every Shopify
    store was defaulting to USD — Snus O'Clock priced in GBP and
    Europesnus in EUR both rendered with a dollar sign, and the cart
@@ -630,7 +663,7 @@ async function shopifyProducts(st) {
       const vts = pr.variants && pr.variants.length ? pr.variants : [{}]
       for (const v of vts) {
         out.push(row(st, {
-          brand: pr.vendor, title: pr.title, variant: v.title,
+          brand: brandFrom(st, pr.vendor, pr.title), title: pr.title, variant: v.title,
           tags: Array.isArray(pr.tags) ? pr.tags.join(' ') : pr.tags,
           price: v.price, compareAt: v.compare_at_price, currency,
           available: v.available !== false, image: img, url,
@@ -654,7 +687,7 @@ async function shopifyCollection(st) {
     const url = `https://${st.domain}/products/${pr.handle}`
     for (const v of (pr.variants && pr.variants.length ? pr.variants : [{}])) {
       out.push(row(st, {
-        brand: pr.vendor, title: pr.title, variant: v.title,
+        brand: brandFrom(st, pr.vendor, pr.title), title: pr.title, variant: v.title,
         tags: Array.isArray(pr.tags) ? pr.tags.join(' ') : pr.tags,
         price: v.price, compareAt: v.compare_at_price, currency,
         available: v.available !== false, image: img, url,
@@ -721,8 +754,20 @@ async function wooSweep(st, type) {
 }
 
 async function wooStoreApi(st) {
-  const parents = await wooSweep(st, '')
-  if (!parents.length) throw new Error('woo API empty')
+  /* Variations FIRST, deliberately. All 18 stores share one wall clock,
+     and EightVape's catalogue is ~11 pages of parents followed by ~50
+     pages of variations — so the parents ate the budget and the
+     variation sweep got nothing, leaving 41 simple products out of
+     1,074 + 4,925.
+
+     Variations are the buyable rows; parents only supply brand,
+     department and a fallback image. If the clock cuts the parent
+     sweep short, a variation degrades to the store's own brand and
+     dept rather than disappearing. Losing that is much cheaper than
+     losing 4,925 products. */
+  const variations = await wooSweep(st, 'variation').catch(() => [])
+  const parents = await wooSweep(st, '').catch(() => [])
+  if (!parents.length && !variations.length) throw new Error('woo API empty')
 
   /* parent id -> its own info, so a variation can inherit the bits it
      does not carry (department, brand, and a fallback image) */
@@ -890,6 +935,76 @@ async function wooCategoryWalk(st) {
   })
 
   if (!out.length) throw new Error('category pages returned no cards')
+  return out
+}
+
+/* ============================================================
+   BIGCOMMERCE — Stencil product cards
+   ------------------------------------------------------------
+   BigCommerce publishes no products.json and, unlike most carts, its
+   default Stencil category pages carry NO JSON-LD either — which is
+   why Beard Cigars sat at FAILED with "no JSON-LD Product objects
+   found" while its /shop-all/ page was serving cards the whole time.
+
+   So parse the cards. The markup is stable and generous:
+     <h4 class="card-title"><a href="URL">TITLE</a></h4>
+     <span data-product-price-without-tax class="price ...">$X.XX</span>
+     <img src="https://cdn11.bigcommerce.com/s-HASH/.../file.jpg">
+
+   Note the rrp and non-sale spans are rendered but style="display:none"
+   when empty, so a naive "first price on the card" grab returns blank.
+   Anchor on the data- attributes instead of the class names.
+   ============================================================ */
+async function bigCommerceCards(st) {
+  const paths = st.cats && st.cats.length ? st.cats : ['/shop-all/', '/cigars/', '/all/', '/']
+  const out = []
+  const seen = new Set()
+
+  for (const path of paths) {
+    for (let page = 1; page <= 8; page++) {
+      if (outOfTime(4000)) break
+      const url = `https://${st.domain}${path}` + (page > 1 ? `?page=${page}` : '')
+      let res
+      try { res = await get(url, 10000) } catch { break }
+      if (!res.ok) break
+      const html = await res.text()
+
+      const cards = html.split(/<article[^>]*class="[^"]*\bcard\b[^"]*"/i).slice(1)
+      if (!cards.length) break
+      let added = 0
+
+      for (const card of cards) {
+        const t = card.match(/<h4[^>]*class="[^"]*card-title[^"]*"[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i)
+        if (!t) continue
+        const link = t[1]
+        const title = t[2].replace(/<[^>]+>/g, '').replace(/&amp;/g, '&')
+          .replace(/&#\d+;/g, '').replace(/\s+/g, ' ').trim()
+        if (!title || seen.has(link)) continue
+        seen.add(link)
+
+        const price = (card.match(/data-product-price-without-tax[^>]*>[^$\d]*\$?\s*([\d,]+\.?\d*)/i) || [])[1] || ''
+        const was = (card.match(/data-product-non-sale-price-without-tax[^>]*>[^$\d]*\$?\s*([\d,]+\.?\d*)/i) || [])[1] || ''
+        /* strip the srcset size segment so we get a usable resolution
+           rather than the 80w thumbnail the lazy-loader starts on */
+        let img = (card.match(/<img[^>]+src="(https:\/\/cdn11\.bigcommerce\.com[^"]+)"/i) || [])[1] || ''
+        if (img) img = img.replace(/\/stencil\/\d+w\//, '/stencil/500x659/')
+
+        out.push(row(st, {
+          brand: st.name, title, tags: title,
+          price: price.replace(/,/g, ''),
+          compareAt: was && Number(was.replace(/,/g, '')) > Number(price.replace(/,/g, ''))
+            ? was.replace(/,/g, '') : '',
+          available: !/out[- ]of[- ]stock|sold[- ]out/i.test(card),
+          image: img, url: link, currency: st.currency || 'USD',
+        }))
+        added++
+      }
+      if (!added) break
+      if (!/rel="next"|\?page=/.test(html)) break
+    }
+    if (out.length) break     // first productive path wins
+  }
+  if (!out.length) throw new Error('no BigCommerce cards parsed')
   return out
 }
 
@@ -1182,7 +1297,7 @@ async function jsonLd(st) {
 const LADDERS = {
   shopify: [['products.json', shopifyProducts], ['collections', shopifyCollection], ['json-ld', jsonLd]],
   woocommerce: [['woo store api', wooStoreApi], ['woo categories', wooCategoryWalk], ['json-ld', jsonLd]],
-  bigcommerce: [['json-ld', jsonLd]],
+  bigcommerce: [['bc cards', bigCommerceCards], ['json-ld', jsonLd]],
   magento: [['magento graphql', magentoGraphql], ['json-ld', jsonLd]],
   /* A feed store still gets a scrape fallback: if the key is missing or
      AWIN has the feed offline, the storefront is better than nothing. */

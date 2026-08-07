@@ -1219,7 +1219,9 @@ function facetCount(skip){
    RENDER
    ============================================================ */
 function apply(reset){
-  if(reset!==false)PAGE=0;
+  /* A new filter or shelf starts the strip back at the best prices —
+     landing halfway down someone else's ranking would be nonsense. */
+  if(reset!==false){ PAGE=0; RAILP=0; }
   var q=F.q.trim().toLowerCase();
 
   VIEW=PGROUPS.filter(function(g){
@@ -1239,12 +1241,17 @@ function apply(reset){
   VIEW.sort(function(a,b){
     var ia=gitem(a), ib=gitem(b);
     if(s==='unit'){
-      /* Currencies are not converted, so they are grouped rather than
-         interleaved — a £ figure beating a $ figure would be fiction. */
-      var ca=ia.currency||'USD', cb=ib.currency||'USD';
-      if(ca!==cb) return ca<cb?-1:1;
-      var ua=unitPrice(ia),ub=unitPrice(ib);
-      return (ua?ua.value:1e9)-(ub?ub.value:1e9);
+      /* Ranked on the CONVERTED value. Grouping by currency was honest
+         while nothing converted — a £ figure beating a $ figure would
+         have been fiction — but it meant "best value per unit" listed
+         every DKK row ahead of every EUR row regardless of worth, and
+         the rail, which reads off the top of this list, could only ever
+         show one currency. A currency with no rate sorts last rather
+         than being ranked against a number we cannot compute. */
+      var ua=unitPrice(ia), ub=unitPrice(ib);
+      var va=ua?usdOf(ua.value,ia.currency||'USD'):null;
+      var vb=ub?usdOf(ub.value,ib.currency||'USD'):null;
+      return (va==null?1e9:va)-(vb==null?1e9:vb);
     }
     if(s==='price-asc') return (Number(ia.price)||1e9)-(Number(ib.price)||1e9);
     if(s==='price-desc')return (Number(ib.price)||-1)-(Number(ia.price)||-1);
@@ -1302,16 +1309,76 @@ function apply(reset){
   renderRail(); refreshFacets(); setWarn(); setNotices(); saveSelv();
 }
 
+/* How deep into each shelf's ranking the strip is currently showing.
+   Reset by apply(), advanced by the shuffle button. */
+var RAILP=0;
+
+/* One ranked bucket per department, each on the converted value so a kr
+   row and a $ row can sit in the same strip honestly. Devices and gear
+   have no honest unit, so those shelves rank on price. */
+function railPool(){
+  var by={};
+  VIEW.forEach(function(g){
+    var it=gitem(g); if(!it||!it.available) return;
+    var u=unitPrice(it);
+    var v=u ? usdOf(u.value,it.currency||'USD')
+            : usdOf(it.price,it.currency||'USD');
+    if(v==null||!(v>0)) return;
+    var d=deptOf(g);
+    (by[d]||(by[d]=[])).push({g:g,v:v});
+  });
+  Object.keys(by).forEach(function(k){
+    by[k].sort(function(a,b){ return a.v-b.v; });
+  });
+  return by;
+}
+
+/* The strip was VIEW.slice(0,10) — the head of a list sorted by unit
+   price, which on the "everything" shelf meant ten rows from whichever
+   department and currency happened to sort first. One category, every
+   time, and never the one you were looking at.
+
+   It takes the best of each shelf in turn now, so pouches, disposables,
+   e-liquid, cigars, devices and gear all get a place.
+
+   RAILP walks every shelf one step deeper at once, so shuffling shows
+   the NEXT best prices rather than reshuffling the same ten cards. It
+   wraps, so the strip can be cycled indefinitely without emptying. */
 function renderRail(){
   var sec=document.getElementById('railsec');
-  var pick=VIEW.filter(function(g){var i=gitem(g);return unitPrice(i)&&i.available;}).slice(0,10);
-  if(pick.length<4){sec.hidden=true;return;}
+  var by=railPool();
+  var order=DEPT_ORDER.filter(function(d){ return by[d]&&by[d].length; });
+  var total=0, deepest=0;
+  order.forEach(function(d){
+    total+=by[d].length;
+    if(by[d].length>deepest) deepest=by[d].length;
+  });
+  if(total<4){ sec.hidden=true; return; }
   sec.hidden=false;
+
+  var want=Math.min(12,total), pick=[], seen={};
+  for(var r=0; r<deepest && pick.length<want; r++){
+    for(var i=0; i<order.length && pick.length<want; i++){
+      var list=by[order[i]];
+      var row=list[(r+RAILP)%list.length];
+      if(!row || seen[row.g.gid]) continue;
+      seen[row.g.gid]=1; pick.push(row.g);
+    }
+  }
+
   var d=F.dept!=='all'?DEPTS[F.dept]:null;
   document.getElementById('railTitle').textContent=
     d?('Best '+(d.unitLabel||'value')+' right now'):'Best value right now';
   document.getElementById('railSub').textContent=
-    d?('cheapest '+(d.unitLabel||'')+' we can find'):'cheapest per pouch, per 1k puffs, per ml and per stick';
+    d ? ('cheapest '+(d.unitLabel||'')+' we can find')
+      : (order.length>1
+          ? 'best value on each of '+order.length+' shelves, converted so they compare'
+          : 'cheapest per pouch, per 1k puffs, per ml and per stick');
+
+  /* nothing to shuffle to when the strip already holds everything */
+  var sh=document.getElementById('railShuffle');
+  if(sh) sh.hidden = total<=want;
+
   document.getElementById('rail').innerHTML=pick.map(card).join('');
 }
 
@@ -2158,6 +2225,12 @@ document.getElementById('depts').addEventListener('click',function(e){
   this.querySelectorAll('.dept').forEach(function(x){x.setAttribute('aria-pressed','false');});
   b.setAttribute('aria-pressed','true'); F.dept=b.getAttribute('data-dept');
   leaveSpotlight(); pushDeptPath(); apply();});
+/* Shuffle only moves the strip — it must NOT run apply(), which would
+   reset RAILP to 0 and land you back on the same twelve cards. */
+(function(){
+  var b=document.getElementById('railShuffle');
+  if(b) b.addEventListener('click',function(){ RAILP++; renderRail(); });
+})();
 document.getElementById('clearStores').addEventListener('click',function(){F.stores={};apply();});
 document.getElementById('clearBrands').addEventListener('click',function(){F.brands={};apply();});
 document.getElementById('clear').addEventListener('click',function(){

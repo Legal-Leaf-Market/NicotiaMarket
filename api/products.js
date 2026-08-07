@@ -432,8 +432,30 @@ function classify(st, blob) {
      "cigar" itself is NOT one of them — pouch marketing copy says
      "alternative to cigarettes and cigars" often enough to matter — so
      it stays in the later, lower-priority rule. */
+  /* ROLLING ACCESSORIES FIRST. Blunt tips, wraps, cones and papers ship
+     in resealable pouches and say so in their descriptions, which is the
+     other half of how the pouch shelf filled up with things that are not
+     pouches. They are accessories, so they go to gear, where the unit is
+     flat — a blunt tip priced "per pouch" OR "per stick" is an invented
+     number either way. */
+  if (/\b(blunt tips?|filter tips?|blunt wraps?|hemp wraps?|rolling papers?|cones?)\b/.test(t)) return 'gear'
+
   if (/\b(cigarillos?|robustos?|churchill|maduro|belicoso|torpedo)\b/.test(t)) return 'cigar'
-  if (/\b(nicotine pouch|snus|pouches|lozenge|mint chew)\b/.test(t)) return 'pouch'
+
+  /* THE POUCH RULE NEEDS NICOTINE CONTEXT. "pouch"/"pouches" on its own
+     is a PACKAGING word and matched against a blob that includes the
+     product description, so anything sold in a resealable pouch landed
+     on the nicotine-pouch shelf and got divided by 20.
+
+     Positive evidence is required instead: a snus/lozenge word, an
+     explicit "nicotine pouch", or the word plus an mg strength — real
+     pouches always state their strength, packaging never does.
+
+     Nothing is lost at the pouch stores: st.dept below still catches
+     any product whose own text says none of this. */
+  if (/\b(snus|lozenges?|mint chew|nicopods?)\b/.test(t)) return 'pouch'
+  if (/\b(nicotine|nic|tobacco[- ]free|all[- ]white)[ -]pouch(es)?\b/.test(t)) return 'pouch'
+  if (/\bpouch(es)?\b/.test(t) && /\b\d{1,2}\s*mg\b/.test(t)) return 'pouch'
   if (/\b(disposable|puffs?|\d{1,3}k\b)/.test(t) && !/coil|tank|replacement pod/.test(t)) return 'disposable'
   if (/\b(e-?liquid|vape juice|shortfill|\d+\s*ml)\b/.test(t) && !/disposable/.test(t)) return 'liquid'
   if (/\b(humidor|cutter|lighter|ashtray|case|grinder|torch|hygrometer)\b/.test(t)) return 'gear'

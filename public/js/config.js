@@ -21,10 +21,17 @@ window.NM_CONFIG = {
      while this is true — that is deliberate, it should be impossible
      to ship by accident.
 
-     Currently true because the registry still has no US pouch store;
-     with it false a US visitor sees an empty Pouches shelf. Flip it
-     once Wave Vape and a US pouch vendor are both live. */
-  previewMode: true,
+     Was true because the registry had no US pouch store, which would
+     have shown a US visitor an empty Pouches shelf. Nicokick closed
+     that gap (Magento GraphQL + CJ Affiliate), so the condition §8
+     set for flipping this is met and it is now FALSE.
+
+     Consequence to expect while testing: shelves are now filtered by
+     where you say you ship to, and LEGAL[] — not the vendor's own
+     dropdown — decides what you are shown. A shelf looking thinner
+     than it did in preview is this working, not a regression. Set your
+     destination with the SHIP TO pill to see the US selection. */
+  previewMode: false,
 
   /* Sister sites — rendered in the footer strip on all three. */
   sisters: [

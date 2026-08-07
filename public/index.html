@@ -7,8 +7,11 @@
 <meta name="description" content="Compare nicotine pouches, snus, disposables, e-liquid and cigars across every store we carry. Priced per pouch, per 1,000 puffs, per ml and per stick. Adults 21+.">
 <meta name="theme-color" content="#0b0f0d">
 <link rel="icon" href="/assets/mark.svg" type="image/svg+xml">
-<!-- Every department route rewrites to this same document, so without a
-     canonical the six of them read as six duplicates of the homepage. -->
+<!-- Every department route rewrites to this same document. These are the
+     HOMEPAGE defaults; setRouteMeta() in app.js rewrites title, description,
+     canonical and og:* to the department's own values on load and on every
+     shelf change, so the six routes stop deduplicating into the homepage.
+     Keep these in sync with DEPT_SEO.all. -->
 <link rel="canonical" href="https://nicotiamarket.com/">
 <meta property="og:title" content="Nicotia Market — priced by the unit">
 <meta property="og:description" content="Pouches, disposables, e-liquid and cigars from every shop we carry, priced so packs and bundles finally compare honestly.">
@@ -155,10 +158,13 @@
 
 <div id="mallview">
 
-<section class="hero"><div class="hero-inner shell">
-  <span class="eyebrow">every store, one price you can compare</span>
-  <h1><span class="h-lead">what it actually</span>costs</h1>
-  <p class="hsub">Pouches, disposables, e-liquid and cigars from every shop we carry — priced
+<!-- One hero per shelf. The copy is swapped by renderHero() from the
+     HEROES map in app.js, and data-hero drives the colour — a department
+     URL rewrites to this same file, so the hero cannot be markup. -->
+<section class="hero" id="hero" data-hero="all"><div class="hero-inner shell">
+  <span class="eyebrow" id="heroEyebrow">every store, one price you can compare</span>
+  <h1><span class="h-lead" id="heroLead">what it actually</span><span id="heroHead">costs</span></h1>
+  <p class="hsub" id="heroSub">Pouches, disposables, e-liquid and cigars from every shop we carry — priced
     per pouch, per 1,000 puffs, per ml and per stick, so a five-can roll and a single tin
     finally compare honestly.</p>
   <div class="hstats" id="heroStats"></div>

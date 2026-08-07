@@ -277,6 +277,66 @@ function unitFmt(n,cur){
   var v=n>=1?n.toFixed(2):n.toFixed(3).replace(/0$/,'');
   return s ? (s.indexOf('kr')===0 ? v+' kr' : s+v) : v+' '+(cur||'');
 }
+/* ============================================================
+   FX — the common yardstick
+   ------------------------------------------------------------
+   The catalogue spans at least four native currencies and until now
+   NOTHING converted between them. Two consequences, both shipped:
+
+     - computeBestUnits() keyed its map by dept|currency, so the gold
+       "best per pouch" chip was awarded once PER CURRENCY. A 1.40 kr
+       pouch (~$0.22) and a EUR 0.05 pouch (~$0.06) both wore it — a
+       3.7x spread, and that badge is the entire product.
+     - heroStats() did the opposite, and worse: it took a global minimum
+       across MIXED currencies with no key at all, comparing bare
+       numbers, then stamped the winner's symbol on the result.
+
+   So the two paths disagreed with each other, and both were wrong.
+
+   Display stays native — converting what a store charges you would
+   misrepresent the store. Conversion ranks and badges only, which is
+   the one place a common yardstick is actually required.
+
+   RATES ARE STATIC AND DATED. An unrated currency returns null and is
+   simply not eligible for the global badge, because silently treating
+   it as 1:1 with USD is exactly the made-up number the old comment
+   here was right to refuse. meta.fx from the API wins when present, so
+   a live rate feed needs no front-end change. */
+var FX_ASOF='2026-08-06';
+var FX_USD={              /* 1 unit of X = N USD. xe.com mid-market. */
+  USD:1,
+  EUR:1.15219,
+  GBP:1.34526,
+  DKK:0.15412
+  /* SEK, NOK, CAD and AUD appear in CUR but have no rate here yet.
+     Items priced in them keep their native unit chip and sit out the
+     cross-currency badge race rather than being guessed at. */
+};
+/* set in received() when the API supplies rates; null until then. `meta`
+   is an array of per-store rows, so the feed is read from res.fx or
+   res.meta.fx rather than assumed onto it. */
+var FXR=null;
+function fxTable(){ return (FXR&&FXR.rates)||FX_USD; }
+function fxAsOf(){ return (FXR&&FXR.asOf)||FX_ASOF; }
+
+/* value in `cur` -> USD, or null when we have no honest rate for it */
+function usdOf(n,cur){
+  var v=Number(n); if(isNaN(v)) return null;
+  var r=fxTable()[cur||'USD'];
+  return (typeof r==='number'&&r>0) ? v*r : null;
+}
+/* "≈ $0.06" — always USD, always marked approximate */
+function usdApprox(n,cur){
+  var u=usdOf(n,cur); if(u==null) return '';
+  return '≈ $'+(u>=1?u.toFixed(2):u.toFixed(3).replace(/0$/,''));
+}
+/* the tooltip that makes a cross-currency claim inspectable */
+function fxTitle(n,cur){
+  if(!cur||cur==='USD') return '';
+  var a=usdApprox(n,cur); if(!a) return '';
+  return a+' per unit · converted at '+fxAsOf()+' rates';
+}
+
 function deptOf(x){
   if(x && x.dept && DEPTS[x.dept]) return x.dept;
   var st=SMAP[x&&x.key]; return (st&&DEPTS[st.dept])?st.dept:'device';
@@ -677,13 +737,35 @@ function refreshCard(gid){
     ? Math.round((1-Number(it.price)/Number(it.compareAt))*100) : 0;
 
   Array.prototype.forEach.call(cards,function(card){
+    /* The photo follows the SELECTED VARIANT, not just the flavour.
+       This read f.image only, so changing the strength dropdown never
+       changed the picture — and the `&& f.image` guard meant picking a
+       flavour with no photo of its own skipped the block entirely and
+       left the PREVIOUS flavour's photo on screen, now captioned with
+       the newly selected name. Falls back flavour -> group, and clears
+       to the placeholder when there is genuinely nothing to show. */
     var shot=card.querySelector('.shot');
-    if(shot&&f.image){
+    if(shot){
+      var src=(it&&it.image)||f.image||g.image||'';
       var img=shot.querySelector('img');
-      if(img){ if(img.getAttribute('src')!==f.image){ img.style.opacity=0;
-                 img.onload=function(){img.style.opacity=1;}; img.src=f.image; } }
-      else shot.insertAdjacentHTML('afterbegin',
-        '<img src="'+esc(f.image)+'" alt="'+esc(g.brand+' '+f.name)+'" loading="lazy" referrerpolicy="no-referrer">');
+      var alt=g.brand+(f.name&&f.name!=='—'?' '+f.name:'');
+      if(src){
+        if(img){
+          if(img.getAttribute('src')!==src){
+            img.style.opacity=0;
+            img.onload=function(){ img.style.opacity=1; };
+            img.src=src; img.alt=alt;
+          }
+        }else{
+          var ph=shot.querySelector('.shot-empty');
+          if(ph) ph.parentNode.removeChild(ph);
+          shot.insertAdjacentHTML('afterbegin',
+            '<img src="'+esc(src)+'" alt="'+esc(alt)+'" loading="lazy" referrerpolicy="no-referrer">');
+        }
+      }else if(img){
+        img.parentNode.removeChild(img);
+        shot.insertAdjacentHTML('afterbegin','<div class="shot-empty">No photo</div>');
+      }
     }
     var ssel=card.querySelector('.vsel.str');
     if(ssel) ssel.innerHTML=strengthOptions(f,s.v);
@@ -691,8 +773,10 @@ function refreshCard(gid){
     if(pr) pr.innerHTML=priceHtml(it,cur,off,u,best);
     var buy=card.querySelector('.buy');
     if(buy) buy.textContent='Add to cart — '+(money(it.price,cur)||'see store');
-    var h4=card.querySelector('.back h4');
-    if(h4) h4.textContent=g.brand+(f.name!=='—'?' '+f.name:'');
+    /* whole back panel, not just the heading — description, unit price,
+       puff count and market list are all per-variant */
+    var bk=card.querySelector('.backin');
+    if(bk) bk.innerHTML=backInnerHtml(g);
   });
 }
 
@@ -807,38 +891,98 @@ function resetEntry(){
    ============================================================ */
 var ALL=[],PGROUPS=[],VIEW=[],PAGE=0,PER=24,GROUPS={},BOARD={};
 var CONN='',META=[],SRC={live:0,seeded:0},UPDATED=null;
-var BESTUNIT={};   /* dept -> cheapest unit value seen, per currency */
+var BESTUNIT={};   /* dept -> cheapest unit value ON THE SITE, in USD */
 
 var F={q:'',dept:'all',store:'all',brand:'all',strength:'all',price:'all',
        sort:'unit',deals:false,instock:false,stores:{},brands:{}};
 
 /* The gold unit chip means "cheapest on the whole site for this
-   department", not "cheapest of this brand". Currencies are kept apart
-   because converting them would be a made-up number. */
+   department", not "cheapest of this brand" and not "cheapest in this
+   currency" — which is what it used to mean, and why a 1.40 kr pouch
+   and a EUR 0.05 pouch, 3.7x apart, both wore it. Ranking now happens
+   on the common yardstick (see the FX block above).
+
+   Two further defects fixed here:
+     - it ignored `available` entirely while renderRail() filters on it,
+       so the record could be held by a row no shelf would ever show;
+     - isBestUnit() compared the map against the SELECTED variant with
+       no availability check of its own.
+
+   A currency with no rate sits the race out rather than being assumed
+   1:1 with USD — it keeps its native unit chip, just not the gold one. */
 function computeBestUnits(){
   BESTUNIT={};
   PGROUPS.forEach(function(g){
     var d=deptOf(g);
     gvariants(g).forEach(function(v){
+      if(!v.available) return;
       var u=unitPrice(v); if(!u) return;
-      var k=d+'|'+(v.currency||'USD');
-      if(BESTUNIT[k]==null||u.value<BESTUNIT[k]) BESTUNIT[k]=u.value;
+      var usd=usdOf(u.value,v.currency||'USD'); if(usd==null) return;
+      if(BESTUNIT[d]==null||usd<BESTUNIT[d]) BESTUNIT[d]=usd;
     });
   });
 }
 function isBestUnit(g,u){
   if(!u) return false;
-  var it=gitem(g), k=deptOf(g)+'|'+(it.currency||'USD');
-  var b=BESTUNIT[k];
-  return b!=null && u.value<=b*1.0001;
+  var it=gitem(g);
+  if(!it||!it.available) return false;
+  var usd=usdOf(u.value,it.currency||'USD'); if(usd==null) return false;
+  var b=BESTUNIT[deptOf(g)];
+  return b!=null && usd<=b*1.0001;
 }
 
+/* Price stays in the store's own currency — that is what they will
+   charge. The chip carries the converted value in its tooltip so the
+   cross-currency ranking behind the gold badge stays inspectable
+   instead of being an assertion. */
 function priceHtml(it,cur,off,u,best){
   var p=money(it.price,cur);
+  var ttl=u?fxTitle(u.value,cur):'';
   return (p?'<b>'+p+'</b>':'<span class="noprice">Price at store</span>')+
     (off?'<s>'+money(it.compareAt,cur)+'</s>':'')+
-    (u?'<span class="unitchip'+(best?' best':'')+'">'+unitFmt(u.value,cur)+
+    (u?'<span class="unitchip'+(best?' best':'')+'"'+
+       (ttl?' title="'+esc(ttl)+'"':'')+'>'+unitFmt(u.value,cur)+
        ' <span class="u">'+esc(u.label)+'</span></span>':'');
+}
+
+/* The back of the card is per-VARIANT: the description, unit price,
+   puff count and market list all come off the selected row, not off the
+   group. refreshCard() only ever rewrote the <h4>, so turning a card
+   over after changing a dropdown showed the new variant's title above
+   the OLD variant's description and spec table. One renderer now feeds
+   both card() and refreshCard(), so they cannot drift again. */
+function backInnerHtml(g){
+  var st=SMAP[g.key]||{name:g.key,dept:g.dept};
+  var d=DEPTS[deptOf(g)]||{};
+  var s=gsel(g), f=g.flav[s.f], it=gitem(g), cur=it.currency;
+  var u=unitPrice(it), allV=gvariants(g);
+  var nFlav=g.flav.length;
+  var hasFlav=!g.split && (nFlav>1||(g.flav[0]&&g.flav[0].name!=='—'));
+  var peers=GROUPS[nk(g.brand)]||[];
+  var nSt={}; peers.forEach(function(x){ nSt[x.key]=1; });
+  var nStores=Object.keys(nSt).length||1;
+  var desc=String(it.desc==null?'':it.desc).trim();
+  var approx=u?usdApprox(u.value,cur):'';
+
+  return '<div class="bstore">'+esc(st.name||g.key)+'</div>'+
+    '<h4>'+esc(g.split?g.title:(g.brand+(f.name!=='—'?' '+f.name:'')))+'</h4>'+
+    (desc?'<p class="bdesc">'+esc(desc)+'</p>'
+         :'<p class="bdesc dim">No description published for this one.</p>')+
+    '<dl class="bspec">'+
+      '<dt>Department</dt><dd>'+esc(d.label||'—')+'</dd>'+
+      '<dt>Brand</dt><dd>'+esc(g.brand)+'</dd>'+
+      (hasFlav?'<dt>Flavours</dt><dd>'+nFlav+'</dd>':'')+
+      (deptOf(g)==='disposable'&&u?'<dt>Puffs</dt><dd>'+u.count.toLocaleString()+'</dd>'
+        :'<dt>Strengths</dt><dd>'+strengthList(allV)+'</dd>')+
+      (u?'<dt>Unit price</dt><dd>'+unitFmt(u.value,cur)+' '+esc(u.label)+
+         /* the converted figure the badge actually ranked on */
+         (approx?'<small class="fxnote">'+esc(approx)+' · '+esc(fxAsOf())+'</small>':'')+
+         '</dd>':'')+
+      (nStores>1?'<dt>Also at</dt><dd>'+(nStores-1)+' other store'+(nStores>2?'s':'')+'</dd>':'')+
+      (it.markets?'<dt>Available in</dt><dd>'+
+        esc(String(it.markets).replace('ROW','rest of world').replace('INTL','worldwide').split(',').join(' + '))+
+        '</dd>':'')+
+    '</dl>';
 }
 
 function card(g){
@@ -903,24 +1047,7 @@ function card(g){
     '</div>'+
 
     '<div class="face back">'+
-      '<div class="backin">'+
-        '<div class="bstore">'+esc(st.name||g.key)+'</div>'+
-        '<h4>'+esc(g.split?g.title:(g.brand+(f.name!=='—'?' '+f.name:'')))+'</h4>'+
-        (desc?'<p class="bdesc">'+esc(desc)+'</p>'
-             :'<p class="bdesc dim">No description published for this one.</p>')+
-        '<dl class="bspec">'+
-          '<dt>Department</dt><dd>'+esc(d.label||'—')+'</dd>'+
-          '<dt>Brand</dt><dd>'+esc(g.brand)+'</dd>'+
-          (hasFlav?'<dt>Flavours</dt><dd>'+nFlav+'</dd>':'')+
-          (deptOf(g)==='disposable'&&u?'<dt>Puffs</dt><dd>'+u.count.toLocaleString()+'</dd>'
-            :'<dt>Strengths</dt><dd>'+strengthList(allV)+'</dd>')+
-          (u?'<dt>Unit price</dt><dd>'+unitFmt(u.value,cur)+' '+esc(u.label)+'</dd>':'')+
-          (nStores>1?'<dt>Also at</dt><dd>'+(nStores-1)+' other store'+(nStores>2?'s':'')+'</dd>':'')+
-          (it.markets?'<dt>Available in</dt><dd>'+
-            esc(String(it.markets).replace('ROW','rest of world').replace('INTL','worldwide').split(',').join(' + '))+
-            '</dd>':'')+
-        '</dl>'+
-      '</div>'+
+      '<div class="backin">'+backInnerHtml(g)+'</div>'+
       '<div class="backfoot">'+
         '<button class="buy" type="button" data-add="'+gid+'">Add to cart — '+
           (money(it.price,cur)||'see store')+'</button>'+
@@ -1087,6 +1214,7 @@ function apply(reset){
     Object.keys(F.stores).length||Object.keys(F.brands).length;
   document.getElementById('clear').hidden=!on;
 
+  renderHero(); setRouteMeta();
   renderRail(); refreshFacets(); setWarn(); setNotices(); saveSelv();
 }
 
@@ -1173,9 +1301,12 @@ function refreshFacets(){
    shot stands in — presented as a rounded square, which is what it
    honestly is.
    ============================================================ */
-function logoFor(st){
+/* `sz` matters now that the spotlight watermark wants the same mark at
+   poster size. Existing callers pass no size and keep the 128 they had. */
+function logoFor(st,sz){
   if(st.logo) return st.logo;
-  return 'https://www.google.com/s2/favicons?sz=128&domain='+encodeURIComponent(st.domain||'');
+  return 'https://www.google.com/s2/favicons?sz='+(sz||128)+
+    '&domain='+encodeURIComponent(st.domain||'');
 }
 /* deterministic tint per store so the row reads as distinct shops */
 function monoTint(key){
@@ -1272,20 +1403,181 @@ function setNotices(){
   box.innerHTML=html;
 }
 
+/* ============================================================
+   DEPARTMENT HEROES
+   ------------------------------------------------------------
+   Legal-Leaf gives each page its own hero by serving a separate HTML
+   file per page. We cannot do that: every department URL rewrites to
+   index.html and the shelf is chosen client-side (CLAUDE.md §3), so
+   here the hero is DATA and renderHero() swaps it.
+
+   Each entry argues its own shelf's unit, because that unit is the
+   reason the shelf exists. The colour comes from the department token
+   via data-hero, so a new shelf needs a HEROES entry and one CSS line.
+   ============================================================ */
+var HEROES={
+  all:{ eyebrow:'every store, one price you can compare',
+    lead:'what it actually', head:'costs',
+    sub:'Pouches, disposables, e-liquid and cigars from every shop we carry — priced '+
+        'per pouch, per 1,000 puffs, per ml and per stick, so a five-can roll and a '+
+        'single tin finally compare honestly.' },
+  pouch:{ eyebrow:'pouches & snus · priced per pouch',
+    lead:'the only number', head:'that matters',
+    sub:'A tin of 20 and a roll of five never compared on the shelf price. Every pouch '+
+        'here carries its own per-pouch cost, converted to one currency — so a kroner '+
+        'listing and a euro listing can actually be ranked against each other.' },
+  disposable:{ eyebrow:'disposables · priced per 1,000 puffs',
+    lead:'puffs, not', head:'packaging',
+    sub:'A 30K at $16.99 and a 60K at $19.99 look three dollars apart and are 42% apart. '+
+        'Pricing by the thousand puffs is the entire reason this shelf exists.' },
+  device:{ eyebrow:'devices & pods · priced flat',
+    lead:'hardware, judged', head:'honestly',
+    sub:'Mods, kits, pods, tanks and coils. No invented unit here — a device is a device, '+
+        'so this shelf compares on flat price, stock, and what each store will ship you.' },
+  liquid:{ eyebrow:'e-liquid · priced per ml',
+    lead:'per millilitre,', head:'not per bottle',
+    sub:'A 100ml shortfill and a 10ml nic salt are not the same purchase. Every bottle '+
+        'shows its cost per ml, so the big bottle has to earn its shelf price.' },
+  cigar:{ eyebrow:'cigars · priced per stick',
+    lead:'per stick,', head:'every time',
+    sub:'Singles, fivers and full boxes reduced to one comparable number. Cutters, cases '+
+        'and humidors live on the Gear shelf — a $199 humidor is not a $199 cigar.' },
+  gear:{ eyebrow:'gear & accessories · priced flat',
+    lead:'everything', head:'around it',
+    sub:'Humidors, cutters, cases and pipe gear. This shelf exists so that nothing without '+
+        'nicotine in it gets priced per stick, which is exactly what used to happen.' }
+};
+
+function renderHero(){
+  var sec=document.getElementById('hero'); if(!sec) return;
+  var d=F.dept||'all', h=HEROES[d]||HEROES.all;
+  sec.setAttribute('data-hero',d);
+  [['heroEyebrow',h.eyebrow],['heroLead',h.lead],
+   ['heroHead',h.head],['heroSub',h.sub]].forEach(function(p){
+    var el=document.getElementById(p[0]); if(el) el.textContent=p[1];
+  });
+}
+
+/* ============================================================
+   DEPARTMENT ROUTES — path in, path out
+   ------------------------------------------------------------
+   CLAUDE.md §3 states the department is chosen client-side from the
+   path. It was not. NOTHING read location.pathname, so /pouches,
+   /cigars and the rest rewrote to index.html and every one of them
+   landed on "Everything" — a dead end for the visitor, and six landing
+   pages search engines had no reason to keep apart.
+
+   Compounding it, index.html carried ONE title, ONE description and a
+   canonical hardcoded to "/", so all six routes deduplicated into the
+   homepage. Unique titles cost nothing and are the single biggest
+   organic-traffic lever on a comparison site.
+
+   NOTE: this is client-side metadata. Google renders JS and will see
+   it; other crawlers and social unfurlers often will not. Serving real
+   per-route <head> content is stronger — but that needs either a build
+   step or six near-duplicate HTML files, and §2/§5 rule both out. This
+   is the honest maximum without changing the architecture.
+   ============================================================ */
+var DEPT_PATH={pouch:'pouches', disposable:'disposables', device:'devices',
+               liquid:'e-liquid', cigar:'cigars', gear:'gear'};
+var PATH_DEPT={}; Object.keys(DEPT_PATH).forEach(function(d){ PATH_DEPT[DEPT_PATH[d]]=d; });
+
+var DEPT_SEO={
+  all:{ t:'Nicotia Market — Pouches, Vape & Cigars, Priced by the Unit',
+    d:'Compare nicotine pouches, snus, disposables, e-liquid and cigars across every store we carry. Priced per pouch, per 1,000 puffs, per ml and per stick. Adults 21+.' },
+  pouch:{ t:'Nicotine Pouches & Snus — Compared Per Pouch | Nicotia Market',
+    d:'Every nicotine pouch and snus tin we track, priced per pouch and converted to one currency so a five-can roll and a single tin compare honestly. ZYN, VELO, Pablo, Iceberg and more. Adults 21+.' },
+  disposable:{ t:'Disposable Vapes — Compared Per 1,000 Puffs | Nicotia Market',
+    d:'Disposable vapes priced per 1,000 puffs, not per device. A 30K and a 60K look three dollars apart and are 42% apart — see the real cost. Adults 21+.' },
+  device:{ t:'Vape Devices, Pods, Kits & Coils — Compared | Nicotia Market',
+    d:'Mods, kits, pods, tanks and coils compared across every store we carry, on flat price, stock and where each one actually ships. Adults 21+.' },
+  liquid:{ t:'E-Liquid & Vape Juice — Compared Per ml | Nicotia Market',
+    d:'Shortfills, nic salts and freebase e-liquid priced per millilitre, so a 100ml bottle has to earn its shelf price against a 10ml. Adults 21+.' },
+  cigar:{ t:'Cigars — Compared Per Stick | Nicotia Market',
+    d:'Singles, fivers and full boxes reduced to one comparable number: the price per stick. Cutters, cases and humidors live on the Gear shelf. Adults 21+.' },
+  gear:{ t:'Humidors, Cutters, Cases & Pipe Gear | Nicotia Market',
+    d:'Humidors, cutters, cases and pipe gear compared across every store we carry. Accessories only — nothing here contains nicotine. Adults 21+.' }
+};
+
+function deptFromPath(){
+  var seg=String(location.pathname||'').replace(/^\/+|\/+$/g,'').toLowerCase();
+  return PATH_DEPT[seg]||'';
+}
+
+/* Title, description and canonical per shelf. Canonical points at the
+   department's OWN url — pointing all six at "/" told Google they were
+   the homepage wearing a hat, which is why none of them could rank. */
+function setRouteMeta(){
+  var d=F.dept||'all', s=DEPT_SEO[d]||DEPT_SEO.all;
+  var path=d==='all'?'/':('/'+DEPT_PATH[d]);
+  document.title=s.t;
+  var set=function(sel,attr,val){
+    var el=document.querySelector(sel); if(el) el.setAttribute(attr,val);
+  };
+  set('meta[name="description"]','content',s.d);
+  set('link[rel="canonical"]','href','https://nicotiamarket.com'+path);
+  set('meta[property="og:title"]','content',s.t);
+  set('meta[property="og:description"]','content',s.d);
+  set('meta[property="og:url"]','content','https://nicotiamarket.com'+path);
+}
+
+/* Keep the address bar honest when the shelf changes, so a department
+   is linkable and the back button steps through shelves. Spotlights own
+   the hash, so this only ever rewrites the path. */
+function pushDeptPath(){
+  if(currentRoute().view==='spotlight') return;
+  var d=F.dept||'all', want=d==='all'?'/':('/'+DEPT_PATH[d]);
+  if(!want||location.pathname===want) return;
+  try{ history.pushState({dept:d},'',want+location.search); }catch(e){}
+}
+
+/* the tab strip follows F.dept, whoever set it — click, path or Back */
+function syncDeptTabs(){
+  var d=F.dept||'all';
+  Array.prototype.forEach.call(document.querySelectorAll('.dept'),function(x){
+    if(x.tagName==='A') return;
+    x.setAttribute('aria-pressed', x.getAttribute('data-dept')===d?'true':'false');
+  });
+}
+window.addEventListener('popstate',function(){
+  F.dept=deptFromPath()||'all'; syncDeptTabs(); apply();
+});
+
+/* The headline number, and the one most easily made a liar.
+
+   It used to walk only each group's SELECTED variant, skip the
+   `available` check that every shelf applies, compare bare numbers
+   across four currencies, and then print the winner's own symbol on the
+   result. That is how the hero could claim a cheapest pouch of £0.003
+   while the site's own "best value per unit" sort, filtered to the same
+   store, put the real floor at £0.03.
+
+   It now shares computeBestUnits()' yardstick exactly: in stock, every
+   variant, one currency.
+
+   DISPLAYED IN USD for now. Once PREVIEW_MODE goes false and shipping
+   limits are enforced, this should follow the shopper's own region —
+   the conversion already runs through usdOf(), so that becomes a
+   question of which target currency to format into, not new maths. */
 function heroStats(){
   var el=document.getElementById('heroStats'); if(!el) return;
-  var stores={}, best=null, bestCur='USD';
+  var stores={}, best=null;
   PGROUPS.forEach(function(g){ stores[g.key]=1; });
   PGROUPS.forEach(function(g){
     if(deptOf(g)!=='pouch') return;
-    var u=unitPrice(gitem(g)); if(!u) return;
-    if(best==null||u.value<best){ best=u.value; bestCur=gitem(g).currency||'USD'; }
+    gvariants(g).forEach(function(v){
+      if(!v.available) return;
+      var u=unitPrice(v); if(!u) return;
+      var usd=usdOf(u.value,v.currency||'USD'); if(usd==null) return;
+      if(best==null||usd<best) best=usd;
+    });
   });
   var bits=[
     '<div><b>'+ALL.length.toLocaleString()+'</b><span>products tracked</span></div>',
     '<div><b>'+Object.keys(stores).length+'</b><span>stores compared</span></div>'
   ];
-  if(best!=null) bits.push('<div><b>'+unitFmt(best,bestCur)+'</b><span>cheapest pouch</span></div>');
+  if(best!=null) bits.push('<div><b>'+unitFmt(best,'USD')+'</b>'+
+    '<span>cheapest pouch (USD)</span></div>');
   el.innerHTML=bits.join('');
 }
 
@@ -1733,7 +2025,8 @@ document.getElementById('f-instock').addEventListener('click',function(){
 document.getElementById('depts').addEventListener('click',function(e){
   var b=e.target.closest('.dept'); if(!b||b.tagName==='A') return;
   this.querySelectorAll('.dept').forEach(function(x){x.setAttribute('aria-pressed','false');});
-  b.setAttribute('aria-pressed','true'); F.dept=b.getAttribute('data-dept'); apply();});
+  b.setAttribute('aria-pressed','true'); F.dept=b.getAttribute('data-dept');
+  leaveSpotlight(); pushDeptPath(); apply();});
 document.getElementById('clearStores').addEventListener('click',function(){F.stores={};apply();});
 document.getElementById('clearBrands').addEventListener('click',function(){F.brands={};apply();});
 document.getElementById('clear').addEventListener('click',function(){
@@ -1747,7 +2040,7 @@ document.getElementById('clear').addEventListener('click',function(){
   document.getElementById('f-instock').classList.remove('active');
   document.querySelectorAll('.dept').forEach(function(x){x.setAttribute('aria-pressed','false');});
   document.querySelector('.dept[data-dept="all"]').setAttribute('aria-pressed','true');
-  apply();});
+  leaveSpotlight(); pushDeptPath(); apply();});
 
 document.getElementById('scrim').addEventListener('click',function(){
   drawer('board',false);drawer('list',false);});
@@ -1770,6 +2063,24 @@ document.getElementById('fscrim').addEventListener('click',function(){toggleFilt
 function currentRoute(){
   var m=(location.hash||'').match(/^#\/store\/([a-z0-9_-]+)/i);
   return m ? {view:'spotlight', key:m[1]} : {view:'mall'};
+}
+
+/* Leaving a spotlight is part of picking a department.
+
+   The #depts handler set F.dept and called apply(), which faithfully
+   re-rendered a #mallview that was still `hidden` behind #spotview — so
+   on /#/store/* every department button, Everything included, looked
+   completely dead. Only the masthead logo escaped, because it is an
+   <a href="#/"> and so moved the hash.
+
+   route() performs the swap on hashchange; calling it directly too
+   makes the order deterministic instead of depending on when the event
+   drains. Running twice is harmless — it only toggles `hidden`. */
+function leaveSpotlight(){
+  if(currentRoute().view!=='spotlight') return false;
+  location.hash='';
+  route();
+  return true;
 }
 function route(){
   var r=currentRoute();
@@ -1817,9 +2128,26 @@ function renderBrandSpotlight(key, cfg, st){
     return '<div class="uspcard"><b>'+esc(u[0])+'</b><span>'+esc(u[1])+'</span></div>';
   }).join('');
 
+  /* The store's mark, poster-sized, behind its own page. aria-hidden and
+     pointer-events:none — this is texture, not content.
+
+     Real artwork if the SPOTLIGHT entry supplies `logo`; otherwise the
+     store's NAME set in our display face, not a favicon. Google's
+     favicon service ignores sz= and hands back 48x48 whatever you ask
+     for — upscaled to ~900px that is an unreadable smear, and pushing
+     the opacity up to compensate only makes the smear obvious. Type
+     stays crisp at any size, costs no request, and cannot 404. */
+  var mark=cfg.logo||'';
+
   el.innerHTML=
     '<div class="shell spot-brand" style="--spot:'+esc(cfg.accent||'var(--ember)')+
       ';--spot2:'+esc(cfg.accent2||'var(--gold)')+'">'+
+      '<div class="spotmark" aria-hidden="true">'+
+        (mark
+          ? '<img src="'+esc(mark)+'" alt="" referrerpolicy="no-referrer" '+
+            'onerror="this.parentNode.remove();">'
+          : '<span class="spotword">'+esc(st.name||key)+'</span>')+
+      '</div>'+
       '<a class="sbacklink" href="#/">&larr; All stores</a>'+
       '<header class="shero">'+
         '<p class="eyebrow spot-eyebrow">'+esc(cfg.eyebrow)+'</p>'+
@@ -2008,6 +2336,12 @@ function received(res){
   META=res.meta||META; UPDATED=res.updated||UPDATED;
   BYDEPT=res.byDept||BYDEPT;
 
+  /* Live FX if the API ever sends it, otherwise the dated table in FX_USD.
+     Only accepted with a usable rates object, so a malformed payload
+     falls back rather than emptying the yardstick. */
+  var fx=res.fx||(res.meta&&!Array.isArray(res.meta)&&res.meta.fx)||null;
+  if(fx&&fx.rates&&typeof fx.rates==='object'&&fx.rates.USD) FXR=fx;
+
   var live=(res.items||[])
     .filter(function(it){ return !!SMAP[it.k]; })
     .map(hydrate);
@@ -2084,6 +2418,9 @@ function loadCatalogue(){
 /* boot */
 loadLoc(); restoreUserLoc(); locPillUI(); setAgeCopy(); setWarn(); setNotices();
 loadSelv(); loadCart(); badges(); accountUI(); setAuthMode('signup'); renderCart();
+/* The path picks the opening shelf BEFORE the first render, so /pouches
+   opens on Pouches instead of dumping the visitor into Everything. */
+F.dept=deptFromPath()||'all'; syncDeptTabs(); setRouteMeta();
 skeleton(); renderStoreList(); route();
 if(read_('nm_age')==='1' && hasLoc()) closeGate(); else openGate(false);
 

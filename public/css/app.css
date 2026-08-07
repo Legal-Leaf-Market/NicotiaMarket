@@ -172,18 +172,34 @@ header.top{position:sticky;top:0;z-index:50;
    HERO — short on purpose. Both sisters open with a statement;
    ours has to make its promise and get out of the grid's way.
    ============================================================ */
-.hero{position:relative;overflow:hidden;padding:42px 0 30px;text-align:center}
+/* ONE HERO PER SHELF. Legal-Leaf gives each page its own hero by
+   serving a separate HTML file; every department URL here rewrites to
+   index.html and the shelf is chosen client-side (CLAUDE.md §3), so the
+   hero is themed from a data attribute instead of duplicated as markup.
+
+   --hero-hue is the ONLY thing each department overrides, so adding a
+   shelf means adding one line, not a new hero. The alpha moved off the
+   gradient stop and onto opacity so the hue can be a bare token. */
+.hero{--hero-hue:var(--ember);
+  position:relative;overflow:hidden;padding:42px 0 30px;text-align:center}
+.hero[data-hero="pouch"]     {--hero-hue:var(--pouch)}
+.hero[data-hero="disposable"]{--hero-hue:var(--disposable)}
+.hero[data-hero="device"]    {--hero-hue:var(--device)}
+.hero[data-hero="liquid"]    {--hero-hue:var(--liquid)}
+.hero[data-hero="cigar"]     {--hero-hue:var(--cigar)}
+.hero[data-hero="gear"]      {--hero-hue:var(--gear)}
 .hero::before{content:"";position:absolute;inset:-40% -10% auto;height:340px;pointer-events:none;
-  background:radial-gradient(60% 100% at 50% 0,rgba(224,134,63,.16),transparent 70%)}
+  opacity:.16;transition:opacity .3s;
+  background:radial-gradient(60% 100% at 50% 0,var(--hero-hue),transparent 70%)}
 .hero-inner{position:relative;z-index:2}
 .hero h1{margin:12px 0 0;font-family:var(--display);font-weight:900;
   font-size:clamp(2.6rem,7vw,5.2rem);line-height:.9;letter-spacing:-.03em;
-  background:linear-gradient(96deg,var(--text) 0%,var(--gold) 46%,var(--ember) 88%);
+  background:linear-gradient(96deg,var(--text) 0%,var(--gold) 46%,var(--hero-hue) 88%);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
   color:var(--gold)}
 .hero .h-lead{display:block;font-family:var(--script);font-style:italic;font-weight:600;
-  font-size:clamp(1.3rem,3.4vw,2.1rem);color:var(--ember);line-height:1;
-  margin-bottom:-.1em;-webkit-text-fill-color:var(--ember)}
+  font-size:clamp(1.3rem,3.4vw,2.1rem);color:var(--hero-hue);line-height:1;
+  margin-bottom:-.1em;-webkit-text-fill-color:var(--hero-hue)}
 .hero .hsub{color:var(--muted);font-size:1.02rem;line-height:1.6;max-width:56ch;
   margin:18px auto 0}
 .hstats{display:flex;gap:30px;flex-wrap:wrap;justify-content:center;margin-top:24px}
@@ -308,6 +324,7 @@ header.top{position:sticky;top:0;z-index:50;
   letter-spacing:-.02em;margin:0}
 .railhead small{font-size:12px;color:var(--dim)}
 .rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,1fr);gap:14px;
+  align-items:stretch;
   overflow-x:auto;padding-bottom:14px;scroll-snap-type:x proximity;scrollbar-width:thin}
 .rail::-webkit-scrollbar{height:5px}
 .rail::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
@@ -386,14 +403,21 @@ header.top{position:sticky;top:0;z-index:50;
      - cards got wider (215 -> 240) so two-line titles stop wrapping
        to three at common breakpoints.
    ============================================================ */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px;
-  padding-bottom:40px;align-items:stretch}
+/* grid-auto-rows:1fr is what makes EVERY card the same height, not just
+   every card sharing a row. Implicit rows size independently by
+   default, so a row carrying a three-line title stood taller than the
+   row above it and the shelf read as ragged. 1fr gives every implicit
+   row the height of the tallest card on the shelf. */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  grid-auto-rows:1fr;gap:18px;padding-bottom:40px;align-items:stretch}
 
 /* No fixed height. The card is a grid item, so it stretches to the row
    and the row sizes to its tallest member. The flip needs an absolutely
    positioned back, so the FRONT stays in normal flow and is what gives
    the card its intrinsic height. */
-.card{perspective:1400px;display:flex;flex-direction:column;cursor:pointer}
+/* height:100% so the card fills its track in ANY container — the rail
+   and the spotlight grid included, not only the main shelf. */
+.card{perspective:1400px;display:flex;flex-direction:column;cursor:pointer;height:100%}
 .card-in{position:relative;flex:1;display:flex;transform-style:preserve-3d;
   transition:transform .6s cubic-bezier(.22,.72,.24,1)}
 .card.on .card-in{transform:rotateY(180deg)}
@@ -505,6 +529,10 @@ header.top{position:sticky;top:0;z-index:50;
 .bspec dt{color:#9a8b7c;letter-spacing:.05em;text-transform:uppercase;font-size:9.5px;
   align-self:center}
 .bspec dd{margin:0;color:#f2eae0;text-align:right;font-weight:600}
+/* the converted figure the gold badge actually ranked on, so a
+   cross-currency claim can be checked rather than taken on trust */
+.fxnote{display:block;font-weight:400;font-size:9.5px;letter-spacing:.04em;
+  color:#9a8b7c;margin-top:2px}
 .backfoot{padding:11px 14px 14px;display:flex;gap:8px;align-items:center;
   border-top:1px solid rgba(224,134,63,.18)}
 .buy{flex:1;text-align:center;font-family:var(--sans);font-weight:700;font-size:12px;
@@ -728,7 +756,45 @@ footer p{margin:0 0 9px;line-height:1.6}
    Our dark chassis carrying the store's own signature colour, set as
    --spot on the wrapper so a future spotlight needs no new CSS.
    Nicokick's teal reads as theirs without breaking the family. */
-.spot-brand{--spot:var(--ember);--spot2:var(--gold)}
+.spot-brand{--spot:var(--ember);--spot2:var(--gold);
+  position:relative;isolation:isolate}
+
+/* THE STORE'S MARK, POSTER-SIZED, BEHIND ITS OWN PAGE.
+   isolation:isolate on the wrapper keeps the negative z-index inside
+   this stacking context, so the watermark sits above the page
+   background and behind every piece of content — without it, z-index:-1
+   escapes and the mark disappears under <body>.
+
+   The radial mask fades it out before it reaches the product grid, so
+   the texture never competes with a card. Greyscale + low opacity means
+   it reads as the store's colour, not as a pasted logo; the tint comes
+   from ::before in their own --spot.
+
+   Sized off a favicon by default, so it is soft — that is fine at 5%
+   behind a mask, but set `logo` on the SPOTLIGHT entry for real
+   artwork. pointer-events:none so it never eats a click. */
+.spotmark{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;
+  display:flex;align-items:flex-start;justify-content:center}
+.spotmark img{width:min(1100px,150%);max-width:none;margin-top:-5%;
+  opacity:.07;filter:grayscale(1) brightness(1.8) contrast(.9);
+  -webkit-mask-image:radial-gradient(58% 52% at 50% 28%,#000 0%,transparent 72%);
+          mask-image:radial-gradient(58% 52% at 50% 28%,#000 0%,transparent 72%)}
+/* the default mark: the store's name at poster scale in its own colour,
+   bled off both edges and faded out before it reaches the product grid.
+   Crisp at any size, no request, no 404. */
+.spotword{font-family:var(--display);font-weight:900;letter-spacing:-.045em;
+  font-size:clamp(116px,25vw,330px);line-height:.78;white-space:nowrap;
+  color:var(--spot);opacity:.11;margin-top:-.05em;user-select:none;
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.55) 46%,transparent 80%);
+          mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.55) 46%,transparent 80%)}
+.spot-brand::before{content:"";position:absolute;inset:0 0 auto;height:520px;z-index:-2;
+  pointer-events:none;opacity:.13;
+  background:radial-gradient(70% 60% at 50% 0,var(--spot),transparent 72%)}
+@media(max-width:560px){
+  .spotmark img{width:190%;margin-top:-2%;opacity:.045}
+  .spot-brand::before{height:340px}
+}
+
 .spot-brand .spot-eyebrow{color:var(--spot);opacity:1}
 .spot-brand .shero{border-bottom:2px solid var(--spot)}
 .spot-brand h1{background:linear-gradient(96deg,var(--text) 0%,var(--spot2) 55%,var(--spot) 100%);

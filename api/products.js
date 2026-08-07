@@ -615,12 +615,49 @@ async function get(url, ms = 12000) {
    Zyn 40 — instead of one. */
 const MULTIWORD = /^(juice head|zeo universe|white fox|killa switch|snus o'?clock|ice energy|loop mix)/i
 
+const normName = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '')
+
+/* Every shop name and domain in the registry, normalised. Built once. */
+let STORE_WORDS = null
+function storeWords() {
+  if (STORE_WORDS) return STORE_WORDS
+  STORE_WORDS = new Set()
+  for (const s of STORES) {
+    if (s.name) STORE_WORDS.add(normName(s.name))
+    if (s.domain) {
+      STORE_WORDS.add(normName(s.domain))
+      STORE_WORDS.add(normName(String(s.domain).replace(/^www\./, '').split('.')[0]))
+    }
+  }
+  return STORE_WORDS
+}
+
+/* A vendor is useless when it names a SHOP rather than a manufacturer.
+   This originally caught only the store scraping ITSELF, which missed
+   resellers. Europesnus stocks NikoPouches.dk items whose vendor field
+   is literally "NikoPouches.dk"; because a row with no variant groups
+   by brand, and app.js promotes brand to the card title, those cards
+   rendered with the headline "NikoPouches.dk" over a store pill reading
+   "Europesnus" — the title/store mismatch seen on the live shelf.
+
+   So: reject a vendor matching ANY store in the registry, not just this
+   one, and reject anything shaped like a bare domain.
+
+   This is safe where a shop is also a genuine brand (Geekvape,
+   Vaporesso, XIFEI): the fallback takes the title's leading token,
+   which for "Geekvape Aegis Legend 3" is "Geekvape" again. The change
+   only bites when the vendor names a shop that ISN'T in the title. */
+const DOMAINISH = /^[a-z0-9-]+\.(com|co\.uk|net|org|shop|store|dk|se|no|fi|de|nl|fr|es|it|eu|uk|us)$/i
+
 function looksLikeStore(vendor, st) {
   if (!vendor) return true
-  const norm = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, '')
-  const v = norm(vendor)
-  return v === norm(st.name) || v === norm(st.domain) ||
-         v === norm(String(st.domain).replace(/^www\./, '').split('.')[0])
+  const v = normName(vendor)
+  if (!v) return true
+  if (DOMAINISH.test(String(vendor).trim())) return true
+  if (v === normName(st.name)) return true
+  if (st.domain && (v === normName(st.domain) ||
+      v === normName(String(st.domain).replace(/^www\./, '').split('.')[0]))) return true
+  return storeWords().has(v)
 }
 
 function brandFrom(st, vendor, title) {

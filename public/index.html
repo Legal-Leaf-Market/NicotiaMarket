@@ -156,6 +156,12 @@
   <a class="dept spot" id="spotLink" href="#/store/nicokick" data-route hidden>US Pouches &#9733;</a>
 </div></nav>
 
+<!-- Subcategories for the chosen department. Hidden on "Everything",
+     where a "Coils" chip next to a "Snus" chip would mean nothing. -->
+<nav class="subnav" id="subnav" hidden aria-label="Subcategory">
+  <div class="subnav-in shell" id="subchips"></div>
+</nav>
+
 <div id="mallview">
 
 <!-- One hero per shelf. The copy is swapped by renderHero() from the

@@ -65,6 +65,36 @@ var DEPTS = {
                warn:'<b>Accessories.</b> Age 21+ still applies. Items containing nicotine are on the other shelves.'}
 };
 var DEPT_ORDER = ['pouch','disposable','device','liquid','cigar','gear'];
+
+/* ============================================================
+   SUBCATEGORIES
+   ------------------------------------------------------------
+   The shelf below the shelf. api/products.js assigns `sub` from the
+   title; this is only the ordering and the wording a shopper reads.
+
+   Order is deliberate — the thing most people came for goes first, and
+   the accessories that are not the product go last. "Devices & Pods"
+   was the department that most needed this: a replacement coil and a
+   200W mod are not the same purchase and were sharing one shelf.
+   ============================================================ */
+var SUBS = {
+  pouch: [['nicotine','Nicotine pouches'],['snus','Snus'],['lozenge','Lozenges'],
+          ['chew','Chew'],['energy','Energy & caffeine']],
+  disposable: [['vape','Disposable vapes'],['prefilled','Prefilled pods']],
+  device: [['kit','Kits & devices'],['mod','Mods & batteries'],['pod','Pods & cartridges'],
+           ['tank','Tanks & atomisers'],['coil','Coils'],['accessory','Accessories']],
+  liquid: [['eliquid','E-liquid'],['shortfill','Shortfills'],['salt','Nic salts']],
+  cigar: [['premium','Cigars'],['cigarillo','Cigarillos & little cigars'],
+          ['pipe','Pipe tobacco'],['rolling','Tubes & rolling'],['sampler','Samplers']],
+  gear: [['wraps','Wraps & papers'],['cutter','Cutters & punches'],['lighter','Lighters & torches'],
+         ['humidor','Humidors & humidity'],['case','Cases & stands'],['ashtray','Ashtrays'],
+         ['pipe','Pipe accessories'],['tool','Tools'],['accessory','Other accessories']]
+};
+function subLabel(dept,key){
+  var l=(SUBS[dept]||[]).filter(function(p){ return p[0]===key; })[0];
+  return l?l[1]:key;
+}
+function subOf(x){ return (x&&x.sub)||''; }
 var ALLWARN = '<b>Warning:</b> Nicotine is addictive. Cigar smoking causes cancer. Adults 21+ only.';
 var EUWARN = {
   pouch:'<b>Warning:</b> This product contains nicotine, which is a highly addictive substance. Not recommended for non-smokers.',
@@ -437,10 +467,21 @@ function parsePuffs(t){
 /* The mall's actual job: make packs, bundles and big-puff disposables
    comparable. Returns null when a department has no honest unit — the
    card then simply shows no chip, rather than inventing one. */
+/* Subcategories whose honest unit is NOT their department's.
+
+   Pipe tobacco sits on the cigar shelf and is sold by WEIGHT — a 2oz
+   tin is not "a stick" — so per-stick pricing on 408 rows was the same
+   fault as the $199 humidor rendering "$199.00 per stick" that made
+   CLAUDE.md §6 create the gear shelf. Tubes and rolling papers are
+   counted in hundreds and are not sticks either. No unit is better than
+   an invented one: these fall back to flat price. */
+var FLAT_SUBS={'cigar/pipe':1,'cigar/rolling':1};
+
 function unitPrice(it){
   var st=SMAP[it.key]||{}, d=DEPTS[deptOf(it)];
   var price=Number(it.price);
   if(!price||!d||d.unit==='flat') return null;
+  if(FLAT_SUBS[deptOf(it)+'/'+subOf(it)]) return null;
   var text=[it.title,it.variant].filter(Boolean).join(' ');
 
   if(d.unit==='ml'){
@@ -709,11 +750,16 @@ function saveSelv(){ store_('nm_selv',JSON.stringify(SELV)); }
    Mixing both inside one store is fine and expected: Wave Vape sells
    35 flavours as individual products AND the same range as a variable
    parent with 41 variations. */
+/* Subcategory is part of the key. Without it a store's "XROS Kit" and
+   "XROS Replacement Pod" share a leading token, group by brand, and
+   collapse onto one card — a device and its consumable behind the same
+   dropdown, which is exactly the split this shelf needed. */
 function groupKeyFor(it){
   var dept=deptOf(it);
   var brand=String(it.brand==null?'':it.brand).trim();
-  if(it.variant) return it.key+'|'+dept+'|t:'+nk(it.title);
-  return it.key+'|'+dept+'|b:'+nk(brand||it.title);
+  var sub=subOf(it);
+  if(it.variant) return it.key+'|'+dept+'|'+sub+'|t:'+nk(it.title);
+  return it.key+'|'+dept+'|'+sub+'|b:'+nk(brand||it.title);
 }
 
 function buildGroups(items){
@@ -975,7 +1021,7 @@ var ALL=[],PGROUPS=[],VIEW=[],PAGE=0,PER=24,GROUPS={},BOARD={};
 var CONN='',META=[],SRC={live:0,seeded:0},UPDATED=null;
 var BESTUNIT={};   /* dept -> cheapest unit value ON THE SITE, in USD */
 
-var F={q:'',dept:'all',store:'all',brand:'all',strength:'all',price:'all',
+var F={q:'',dept:'all',sub:'all',store:'all',brand:'all',strength:'all',price:'all',
        sort:'unit',deals:false,instock:false,stores:{},brands:{}};
 
 /* The gold unit chip means "cheapest on the whole site for this
@@ -1178,6 +1224,9 @@ function passes(g,skip){
     if(legalFor(deptOf(g))[0]==='banned') return null;
   }
   if(skip!=='dept' && F.dept!=='all' && deptOf(g)!==F.dept) return null;
+  /* only ever narrows within a chosen department; the chip row is not
+     rendered on the combined shelf, where a "Coils" chip would be noise */
+  if(skip!=='sub' && F.dept!=='all' && F.sub!=='all' && subOf(gitem(g))!==F.sub) return null;
   if(skip!=='store'){
     var ps=Object.keys(F.stores);
     if(ps.length){ if(!F.stores[g.key]) return null; }
@@ -1320,7 +1369,7 @@ function apply(reset){
   /* heroStats() used to run only from ingest(), so the three figures
      were whatever the last load computed and never followed the shelf. */
   renderHero(); setRouteMeta(); heroStats();
-  renderRail(); refreshFacets(); setWarn(); setNotices(); saveSelv();
+  renderSubnav(); renderRail(); refreshFacets(); setWarn(); setNotices(); saveSelv();
 }
 
 /* How deep into each shelf's ranking the strip is currently showing.
@@ -1358,6 +1407,38 @@ function railPool(){
    RAILP walks every shelf one step deeper at once, so shuffling shows
    the NEXT best prices rather than reshuffling the same ten cards. It
    wraps, so the strip can be cycled indefinitely without emptying. */
+/* The chip row under the department tabs. Counts are taken with the sub
+   filter itself lifted — passes(g,'sub') — so choosing "Coils" narrows
+   the grid without collapsing every other chip to zero and stranding
+   you there. Hidden on the combined shelf, and hidden when a department
+   only has one subcategory, where the row would say nothing. */
+function renderSubnav(){
+  var nav=document.getElementById('subnav'), box=document.getElementById('subchips');
+  if(!nav||!box) return;
+  /* clear as well as hide — otherwise the previous shelf's chips stay in
+     the DOM and reappear for an instant the next time the row is shown */
+  var off=function(){ nav.hidden=true; box.innerHTML=''; };
+  if(F.dept==='all'){ off(); return; }
+
+  var counts={}, total=0;
+  PGROUPS.forEach(function(g){
+    if(!passes(g,'sub')) return;
+    var s=subOf(gitem(g)); if(!s) return;
+    counts[s]=(counts[s]||0)+1; total++;
+  });
+  var live=(SUBS[F.dept]||[]).filter(function(p){ return counts[p[0]]; });
+  if(live.length<2){ off(); return; }
+
+  nav.hidden=false;
+  box.innerHTML=
+    '<button class="subchip'+(F.sub==='all'?' on':'')+'" data-sub="all">'+
+      'All <span>'+total+'</span></button>'+
+    live.map(function(p){
+      return '<button class="subchip'+(F.sub===p[0]?' on':'')+'" data-sub="'+esc(p[0])+'">'+
+        esc(p[1])+' <span>'+counts[p[0]]+'</span></button>';
+    }).join('');
+}
+
 function renderRail(){
   var sec=document.getElementById('railsec');
   var by=railPool();
@@ -1674,7 +1755,7 @@ function syncDeptTabs(){
   });
 }
 window.addEventListener('popstate',function(){
-  F.dept=deptFromPath()||'all'; syncDeptTabs(); apply();
+  F.dept=deptFromPath()||'all'; F.sub='all'; syncDeptTabs(); apply();
 });
 
 /* The headline number, and the one most easily made a liar.
@@ -2211,7 +2292,12 @@ document.getElementById('depts').addEventListener('click',function(e){
   var b=e.target.closest('.dept'); if(!b||b.tagName==='A') return;
   this.querySelectorAll('.dept').forEach(function(x){x.setAttribute('aria-pressed','false');});
   b.setAttribute('aria-pressed','true'); F.dept=b.getAttribute('data-dept');
+  /* a subcategory from the previous shelf means nothing on this one */
+  F.sub='all';
   leaveSpotlight(); pushDeptPath(); apply();});
+document.getElementById('subchips').addEventListener('click',function(e){
+  var b=e.target.closest('.subchip'); if(!b) return;
+  F.sub=b.getAttribute('data-sub')||'all'; apply();});
 /* Shuffle only moves the strip — it must NOT run apply(), which would
    reset RAILP to 0 and land you back on the same twelve cards. */
 (function(){
@@ -2221,7 +2307,7 @@ document.getElementById('depts').addEventListener('click',function(e){
 document.getElementById('clearStores').addEventListener('click',function(){F.stores={};apply();});
 document.getElementById('clearBrands').addEventListener('click',function(){F.brands={};apply();});
 document.getElementById('clear').addEventListener('click',function(){
-  F={q:'',dept:'all',store:'all',brand:'all',strength:'all',price:'all',
+  F={q:'',dept:'all',sub:'all',store:'all',brand:'all',strength:'all',price:'all',
      sort:'unit',deals:false,instock:false,stores:{},brands:{}};
   document.getElementById('q').value='';
   document.getElementById('f-sort').value='unit';
@@ -2490,6 +2576,7 @@ function hydrate(it){
     id: it.k+'-'+(it.vid||url),
     key: it.k,
     dept: it.dept||st.dept||'',
+    sub: it.sub||'',
     brand: it.brand||st.name||'',
     title: it.title||'',
     variant: it.variant||'',

@@ -170,6 +170,24 @@ header.top{position:sticky;top:0;z-index:50;
 .dept[data-dept="cigar"][aria-pressed="true"]{border-bottom-color:var(--cigar)}
 .dept[data-dept="gear"][aria-pressed="true"]{border-bottom-color:var(--gear)}
 .dept span{font-size:11px;color:var(--dim);margin-left:7px;font-weight:400}
+/* ---- subcategory chips, under the department tabs ----
+   Quieter than the tabs above them on purpose: this is a narrowing
+   within a shelf, not a change of shelf, and it should not compete
+   with the department you are already standing in. */
+.subnav{border-bottom:1px solid var(--line);background:rgba(8,12,10,.55)}
+.subnav[hidden]{display:none}
+.subnav-in{display:flex;gap:8px;overflow-x:auto;padding:10px 0;
+  scrollbar-width:none;-ms-overflow-style:none}
+.subnav-in::-webkit-scrollbar{display:none}
+.subchip{flex:none;cursor:pointer;font-family:var(--sans);font-size:12.5px;font-weight:600;
+  letter-spacing:.01em;padding:7px 14px;border-radius:999px;white-space:nowrap;
+  border:1px solid var(--glass-line);background:var(--chip);color:var(--muted);
+  display:inline-flex;align-items:center;gap:7px;transition:color .16s,border-color .16s}
+.subchip:hover{border-color:var(--gold);color:var(--text)}
+.subchip span{font-size:10.5px;font-weight:700;color:var(--dim)}
+.subchip.on{border-color:var(--gold);background:rgba(240,185,60,.12);color:var(--gold)}
+.subchip.on span{color:var(--gold);opacity:.8}
+
 .dept.spot{color:var(--ember);display:inline-flex;align-items:center;gap:6px}
 .dept.spot:hover{color:var(--gold)}
 .dept.spot[aria-current="page"]{border-bottom-color:var(--ember);color:var(--gold)}

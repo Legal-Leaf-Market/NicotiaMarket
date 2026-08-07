@@ -413,8 +413,11 @@ function guessPuffs(text) {
 /* Per-product department. A store can span shelves — Wave Vape sells
    disposables AND pods, EightVape sells four departments — so the
    product's own signals win and the store's dept is only a fallback. */
-function classify(st, blob) {
+function classify(st, blob, name) {
   const t = String(blob || '').toLowerCase()
+  /* title + variant only — the structural decisions below use this, not
+     `t`, wherever a description could plausibly lie about what a thing is */
+  const n = String(name || '').toLowerCase()
   /* UNAMBIGUOUS CIGAR WORDS GO FIRST, because the pouch rule below
      matches the bare word "pouches" — and that matches PACKAGING, not
      product. Cigarillos ship in resealable foil pouches, so BnB
@@ -439,6 +442,12 @@ function classify(st, blob) {
      flat — a blunt tip priced "per pouch" OR "per stick" is an invented
      number either way. */
   if (/\b(blunt tips?|filter tips?|blunt wraps?|hemp wraps?|rolling papers?|cones?)\b/.test(t)) return 'gear'
+  /* A wrap or a paper is an accessory whatever the brand calls it —
+     "Royal Blunts Strawberry Wraps" names no adjacent "blunt wrap", so
+     the rule above misses it and it fell through to the cigar shelf.
+     Title-only, and \bwraps?\b deliberately cannot match "wrapper",
+     which is what every real cigar description calls its leaf. */
+  if (/\b(wraps?|rolling papers?)\b/.test(n)) return 'gear'
 
   if (/\b(cigarillos?|robustos?|churchill|maduro|belicoso|torpedo)\b/.test(t)) return 'cigar'
 
@@ -456,13 +465,111 @@ function classify(st, blob) {
   if (/\b(snus|lozenges?|mint chew|nicopods?)\b/.test(t)) return 'pouch'
   if (/\b(nicotine|nic|tobacco[- ]free|all[- ]white)[ -]pouch(es)?\b/.test(t)) return 'pouch'
   if (/\bpouch(es)?\b/.test(t) && /\b\d{1,2}\s*mg\b/.test(t)) return 'pouch'
-  if (/\b(disposable|puffs?|\d{1,3}k\b)/.test(t) && !/coil|tank|replacement pod/.test(t)) return 'disposable'
-  if (/\b(e-?liquid|vape juice|shortfill|\d+\s*ml)\b/.test(t) && !/disposable/.test(t)) return 'liquid'
+
+  /* HARDWARE NAMED IN THE TITLE, before anything reads an ml figure.
+     `n` is title + variant only — never the description. */
+  if (/\b(rta|rda|rdta|atomi[sz]ers?|replacement pods?|empty pods?|pod cartridges?|replacement coils?|coils?|tanks?|box mod|mods?|drip tips?|chargers?)\b/.test(n)) return 'device'
+
+  /* A disposable states its life in puffs. A bare "4K" is not enough on
+     its own: "Good Times 4K's Cigarillos" is a cigar line, and that
+     pattern was pulling cigarillos and wraps onto the vape shelf. */
+  if (/\bdisposable\b/.test(n)) return 'disposable'
+  if (/\d{3,6}\s*\+?\s*puffs?\b/.test(n)) return 'disposable'
+  if (/\b\d{1,3}k\b/.test(n) && /\b(puffs?|vape|disposable|pod)\b/.test(t)) return 'disposable'
+
+  /* E-LIQUID. The old rule tested `\d+\s*ml` against the whole blob,
+     DESCRIPTION INCLUDED — and every pod and tank spec sheet states its
+     capacity in ml. That is how 843 Vaporesso rows ("XROS 6") and 380
+     Geekvape rows ("ZX RTA") came to be filed as e-liquid: 1,223 devices
+     on the wrong shelf, priced per ml against a capacity they hold
+     rather than a volume you buy.
+
+     A liquid WORD may come from anywhere, being unambiguous. A bare ml
+     figure must be in the TITLE and start at 10ml — bottles start there,
+     hardware capacities are almost all below it. */
+  if (/\b(e-?liquid|vape juice|shortfill|nic ?salt|salt ?nic|freebase)\b/.test(t) && !/\bdisposable\b/.test(t)) return 'liquid'
+  if (/\b\d{2,4}\s*ml\b/.test(n) && !/\b(pods?|tanks?|cartridges?|coils?|kit|atomi[sz]er)\b/.test(n)) return 'liquid'
+
   if (/\b(humidor|cutter|lighter|ashtray|case|grinder|torch|hygrometer)\b/.test(t)) return 'gear'
   if (/\b(cigars?|cigarillos?|robustos?|toro|churchill|maduro)\b/.test(t)) return 'cigar'
   if (/\b(coil|tank|mod|pod kit|atomiser|atomizer|battery|charger)\b/.test(t)) return 'device'
   return st.dept
 }
+
+/* ============================================================
+   SUBCATEGORIES — the shelf below the shelf
+   ------------------------------------------------------------
+   Matched on TITLE + VARIANT only, never the description, for the
+   reason above: prose drags products into the wrong drawer, and that
+   mistake already cost this catalogue 1,223 misfiled devices and a
+   cigarillo at the top of the pouch shelf.
+
+   First match wins and every list ends in a catch-all, so a product
+   always lands somewhere nameable instead of a silent "other".
+   ============================================================ */
+const SUBCATS = {
+  pouch: [
+    /* caffeine pouches contain NO nicotine — a genuinely different
+       product sharing a shelf, and the one most worth separating */
+    ['energy',    /\b(caffeine|energy)\b|hype\+|guarana/],
+    ['lozenge',   /\blozenges?\b/],
+    ['chew',      /\bmint chew\b|chewing tobacco/],
+    ['snus',      /\bsnus\b|\bportion\b|l[oö]svikt/],
+    ['nicotine',  /./],
+  ],
+  disposable: [
+    ['prefilled', /\bpre-?filled\b|\be-?pods?\b/],
+    ['vape',      /./],
+  ],
+  device: [
+    ['coil',      /\bcoils?\b|mesh coil/],
+    ['tank',      /\btanks?\b|atomi[sz]ers?|\brta\b|\brda\b|\brdta\b/],
+    ['pod',       /\bpods?\b|\bcartridges?\b/],
+    ['mod',       /\bmods?\b|\bbatter(y|ies)\b|\d{2,3}\s*w\b/],
+    ['accessory', /drip tip|charger|cable|lanyard|\bglass\b|o-?ring|\bcase\b/],
+    ['kit',       /./],
+  ],
+  liquid: [
+    ['salt',      /\bnic ?salts?\b|\bsalt ?nic\b|\bsalts?\b/],
+    ['shortfill', /\bshortfill\b|short fill|\b(60|100|120|200)\s*ml\b/],
+    ['eliquid',   /./],
+  ],
+  cigar: [
+    /* pipe tobacco is sold by WEIGHT, not by the stick — app.js carries
+       the matching unit override, without which it renders "per stick" */
+    ['pipe',      /\bpipe tobacco\b|\bflake\b|ready ?rubbed/],
+    ['rolling',   /cigarette tubes?|filter tubes?|make.your.own|\bmyo\b|rolling tobacco/],
+    ['cigarillo', /\bcigarillos?\b|\blittle cigars?\b|\bsmall cigars?\b|\bfiltered cigars?\b/],
+    ['sampler',   /\bsamplers?\b|\bassortment\b|variety pack|gift (pack|set|box)/],
+    ['premium',   /./],
+  ],
+  gear: [
+    ['wraps',     /\bwraps?\b|rolling papers?|\bcones?\b|\bblunt\b/],
+    ['lighter',   /\blighters?\b|\btorch\b|butane|jet flame/],
+    ['cutter',    /\bcutters?\b|\bpunch\b|guillotine|v-?cut\b/],
+    ['humidor',   /humidor|humidif|boveda|hygrometer|\bcedar\b/],
+    ['ashtray',   /ashtray/],
+    ['case',      /\bcase\b|\bholder\b|\bstand\b|\btravel\b/],
+    ['pipe',      /\bpipes?\b|\btamper\b|\breamer\b/],
+    ['tool',      /draw enhancer|\bpoker\b|\bneedle\b/],
+    ['accessory', /./],
+  ],
+}
+
+function subclassify(dept, name) {
+  const rules = SUBCATS[dept]
+  if (!rules) return ''
+  const n = String(name || '').toLowerCase()
+  for (const [key, rx] of rules) if (rx.test(n)) return key
+  return ''
+}
+
+/* NOT PRODUCTS. Checkout add-ons, gift cards and "Select 10 for $69.99"
+   bundle placeholders were being scraped as catalogue rows — 313 of
+   them, including 258 copies of "RELX Shipping Protection". They carry
+   prices, so they compete for the cheapest-per-unit badge, and they
+   inflate every count on the page. */
+const NONPRODUCT = /shipping protection|shipping insurance|route protect|\bgift ?cards?\b|\begift\b|free gift|\bautoship\b|subscription plan|expired mystery|mystery box|\bdonation\b|^\s*select \d+ for/i
 
 function cleanDesc(html) {
   if (!html) return ''
@@ -540,11 +647,15 @@ function row(st, o) {
   const variant = o.variant === 'Default Title' ? '' : (o.variant || '')
   const brand = o.brand || st.name
   const cur = o.currency || 'USD'
+  /* what the product calls ITSELF, with no marketing copy attached */
+  const name = [o.title, variant].filter(Boolean).join(' ')
+  /* The store's own category knows better than a regex does. When a
+     strategy supplies a dept it wins outright. */
+  const dept = o.dept || classify(st, blob, name)
   return {
     k: st.key,
-    /* The store's own category knows better than a regex does. When a
-       strategy supplies a dept it wins outright. */
-    dept: o.dept || classify(st, blob),
+    dept,
+    sub: subclassify(dept, name) || undefined,
     brand: brand === st.name ? undefined : brand,   // default = store name
     title: o.title || '',
     variant: variant || undefined,
@@ -653,7 +764,41 @@ async function get(url, ms = 12000) {
    "Iceberg Watermelon 50mg". Taking the leading token yields 110 real
    brands for Europesnus — Iceberg 133, Velo 51, Fedrs 50, Pablo 43,
    Zyn 40 — instead of one. */
-const MULTIWORD = /^(juice head|zeo universe|white fox|killa switch|snus o'?clock|ice energy|loop mix)/i
+/* PRODUCT LINES, NOT JUST BRANDS.
+
+   brandFrom() takes the title's leading token, so "Zyn Ultra Wintergreen
+   Blast" and "Zyn Cool Mint" both became brand "Zyn" and collapsed onto
+   ONE card — despite Ultra being a different format at a different
+   strength. Same for Pablo's Exclusive/Gold/Silver lines, Cuba's
+   Black/White lines, and the rest.
+
+   This is an EXPLICIT list, deliberately. A generic "take two words"
+   rule would read "Zyn Nicotine Pouches Menthol" as a line called "Zyn
+   Nicotine" and "Iceberg Watermelon Mint" as one called "Iceberg
+   Watermelon" — the second word is a descriptor or a flavour far more
+   often than it is a line. Every entry below was read off the live
+   catalogue.
+
+   LONGEST FIRST: alternation is first-match, so "cuba blackline" has to
+   precede "cuba black" or it would match "cuba black" and strand "line". */
+const MULTIWORD = new RegExp('^(' + [
+  /* multi-word brands */
+  "juice head", "zeo universe", "white fox", "killa switch", "snus o'?clock",
+  "ice energy", "loop mix", "nic nac", "kelly white", "lucy breakers",
+  /* product lines within a brand */
+  "zyn ultra",
+  "velo plus",
+  "pablo exclusive", "pablo gold", "pablo silver",
+  "cuba blackline", "cuba whiteline", "cuba black", "cuba white", "cuba ninja",
+  "fedrs energy", "fedrs ice",
+  "kurwa fatality", "kurwa collection",
+  "iceberg energy",
+  "killa exclusive",
+  "rogue max",
+  "garant extreme",
+  "aroma essence", "aroma attention",
+  "ace x",
+].join('|') + ')', 'i')
 
 const normName = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '')
 
@@ -1478,7 +1623,16 @@ export default async function handler(req, res) {
     scrapeStore(st).catch(e => ({ key: st.key, result: 'FAILED', count: 0, detail: e.message, items: [] }))
   ))
 
-  const items = results.flatMap(r => r.items)
+  /* Drop the checkout add-ons, gift cards and bundle placeholders here
+     rather than in each strategy — one gate, and every door goes
+     through it. See NONPRODUCT: 313 rows, 258 of them one shipping-
+     protection line repeated, all of them carrying a price and so all
+     of them eligible for the cheapest-per-unit badge. */
+  const scraped = results.flatMap(r => r.items)
+  const items = scraped.filter(i => !NONPRODUCT.test(
+    [i.title, i.variant].filter(Boolean).join(' ')))
+  const dropped = scraped.length - items.length
+
   const meta = results.map(({ key, result, count, detail }) => ({ key, result, count, detail }))
 
   const truncated = outOfTime()
@@ -1488,7 +1642,14 @@ export default async function handler(req, res) {
     meta,
     count: items.length,
     truncated,
+    dropped,
     byDept: items.reduce((a, i) => { a[i.dept] = (a[i.dept] || 0) + 1; return a }, {}),
+    /* per-shelf subcategory counts, so ?debug shows the tree without
+       having to pull 7MB of rows to count them by hand */
+    bySub: items.reduce((a, i) => {
+      const k = i.dept + '/' + (i.sub || '—')
+      a[k] = (a[k] || 0) + 1; return a
+    }, {}),
     updated: new Date().toISOString(),
     items,
   }

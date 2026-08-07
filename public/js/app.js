@@ -1273,7 +1273,9 @@ function apply(reset){
     Object.keys(F.stores).length||Object.keys(F.brands).length;
   document.getElementById('clear').hidden=!on;
 
-  renderHero(); setRouteMeta();
+  /* heroStats() used to run only from ingest(), so the three figures
+     were whatever the last load computed and never followed the shelf. */
+  renderHero(); setRouteMeta(); heroStats();
   renderRail(); refreshFacets(); setWarn(); setNotices(); saveSelv();
 }
 
@@ -1618,25 +1620,72 @@ window.addEventListener('popstate',function(){
    limits are enforced, this should follow the shopper's own region —
    the conversion already runs through usdOf(), so that becomes a
    question of which target currency to format into, not new maths. */
+var SHELF_NOUN={all:'products tracked', pouch:'pouches tracked',
+  disposable:'disposables tracked', device:'devices tracked',
+  liquid:'e-liquids tracked', cigar:'cigars tracked', gear:'gear items tracked'};
+
+/* What the three figures are counted over.
+
+   Scope is THIS SHELF plus reachability — deliberately NOT the filter
+   bar. The hero is a standing statement about the department; #rcount
+   directly above the grid is the live filtered count. Tying both to the
+   filters made the hero twitch on every keystroke and said the same
+   thing twice. */
+function shelfGroups(){
+  var d=F.dept||'all';
+  return PGROUPS.filter(function(g){
+    if(d!=='all' && deptOf(g)!==d) return false;
+    if(!SHOW_ALL){
+      if(!storeShipsHere(SMAP[g.key])) return false;
+      if(legalFor(deptOf(g))[0]==='banned') return false;
+    }
+    return true;
+  });
+}
+
 function heroStats(){
   var el=document.getElementById('heroStats'); if(!el) return;
-  var stores={}, best=null;
-  PGROUPS.forEach(function(g){ stores[g.key]=1; });
-  PGROUPS.forEach(function(g){
-    if(deptOf(g)!=='pouch') return;
+  var d=F.dept||'all';
+  var groups=shelfGroups();
+
+  /* The unit this shelf is actually priced by. 'all' stays on pouches
+     because that is the homepage's headline claim; every other shelf
+     answers in its own unit, which is why the Disposables page used to
+     advertise a "cheapest pouch". Devices and gear are priced flat, so
+     there is no honest unit and the figure becomes lowest price. */
+  var unitDept = d==='all' ? 'pouch' : d;
+  var dd = DEPTS[unitDept]||{};
+  var flat = !dd.unit || dd.unit==='flat';
+
+  var stores={}, rows=0, best=null;
+  groups.forEach(function(g){
+    stores[g.key]=1;
     gvariants(g).forEach(function(v){
+      rows++;
       if(!v.available) return;
-      var u=unitPrice(v); if(!u) return;
-      var usd=usdOf(u.value,v.currency||'USD'); if(usd==null) return;
-      if(best==null||usd<best) best=usd;
+      var val;
+      if(flat){
+        val=usdOf(v.price,v.currency||'USD');
+      }else{
+        if(deptOf(g)!==unitDept) return;      /* 'all' ranks pouches only */
+        var u=unitPrice(v); if(!u) return;
+        val=usdOf(u.value,v.currency||'USD');
+      }
+      if(val==null||!val) return;
+      if(best==null||val<best) best=val;
     });
   });
+
   var bits=[
-    '<div><b>'+ALL.length.toLocaleString()+'</b><span>products tracked</span></div>',
+    '<div><b>'+rows.toLocaleString()+'</b><span>'+
+      esc(SHELF_NOUN[d]||SHELF_NOUN.all)+'</span></div>',
     '<div><b>'+Object.keys(stores).length+'</b><span>stores compared</span></div>'
   ];
-  if(best!=null) bits.push('<div><b>'+unitFmt(best,'USD')+'</b>'+
-    '<span>cheapest pouch (USD)</span></div>');
+  if(best!=null){
+    var lbl = flat ? 'lowest price (USD)'
+                   : 'cheapest '+(dd.unitLabel||'per unit')+' (USD)';
+    bits.push('<div><b>'+unitFmt(best,'USD')+'</b><span>'+esc(lbl)+'</span></div>');
+  }
   el.innerHTML=bits.join('');
 }
 

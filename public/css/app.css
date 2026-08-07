@@ -776,22 +776,31 @@ footer p{margin:0 0 9px;line-height:1.6}
 .spotmark{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;
   display:flex;align-items:flex-start;justify-content:center}
 .spotmark img{width:min(1100px,150%);max-width:none;margin-top:-5%;
-  opacity:.07;filter:grayscale(1) brightness(1.8) contrast(.9);
+  opacity:.18;filter:grayscale(1) brightness(1.9) contrast(.95);
   -webkit-mask-image:radial-gradient(58% 52% at 50% 28%,#000 0%,transparent 72%);
           mask-image:radial-gradient(58% 52% at 50% 28%,#000 0%,transparent 72%)}
-/* the default mark: the store's name at poster scale in its own colour,
+/* The default mark: the store's name at poster scale in its own colour,
    bled off both edges and faded out before it reaches the product grid.
-   Crisp at any size, no request, no 404. */
-.spotword{font-family:var(--display);font-weight:900;letter-spacing:-.045em;
-  font-size:clamp(116px,25vw,330px);line-height:.78;white-space:nowrap;
-  color:var(--spot);opacity:.11;margin-top:-.05em;user-select:none;
-  -webkit-mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.55) 46%,transparent 80%);
-          mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.55) 46%,transparent 80%)}
+   Crisp at any size, no request, no 404.
+
+   --spot is a mid-dark brand colour, chosen to sit ON the page against
+   body text. Blown up to 400px over a near-black background it vanishes,
+   so brightness() lifts it instead of swapping in a lighter hue — that
+   would have cost the store its identity, which is the whole point of
+   the mark. The drop-shadow keeps the letterforms from flattening into
+   the background now that they carry real weight. */
+.spotword{font-family:var(--display);font-weight:900;letter-spacing:-.05em;
+  font-size:clamp(140px,29vw,400px);line-height:.76;white-space:nowrap;
+  color:var(--spot);opacity:.34;margin-top:-.06em;user-select:none;
+  filter:brightness(2.1) saturate(1.15) drop-shadow(0 0 42px rgba(0,0,0,.5));
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.72) 58%,transparent 94%);
+          mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.72) 58%,transparent 94%)}
 .spot-brand::before{content:"";position:absolute;inset:0 0 auto;height:520px;z-index:-2;
-  pointer-events:none;opacity:.13;
+  pointer-events:none;opacity:.2;
   background:radial-gradient(70% 60% at 50% 0,var(--spot),transparent 72%)}
 @media(max-width:560px){
-  .spotmark img{width:190%;margin-top:-2%;opacity:.045}
+  .spotmark img{width:190%;margin-top:-2%;opacity:.14}
+  .spotword{font-size:24vw;opacity:.3}
   .spot-brand::before{height:340px}
 }
 

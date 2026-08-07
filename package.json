@@ -9,5 +9,10 @@
     "start": "node server.mjs",
     "check": "node --check server.mjs && node --check api/products.js && node --check api/subscribe.js && node --check api/track.js"
   },
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
 }

@@ -175,6 +175,54 @@ header.top{position:sticky;top:0;z-index:50;
    within a shelf, not a change of shelf, and it should not compete
    with the department you are already standing in. */
 /* ============================================================
+   /android — THE GET-THE-APP PAGE
+   ------------------------------------------------------------
+   A standalone document rather than an SPA route: it has to be
+   linkable, indexable and readable before the engine boots, and it is
+   the page people will land on from outside. Not a department, so §3's
+   one-file rule does not apply to it.
+   ============================================================ */
+.getapp{padding:0 0 70px;max-width:760px}
+.ga-head{display:flex;gap:20px;align-items:flex-start;padding:26px 0 30px;
+  border-bottom:1px solid var(--line);margin-bottom:26px}
+.ga-head img{flex:none;border-radius:16px;box-shadow:0 8px 26px rgba(0,0,0,.5)}
+.ga-head h1{font-family:var(--display);font-weight:900;letter-spacing:-.03em;
+  font-size:clamp(28px,6vw,46px);line-height:1;margin:8px 0 12px}
+.ga-sub{color:var(--muted);font-size:16px;line-height:1.6;margin:0;max-width:46ch}
+
+.ga-card{border:1px solid var(--line);border-radius:var(--r);padding:22px 22px 20px;
+  margin-bottom:16px;background:var(--panel)}
+.ga-card h2{font-family:var(--display);font-weight:900;font-size:19px;
+  letter-spacing:-.02em;margin:0 0 8px}
+.ga-card p{color:var(--muted);font-size:14.5px;line-height:1.6;margin:0 0 14px;max-width:56ch}
+.ga-primary{border-color:var(--sage-dk);box-shadow:0 0 0 1px rgba(74,222,128,.14)}
+.ga-quiet{background:none}
+
+.ga-btn{display:inline-block;font-family:var(--sans);font-weight:700;font-size:14px;
+  letter-spacing:.01em;padding:13px 24px;border-radius:999px;border:0;cursor:pointer;
+  background:linear-gradient(90deg,var(--sage-dk),var(--sage));color:#04140a;
+  box-shadow:0 5px 18px rgba(34,197,94,.22);transition:filter .16s}
+.ga-btn:hover{filter:brightness(1.08)}
+.ga-apk{background:var(--ember);color:#160c06;box-shadow:0 5px 18px rgba(224,134,63,.22)}
+.ga-apk:hover{background:var(--gold)}
+/* the APK link before the file exists — visible, obviously not ready */
+.ga-off{background:var(--chip);color:var(--dim);cursor:default;box-shadow:none;
+  border:1px dashed var(--line)}
+.ga-off:hover{background:var(--chip)}
+
+.ga-steps{font-size:13.5px;color:var(--muted);line-height:1.65;margin:14px 0 0}
+.ga-steps b{color:var(--text);font-weight:700}
+.ga-fine{font-size:12px;color:var(--dim);line-height:1.6;margin:10px 0 0}
+.ga-legal{margin-top:26px;max-width:62ch}
+.ga-link{display:inline-block;font-size:14px;font-weight:600;color:var(--sage);
+  text-decoration:underline;text-underline-offset:3px}
+.ga-link:hover{color:var(--gold)}
+@media(max-width:560px){
+  .ga-head{flex-direction:column;gap:14px}
+  .ga-btn{display:block;text-align:center}
+}
+
+/* ============================================================
    INSTALL HINT
    ------------------------------------------------------------
    Sits above the safe-area inset so it clears the iPhone home bar, and

@@ -1,0 +1,48 @@
+[
+  {
+    "_comment": [
+      "DIGITAL ASSET LINKS — this file is what makes the Android APK open",
+      "full-screen instead of inside a browser frame with an address bar.",
+      "",
+      "A Trusted Web Activity only drops its browser chrome when Android can",
+      "prove the APK and this domain belong to the same owner. It proves that",
+      "by fetching https://nicotiamarket.com/.well-known/assetlinks.json and",
+      "matching the SHA-256 fingerprint of the certificate the APK was signed",
+      "with against the list below. No match, no proof, and the app renders",
+      "as a Custom Tab — which looks broken, and is the single most common",
+      "reason a home-made TWA 'doesn't work'.",
+      "",
+      "TO FILL THIS IN:",
+      "  1. Build the APK (PWABuilder or Bubblewrap — see /android).",
+      "  2. Both hand you a signing key and print its SHA-256 fingerprint.",
+      "     PWABuilder puts it in signing.keystore + the generated",
+      "     assetlinks.json in the zip; Bubblewrap prints it at the end and",
+      "     can also emit one with `bubblewrap fingerprint generateAssetLinks`.",
+      "  3. Replace REPLACE_WITH_SHA256_FINGERPRINT below with that value —",
+      "     uppercase hex, colon-separated, e.g. AB:CD:12:...  (32 pairs).",
+      "  4. Deploy, then check it is live and served as JSON:",
+      "       curl -s https://nicotiamarket.com/.well-known/assetlinks.json",
+      "  5. Verify Android accepts it:",
+      "       https://developers.google.com/digital-asset-links/tools/generator",
+      "",
+      "Keep the keystore safe and backed up. Android identifies an app by its",
+      "signing key: lose it and you cannot ship an update to anyone who",
+      "already installed, they have to uninstall and reinstall.",
+      "",
+      "package_name must match the id you gave the generator. Leaving this",
+      "file live with the placeholder is harmless — Android simply finds no",
+      "match, exactly as it does today with no file at all.",
+      "",
+      "This _comment key is ignored by Android; the parser reads the objects",
+      "and the fields it knows."
+    ],
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.nicotiamarket.twa",
+      "sha256_cert_fingerprints": [
+        "REPLACE_WITH_SHA256_FINGERPRINT"
+      ]
+    }
+  }
+]

@@ -5,7 +5,9 @@
   Product URLs are deliberately absent — every product lives on the
   vendor's own site and we should never compete with them for it.
 -->
-<urlset xmlns="http://www.sitemap.org/schemas/sitemap/0.9">
+<!-- sitemapS.org, plural. It read sitemap.org, which is not the sitemap
+     protocol namespace, and a wrong xmlns invalidates the whole file. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://nicotiamarket.com/</loc>
     <changefreq>daily</changefreq>
@@ -40,5 +42,12 @@
     <loc>https://nicotiamarket.com/gear</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
+  </url>
+  <!-- Not a shelf. Listed because there is no App Store or Play listing
+       to be found through, so this page is the only route to the app. -->
+  <url>
+    <loc>https://nicotiamarket.com/android</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
 </urlset>

@@ -247,10 +247,22 @@ export const STORES = [
   //   cats:['all','nicotine-pouches','energy-pouches','aroma-pouches',
   //         'cream-energy-pouches','hardy-energy-pouches','xqs-caffeine'] },
 
-  /* ---- AWIN, applied. Flip `ref` to the tracked link on approval.
-     For platform:'feedcsv' the AWIN product feed URL goes in `domain`
-     — a feed skips scraping entirely: no WAF, no 250-product ceiling.
-     That path is NOT implemented yet; see CLAUDE.md §7. ---- */
+  /* ---- AWIN, applied. ----------------------------------------
+     platform:'feedcsv' is IMPLEMENTED now. To bring one of these live:
+
+       1. set AWIN_API_KEY in Vercel (once, covers all of them)
+       2. get the FEED ID from AWIN's feed list — it is NOT the
+          advertiser id already recorded here, they are different
+          numbers and mixing them up returns someone else's catalogue
+       3. put it in `feedId`, uncomment, deploy
+
+     Leave `ref` empty on these. The feed's aw_deep_link is already the
+     tracked link; appending ?ref= on top would be a second, conflicting
+     attribution. get() refuses to fetch tracking URLs, so the scraper
+     can never click our own links.
+
+     Each still keeps a storefront fallback in the ladder, so a missing
+     key or an offline feed degrades to scraping rather than to zero. */
 
   // { key:'jones', name:'Jones', dept:'pouch', domain:'quitwithjones.com',
   //   ref:'', ships:['US'], guess:1, platform:'shopify', awin:63308, perPack:1 },
@@ -261,19 +273,25 @@ export const STORES = [
   //   ref:'', ships:['US'], guess:1, platform:'shopify', awin:126721, perPack:20 },
   //   // NICOTINE-FREE performance pouches, US. New programme, no EPC history.
   // { key:'smokecartel', name:'Smoke Cartel', dept:'device', domain:'smokecartel.com',
-  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:77378 },              // 365-day cookie, 15%+, 5k products, $110 AOV
+  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:77378, feedId:0, max:6000 },
+  //   // 365-DAY cookie, 15%+, ~5,000 products, $110 AOV. Longest window
+  //   // of anything on the site; cap `max` if the payload gets heavy.
   // { key:'relxglobal', name:'RELX', dept:'device', domain:'relxnow.com',
-  //   ref:'', ships:['US','INTL'], guess:1, platform:'feedcsv', awin:82289 },       // 100% approval, feed. Replaces RELX UK's 1% for US traffic
+  //   ref:'', ships:['US','INTL'], guess:1, platform:'feedcsv', awin:82289, feedId:0 },
+  //   // 100% approval. Replaces RELX UK's 1% for US traffic — once this
+  //   // is live, consider geo-gating relxuk to UK-only placements.
   // { key:'fruitia', name:'FRUITIA', dept:'liquid', domain:'fruitia.shop',
-  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:108248 },             // states 20%, 60-day
-  // { key:'vapejuicedepot', name:'Vape Juice Depot', dept:'liquid', domain:'vapejuicedepot.com',
-  //   ref:'', ships:['US'], guess:1, platform:'shopify', awin:96141 },              // states 10%, 90-day. NO feed — scrape it
+  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:108248, feedId:0 },   // 20%, 60-day
   // { key:'kindjuice', name:'Kind Juice', dept:'liquid', domain:'www.kindjuice.com',
-  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:89381 },              // states 10%, 90-day, organic/PG-free
+  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:89381, feedId:0 },    // 10%, 90-day, organic/PG-free
   // { key:'humidors', name:'1st Class Humidors', dept:'gear', domain:'www.1stclasshumidors.com',
-  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:105497 },             // 90-day, fills the accessory gap beside XIFEI
+  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:105497, feedId:0 },   // 90-day, fills the gear gap beside XIFEI
   // { key:'bnbtobacco', name:'BnB Tobacco', dept:'cigar', domain:'www.bnbtobacco.com',
-  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:87969 },              // feed, 100% approval, 8.5% conversion
+  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:87969, feedId:0 },    // 100% approval, 8.5% conversion
+  //
+  // No AWIN feed — scrape it like any other Shopify store:
+  // { key:'vapejuicedepot', name:'Vape Juice Depot', dept:'liquid', domain:'vapejuicedepot.com',
+  //   ref:'', ships:['US'], guess:1, platform:'shopify', awin:96141 },              // 10%, 90-day
 ]
 
 /* Only these fields ever reach a browser. */
@@ -454,7 +472,19 @@ async function pool(items, limit, fn) {
 /* ============================================================
    FETCH
    ============================================================ */
+/* Never fetch a URL carrying an affiliate/tracking parameter. A feed's
+   aw_deep_link IS a tracked link, and it now lands in every feedcsv
+   row's `url` — so if any strategy ever followed one, the scraper would
+   register phantom clicks in the merchant's dashboard on every refresh.
+   That corrupts the attribution data we get paid on AND makes a real
+   attribution outage impossible to diagnose. Enforced here rather than
+   trusted to every call site. Borrowed from Legal-Leaf. */
+const TRACKING_PARAM = /[?&](?:ref|rfsn|sca_ref|awinaffid|awinmid|irclickid|cjevent|sscid)=/i
+
 async function get(url, ms = 12000) {
+  if (TRACKING_PARAM.test(String(url))) {
+    throw new Error('refusing to fetch a tracking URL')
+  }
   const ctl = new AbortController()
   const timer = setTimeout(() => ctl.abort(), ms)
   try {
@@ -787,6 +817,135 @@ async function wooCategoryWalk(st) {
   return out
 }
 
+/* ============================================================
+   CSV PRODUCT FEEDS (AWIN and anything else that serves a CSV)
+   ------------------------------------------------------------
+   A feed is strictly better than scraping: no WAF, no rate limit, no
+   250-product ceiling, no parser that breaks when a theme updates. It
+   is why these programmes were worth chasing.
+
+   Two ways to point a store at one:
+     feed:   'https://…'   an explicit URL (any CSV host)
+     feedId: 123456        an AWIN feed id, combined with AWIN_API_KEY
+
+   AWIN feed ids are NOT the advertiser ids already in the registry —
+   you get them from the AWIN feed list. Keeping them separate so the
+   two never get confused.
+
+   The API key is a secret. It lives in an env var and must never be
+   committed; without it, feedId stores throw a clear error and the
+   ladder falls through rather than silently returning nothing.
+   ============================================================ */
+function feedUrlFor(st) {
+  if (st.feed) return st.feed
+  if (!st.feedId) return ''
+  const key = process.env.AWIN_API_KEY
+  if (!key) throw new Error('AWIN_API_KEY not set — cannot build feed URL')
+  /* compression/none so we never have to gunzip in the function; the
+     columns list is the union of everything mapCsvRow() looks for. */
+  const cols = [
+    'aw_deep_link','product_name','merchant_product_id','aw_product_id',
+    'merchant_image_url','description','merchant_category','category_name',
+    'search_price','store_price','rrp_price','currency','brand_name',
+    'in_stock','stock_quantity','merchant_name',
+  ].join(',')
+  return `https://productdata.awin.com/datafeed/download/apikey/${key}` +
+         `/language/en/fid/${st.feedId}/columns/${cols}` +
+         `/format/csv/delimiter/%2C/compression/none/adultcontent/1/`
+}
+
+/* A real parser, not split(','). Feed descriptions routinely contain
+   commas, quoted quotes and embedded newlines — splitting on commas
+   shifts every column after the first offending row and silently
+   corrupts the whole file. */
+function parseCsv(text, delim, maxRows) {
+  const rows = []
+  let field = '', row = [], q = false
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++ } else q = false }
+      else field += c
+    } else if (c === '"') { q = true }
+    else if (c === delim) { row.push(field); field = '' }
+    else if (c === '\n') {
+      row.push(field); field = ''
+      rows.push(row); row = []
+      if (maxRows && rows.length >= maxRows) return rows
+    } else if (c !== '\r') field += c
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row) }
+  return rows
+}
+
+/* Column names differ per feed and per advertiser's own config, so
+   take the first candidate that is actually present and non-empty. */
+function pick(rec, ...names) {
+  for (const n of names) {
+    const v = rec[n]
+    if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim()
+  }
+  return ''
+}
+
+async function feedCsv(st) {
+  const url = feedUrlFor(st)
+  if (!url) throw new Error('no feed or feedId configured')
+
+  const res = await get(url, 25000)
+  if (!res.ok) throw new Error('feed HTTP ' + res.status)
+  const text = await res.text()
+  if (!text || text.length < 40) throw new Error('feed empty')
+  if (/^\s*</.test(text)) throw new Error('feed returned HTML — check the API key')
+
+  /* Delimiter sniff on the header line: AWIN can be configured for tab
+     or pipe, and guessing comma on a tab feed yields one giant column. */
+  const firstLine = text.slice(0, text.indexOf('\n') + 1 || 400)
+  const delim = [',', '\t', '|', ';']
+    .map(d => [d, firstLine.split(d).length])
+    .sort((a, b) => b[1] - a[1])[0][0]
+
+  const cap = Number(st.max) || 6000
+  const rows = parseCsv(text, delim, cap + 1)
+  if (rows.length < 2) throw new Error('feed had no data rows')
+
+  const head = rows[0].map(h => h.replace(/^﻿/, '').trim().toLowerCase())
+  const out = []
+  for (let i = 1; i < rows.length; i++) {
+    if (outOfTime(3000)) break
+    const rec = {}
+    head.forEach((h, j) => { rec[h] = rows[i][j] })
+
+    const title = pick(rec, 'product_name', 'name', 'title', 'product_short_description')
+    /* aw_deep_link is ALREADY the tracked affiliate link — the whole
+       point of the feed. Never append ?ref= on top of it; these stores
+       carry ref:'' so buildAff() leaves it alone. */
+    const link = pick(rec, 'aw_deep_link', 'merchant_deep_link', 'deep_link', 'product_url', 'url')
+    if (!title || !link) continue
+
+    const stock = pick(rec, 'in_stock', 'stock_status', 'availability', 'stock_quantity')
+    const price = pick(rec, 'search_price', 'store_price', 'price', 'display_price')
+    const was = pick(rec, 'rrp_price', 'was_price', 'product_price_old')
+
+    out.push(row(st, {
+      brand: pick(rec, 'brand_name', 'brand', 'manufacturer') || st.name,
+      title,
+      tags: pick(rec, 'merchant_category', 'category_name', 'custom_1'),
+      price,
+      /* an rrp equal to or below the live price is not a discount */
+      compareAt: was && Number(was) > Number(price) ? was : '',
+      available: !/^(0|no|false|out of stock|outofstock)$/i.test(stock),
+      image: pick(rec, 'merchant_image_url', 'aw_image_url', 'image_url', 'large_image'),
+      url: link,
+      currency: pick(rec, 'currency') || st.currency || 'USD',
+      desc: pick(rec, 'description', 'product_short_description'),
+      vid: pick(rec, 'merchant_product_id', 'aw_product_id', 'product_id'),
+    }))
+  }
+  if (!out.length) throw new Error('feed parsed but produced no usable rows')
+  return out
+}
+
 /* Themes emit <script type="application/ld+json"> Product objects.
    That markup exists so machines can read it — a published interface,
    not a workaround. Last resort for BigCommerce and custom carts. */
@@ -836,6 +995,10 @@ const LADDERS = {
   shopify: [['products.json', shopifyProducts], ['collections', shopifyCollection], ['json-ld', jsonLd]],
   woocommerce: [['woo store api', wooStoreApi], ['woo categories', wooCategoryWalk], ['json-ld', jsonLd]],
   bigcommerce: [['json-ld', jsonLd]],
+  /* A feed store still gets a scrape fallback: if the key is missing or
+     AWIN has the feed offline, the storefront is better than nothing. */
+  feedcsv: [['csv feed', feedCsv], ['products.json', shopifyProducts],
+            ['woo store api', wooStoreApi], ['json-ld', jsonLd]],
   default: [['products.json', shopifyProducts], ['woo store api', wooStoreApi], ['json-ld', jsonLd]],
 }
 

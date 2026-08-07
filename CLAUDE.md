@@ -199,10 +199,27 @@ visitor sees an empty Pouches shelf. Flip it once that gap is filled.
 
 | Var | Purpose |
 |---|---|
+| `AWIN_API_KEY` | **Required for `platform:'feedcsv'` stores.** One key covers every AWIN advertiser; each store then needs its own `feedId`. Without it those stores throw a clear error and fall through to their storefront-scrape fallback. |
 | `NM_CRM_WEBHOOK` | Forward `/api/subscribe` signups to an Apps Script `/exec` URL. |
 | `NM_EVENTS_WEBHOOK` | Forward `/api/track` events. |
 
-Never commit secrets. `.env*` is gitignored.
+Never commit secrets. `.env*` is gitignored; see `.env.example`.
+
+### Bringing a CSV-feed store live
+
+1. Set `AWIN_API_KEY` in Vercel (once, covers all of them).
+2. Get the **feed id** from AWIN → Toolbox → Create-a-Feed. It is **not**
+   the advertiser id already recorded in the registry — they are different
+   numbers, and swapping them returns a different merchant's catalogue.
+3. Put it in `feedId`, uncomment the entry, deploy.
+
+Leave `ref` empty on feed stores. The feed's `aw_deep_link` **is** the tracked
+link; appending `?ref=` would be a second, conflicting attribution. `get()`
+refuses to fetch any URL carrying a tracking param, so the scraper can never
+click our own links and manufacture phantom conversions.
+
+Feed stores keep a storefront fallback in their ladder, so a missing key or an
+offline feed degrades to scraping rather than to zero products.
 
 ---
 

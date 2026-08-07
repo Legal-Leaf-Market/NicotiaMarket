@@ -1376,6 +1376,25 @@ function apply(reset){
    Reset by apply(), advanced by the shuffle button. */
 var RAILP=0;
 
+/* SUBCATEGORIES THE VALUE STRIP IGNORES.
+
+   Not a hiding mechanism: these keep their shelf, their price and their
+   unit chip everywhere else. They just do not compete for a slot in a
+   strip whose whole job is to show what this market is FOR.
+
+   Cigarette tubes are the case that forced this. They have no honest
+   per-unit price (see FLAT_SUBS), so the strip ranks them on flat price
+   — and a couple of dollars for a box of two hundred beats every pouch
+   and disposable on the site, every time. They were winning the strip
+   by being cheap in a way nobody came here to compare. */
+var RAIL_SKIP={'cigar/rolling':1};
+
+/* WHAT THE FRONT PAGE IS ABOUT. Pouches and disposables are the volume
+   shelves and the reason people arrive, so they get three chances at a
+   slot per round to everything else's one. A flat round-robin gave a
+   humidor the same billing as a pouch. */
+var RAIL_WEIGHT={pouch:3, disposable:3, device:1, liquid:1, cigar:1, gear:1};
+
 /* One ranked bucket per department, each on the converted value so a kr
    row and a $ row can sit in the same strip honestly. Devices and gear
    have no honest unit, so those shelves rank on price. */
@@ -1383,11 +1402,12 @@ function railPool(){
   var by={};
   VIEW.forEach(function(g){
     var it=gitem(g); if(!it||!it.available) return;
+    var d=deptOf(g);
+    if(RAIL_SKIP[d+'/'+subOf(it)]) return;
     var u=unitPrice(it);
     var v=u ? usdOf(u.value,it.currency||'USD')
             : usdOf(it.price,it.currency||'USD');
     if(v==null||!(v>0)) return;
-    var d=deptOf(g);
     (by[d]||(by[d]=[])).push({g:g,v:v});
   });
   Object.keys(by).forEach(function(k){
@@ -1451,14 +1471,30 @@ function renderRail(){
   if(total<4){ sec.hidden=true; return; }
   sec.hidden=false;
 
-  var want=Math.min(12,total), pick=[], seen={};
-  for(var r=0; r<deepest && pick.length<want; r++){
-    for(var i=0; i<order.length && pick.length<want; i++){
-      var list=by[order[i]];
-      var row=list[(r+RAILP)%list.length];
+  /* One weighted pass per round: a shelf with weight 3 appears three
+     times in `seq`, so it gets three chances at a slot before the round
+     restarts. Each shelf keeps its OWN cursor, otherwise those three
+     chances would all land on the same product and be deduped away. */
+  var seq=[];
+  order.forEach(function(d){
+    var w=RAIL_WEIGHT[d]||1;
+    for(var k=0;k<w;k++) seq.push(d);
+  });
+  var cursor={};
+  order.forEach(function(d){ cursor[d]=RAILP; });
+
+  var want=Math.min(12,total), pick=[], seen={}, guard=0;
+  while(pick.length<want && guard++ < deepest+40){
+    var moved=false;
+    for(var i=0; i<seq.length && pick.length<want; i++){
+      var list=by[seq[i]];
+      if(!list||!list.length) continue;
+      var row=list[cursor[seq[i]]%list.length];
+      cursor[seq[i]]++;
       if(!row || seen[row.g.gid]) continue;
-      seen[row.g.gid]=1; pick.push(row.g);
+      seen[row.g.gid]=1; pick.push(row.g); moved=true;
     }
+    if(!moved) break;   /* every shelf exhausted */
   }
 
   var d=F.dept!=='all'?DEPTS[F.dept]:null;

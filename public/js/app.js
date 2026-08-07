@@ -1273,7 +1273,9 @@ function addToCart(it){
   if(CART[k]) CART[k].qty++;
   else CART[k]={qty:1, key:it.key, title:it.title, variant:it.variant||'',
                 price:Number(it.price)||0, currency:it.currency||'USD',
-                image:it.image||'', url:it.url||'', vid:it.vid||'', aff:it.aff||it.url||''};
+                image:it.image||'', url:it.url||'', vid:it.vid||'',
+                pid:it.pid||'', attrs:it.attrs||'',
+                aff:it.aff||it.url||''};
   saveCart(); badges(); renderCart(); pulseCart();
   toast((it.title||'Item')+' added');
 }
@@ -1379,11 +1381,26 @@ function addParams(url, params){
   return url+(url.indexOf('?')>-1?'&':'?')+qs.join('&');
 }
 
+/* Some stores enforce a quantity rule the catalogue APIs do not expose
+   — Snus O'Clock rejects a hand-off with "Quantity must be in
+   increments of Multiple of 10" on certain bundles. We send 1, their
+   checkout blocks, and the shopper is stuck on a page they cannot
+   submit. Where a store's rule is known, set qtyStep in the registry
+   and quantities round UP to it.
+
+   This is per STORE, not per product, so only set it where the rule
+   genuinely applies to the whole catalogue. Left unset it is a no-op. */
+function stepQty(st, q){
+  var step=Number(st.qtyStep)||1;
+  if(step<2) return q;
+  return Math.max(step, Math.ceil(q/step)*step);
+}
+
 function checkoutUrl(st, items){
   var base='https://'+st.domain;
   if(st.platform==='shopify'){
     var parts=items.filter(function(x){return x.vid;})
-                   .map(function(x){return encodeURIComponent(x.vid)+':'+x.qty;});
+                   .map(function(x){return encodeURIComponent(x.vid)+':'+stepQty(st,x.qty);});
     /* The cart permalink jumps straight to /cart, skipping any product
        page — so the affiliate cookie was never set on the way through
        and Shopify handoffs were tracking to nobody. ?ref= rides along
@@ -1394,10 +1411,25 @@ function checkoutUrl(st, items){
       ? addParams(base+'/discount/'+encodeURIComponent(st.coupon),{redirect:'/cart', ref:st.ref})
       : addParams(base+'/cart',{ref:st.ref});
   }
+  /* WooCommerce takes ONE line per request — there is no core equivalent
+     of Shopify's multi-item cart permalink. So we send the first item
+     and say so plainly rather than pretending otherwise.
+
+     For a VARIABLE product the id shape matters and getting it wrong
+     fails loudly: ?add-to-cart=<variation_id> is rejected with "please
+     choose product options" and the cart lands empty. Woo wants the
+     PARENT id, variation_id, and each attribute as its own param. */
   if(st.platform==='woocommerce' && items[0] && items[0].vid){
-    var path=st.cartPath||'/cart/';
-    return addParams(base+path,
-      {'add-to-cart':items[0].vid, quantity:items[0].qty, ref:st.ref});
+    var x=items[0], path=st.cartPath||'/cart/';
+    var url;
+    if(x.pid){
+      url=addParams(base+path,{'add-to-cart':x.pid, variation_id:x.vid,
+                               quantity:stepQty(st,x.qty), ref:st.ref});
+      if(x.attrs) url+='&'+x.attrs;      /* already url-encoded by the store */
+    }else{
+      url=addParams(base+path,{'add-to-cart':x.vid, quantity:stepQty(st,x.qty), ref:st.ref});
+    }
+    return url;
   }
   return items[0] ? (items[0].aff||items[0].url) : addParams(base+'/',{ref:st.ref});
 }
@@ -1806,6 +1838,8 @@ function hydrate(it){
     currency: it.cur||'USD',
     desc: it.desc||'',
     vid: it.vid||'',
+    pid: it.pid||'',        /* Woo variable parent */
+    attrs: it.attrs||'',    /* attribute_flavor=White+Gummy */
     markets: it.markets||'',
     aff: (url && st.ref) ? url+(url.indexOf('?')>-1?'&':'?')+'ref='+st.ref
        : (url || (st.domain?'https://'+st.domain+'/':''))

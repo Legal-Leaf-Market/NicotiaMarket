@@ -332,6 +332,11 @@ function row(st, o) {
     cur: cur === 'USD' ? undefined : cur,           // USD is the norm
     desc: desc || undefined,
     vid: o.vid ? String(o.vid) : undefined,
+    /* Woo variable products only: the parent to add against and the
+       attribute pairs that identify which variation. Absent on simple
+       products and on every Shopify row. */
+    pid: o.pid ? String(o.pid) : undefined,
+    attrs: o.attrs || undefined,
     markets: o.markets || undefined,
   }
 }
@@ -565,6 +570,24 @@ async function wooStoreApi(st) {
   let variations = []
   try { variations = await wooSweep(st, 'variation') } catch { /* simple-only shop */ }
 
+  /* WooCommerce will NOT add a variable product from the variation id
+     alone — ?add-to-cart=<variation_id> is rejected with "please choose
+     product options" and the cart lands empty. It needs the PARENT id,
+     plus variation_id, plus every attribute as its own param:
+
+       ?add-to-cart=8064&variation_id=8121&attribute_flavor=White+Gummy
+
+     The variation's own permalink already carries those attribute pairs
+     ("…/?attribute_flavor=White+Gummy"), so lift them straight off it
+     rather than trying to rebuild them from the attribute list. */
+  const attrsFrom = (permalink) => {
+    const qi = String(permalink || '').indexOf('?')
+    if (qi < 0) return ''
+    return String(permalink).slice(qi + 1).split('&')
+      .filter(kv => kv.toLowerCase().startsWith('attribute_'))
+      .join('&')
+  }
+
   for (const v of variations) {
     const parent = byId.get(v.parent)
     /* "Flavor: White Gummy" -> "White Gummy". Multiple attributes come
@@ -586,6 +609,8 @@ async function wooStoreApi(st) {
       /* no desc: a variation inherits its parent's, and carrying 4,925
          copies of the same paragraph is most of the payload */
       vid: v.id,
+      pid: v.parent,                       // parent id — Woo adds against this
+      attrs: attrsFrom(v.permalink),       // attribute_flavor=White+Gummy
     }))
   }
 

@@ -272,22 +272,38 @@ export const STORES = [
   // { key:'trgt', name:'TRGT', dept:'pouch', domain:'taketrgt.com',
   //   ref:'', ships:['US'], guess:1, platform:'shopify', awin:126721, perPack:20 },
   //   // NICOTINE-FREE performance pouches, US. New programme, no EPC history.
+  /* WRONG SHELF — do not enable here. AWIN lists Smoke Cartel under
+     vape, but its catalogue is a cannabis headshop. Sampled 1,500 of
+     ~5,000 products: 958 are bongs, pipes, dab rigs, chillums,
+     bubblers and grinders; 89 are vape-related and those are dry-herb
+     vaporiser parts. Top vendors are Empire Glassworks, Honeybee Herb,
+     Pulsar, GRAV and RYOT — and RYOT is already recorded in the
+     operator notes as belonging on Legal-Leaf.
+
+     Enabling it would file 269 bongs under Devices & Pods. The 365-day
+     cookie is genuinely the best window available to you; it is just
+     worth that much on LEGAL-LEAF, not here.
   // { key:'smokecartel', name:'Smoke Cartel', dept:'device', domain:'smokecartel.com',
-  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:77378, feedId:0, max:6000 },
-  //   // 365-DAY cookie, 15%+, ~5,000 products, $110 AOV. Longest window
-  //   // of anything on the site; cap `max` if the payload gets heavy.
-  // { key:'relxglobal', name:'RELX', dept:'device', domain:'relxnow.com',
-  //   ref:'', ships:['US','INTL'], guess:1, platform:'feedcsv', awin:82289, feedId:0 },
-  //   // 100% approval. Replaces RELX UK's 1% for US traffic — once this
-  //   // is live, consider geo-gating relxuk to UK-only placements.
-  // { key:'fruitia', name:'FRUITIA', dept:'liquid', domain:'fruitia.shop',
-  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:108248, feedId:0 },   // 20%, 60-day
-  // { key:'kindjuice', name:'Kind Juice', dept:'liquid', domain:'www.kindjuice.com',
-  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:89381, feedId:0 },    // 10%, 90-day, organic/PG-free
-  // { key:'humidors', name:'1st Class Humidors', dept:'gear', domain:'www.1stclasshumidors.com',
-  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:105497, feedId:0 },   // 90-day, fills the gear gap beside XIFEI
-  // { key:'bnbtobacco', name:'BnB Tobacco', dept:'cigar', domain:'www.bnbtobacco.com',
-  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:87969, feedId:0 },    // 100% approval, 8.5% conversion
+  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:77378, feedId:0 },
+  */
+
+  { key:'relxglobal', name:'RELX', dept:'device', domain:'relxnow.com',
+    ref:'', ships:['US','INTL'], guess:1, platform:'feedcsv', awin:82289, feedId:0,
+    from:'CN', ageCheck:'dob' },
+    // 100% approval. Replaces RELX UK's 1% for US traffic — once this
+    // proves out, consider geo-gating relxuk to UK-only placements.
+  { key:'fruitia', name:'FRUITIA', dept:'liquid', domain:'fruitia.shop',
+    ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:108248, feedId:0,
+    from:'US' },                                                                // 20%, 60-day
+  { key:'kindjuice', name:'Kind Juice', dept:'liquid', domain:'www.kindjuice.com',
+    ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:89381, feedId:0,
+    from:'US' },                                                                // 10%, 90-day, organic/PG-free
+  { key:'humidors', name:'1st Class Humidors', dept:'gear', domain:'www.1stclasshumidors.com',
+    ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:105497, feedId:0,
+    from:'US' },                                                                // 90-day, fills the gear gap beside XIFEI
+  { key:'bnbtobacco', name:'BnB Tobacco', dept:'cigar', domain:'www.bnbtobacco.com',
+    ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:87969, feedId:0,
+    from:'US' },                                                                // 100% approval, 8.5% conversion
   //
   // No AWIN feed — scrape it like any other Shopify store:
   // { key:'vapejuicedepot', name:'Vape Juice Depot', dept:'liquid', domain:'vapejuicedepot.com',
@@ -1028,7 +1044,18 @@ async function scrapeStore(st) {
         const items = dedupe(got)
         const inStock = items.filter(i => !i.oos).length
         const priced = items.filter(i => i.price && Number(i.price) > 0).length
+        /* A store with no ref AND no working feed earns nothing: the
+           products render, shoppers click, and every sale is
+           unattributed. That is worse than not carrying the store,
+           and it is invisible from the front end — so say it loudly in
+           the refresh report where it will actually be read. */
+        const attributed = !!st.ref || door === 'csv feed'
         let detail = `via ${door} (${inStock}/${items.length} in stock)`
+        if (!attributed) {
+          detail += st.feedId === 0
+            ? '  [NO ATTRIBUTION — feedId is still 0; set it and AWIN_API_KEY or these clicks pay nothing]'
+            : '  [NO ATTRIBUTION — no ref and no feed; these clicks pay nothing]'
+        }
         if (!priced) detail += '  [WARNING: no prices — likely a brand site, not a storefront]'
         else if (priced < items.length / 2) detail += `  [only ${priced}/${items.length} priced]`
         if (items.length && !inStock) detail += '  [WARNING: nothing in stock]'

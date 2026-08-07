@@ -193,9 +193,14 @@ export const STORES = [
     ref:'nicotinebaby', ships:['US','INTL'], guess:1, featured:1, platform:'shopify',
     from:'CN', days:'7–21 days', ageCheck:'none' },
 
-  { key:'freemax', name:'Freemax', dept:'device', domain:'www.freemaxvape.com',
-    ref:'nicotinebaby', ships:['US'], guess:1, platform:'woocommerce',
-    from:'US', ageCheck:'none' },
+  /* OFF — their Woo Store API returns 200 with unparseable content and
+     the storefront answers to "No Index", so there is no door in. The
+     original Code.gs note already suspected it was a brand catalogue
+     rather than a shop. Re-enable if they put a real storefront up.
+  // { key:'freemax', name:'Freemax', dept:'device', domain:'www.freemaxvape.com',
+  //   ref:'nicotinebaby', ships:['US'], guess:1, platform:'woocommerce',
+  //   from:'US', ageCheck:'none' },
+  */
 
   /* UK addresses only; NI and the Scottish Highlands are slower. Age
      check is weak by construction — the policy says drivers "might"
@@ -218,8 +223,16 @@ export const STORES = [
     ref:'nicotinebaby', ships:['US'], guess:1, featured:1, platform:'shopify',
     from:'US', days:'2–5 days', ageCheck:'id' },
 
-  { key:'beardedcigar', name:'Beard Cigars', dept:'cigar', domain:'beardcigars.com',
-    ref:'nicotinebaby', ships:['US'], guess:1, platform:'bigcommerce', from:'US' },
+  /* OFF. The bigCommerceCards() strategy stays in the ladder and does
+     work on this store — verified 5/5 products off /shop-all/ — so
+     re-enabling is just uncommenting. Note the live shop is
+     beardcigars.com (no "ed"); the bearded-cigar.myshopify.com link
+     you were issued points at an abandoned storefront, so clicks on
+     the old domain may never have tracked.
+  // { key:'beardedcigar', name:'Beard Cigars', dept:'cigar', domain:'beardcigars.com',
+  //   ref:'nicotinebaby', ships:['US'], guess:1, platform:'bigcommerce', from:'US',
+  //   bcHash:'fp8papja3w' },
+  */
 
   /* --- gear & accessories ---
      XIFEI is cigar ACCESSORIES. Filed under 'cigar' it was priced per
@@ -797,9 +810,6 @@ async function wooStoreApi(st) {
       desc: p.short_description || p.description, vid: p.id,
     }))
   }
-
-  let variations = []
-  try { variations = await wooSweep(st, 'variation') } catch { /* simple-only shop */ }
 
   /* WooCommerce will NOT add a variable product from the variation id
      alone — ?add-to-cart=<variation_id> is rejected with "please choose

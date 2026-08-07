@@ -341,13 +341,40 @@ function unitPrice(it){
 
 var SEED = [];   /* run exportSeed() in Apps Script and paste here */
 
+/* ============================================================
+   SPOTLIGHT PAGES
+   ------------------------------------------------------------
+   A store with a deep, coherent range is badly served by being
+   scattered through a mixed grid. It gets a page.
+
+   Nicokick's is a deliberate blend: our chassis — dark, Fraunces and
+   Jost, the unit chip — carrying THEIR information architecture and
+   signature colour. Their site is white/#222 Manrope on teal #2C6777,
+   and it is organised brand-first (Brands → ZYN, Rogue, VELO, on!,
+   FRE) with strength as the axis underneath. So this page is brand
+   shelves in teal, not a flat product dump.
+
+   `accent` recolours the page, so a future spotlight can carry its
+   own store's colour without new CSS.
+   ============================================================ */
 var SPOTLIGHT = {
-  beardedcigar: {
-    eyebrow:'Small-batch cigars', headline:'Beard Cigars',
-    blurb:'A deliberately short list. Ten cigars, chosen and blended rather than '+
-          'assembled from a catalogue — which is why this page exists instead of '+
-          'ten cells in a grid.',
-    off:0, coupon:'', note:'Ships from the US. Adults 21+ only.'
+  nicokick: {
+    eyebrow : 'US nicotine pouches',
+    headline: 'Every pouch America’s actually buying',
+    blurb   : 'ZYN, on!, VELO and Rogue are owned by Swedish Match, Altria, BAT '+
+              'and Turning Point, and none of them sell to you directly. Nicokick '+
+              'carries all four plus the challengers — and every can here is '+
+              'priced per pouch, so a 15-count ZYN and a 20-count VELO finally '+
+              'compare.',
+    accent  : '#2C6777',            /* Nicokick's own teal */
+    accent2 : '#B75C4D',            /* their rust, for the deal line */
+    layout  : 'brands',
+    usps    : [
+      ['Ships from the US',  'Tracked USPS delivery, no international customs wait.'],
+      ['ID verified at checkout', 'Nicokick runs a real identity check before it ships. Not a tick-box.'],
+      ['Priced per pouch',   'Can counts differ by brand. We divide so the comparison is honest.']
+    ],
+    off:0, coupon:'', note:'Ships within the US. Adults 21+ only.'
   }
 };
 function spotlightPrice(it,cfg){
@@ -1761,11 +1788,74 @@ function route(){
 }
 window.addEventListener('hashchange',route);
 
+/* Brand-shelf spotlight. Reuses card() and the grouping engine rather
+   than inventing a second product renderer — Nicokick's 410 pouches
+   already collapse to 17 brand cards, each carrying its own flavour
+   and strength dropdowns, so a flat grid is the right shape. */
+function renderBrandSpotlight(key, cfg, st){
+  var el=document.getElementById('spotview');
+  var groups=PGROUPS.filter(function(g){ return g.key===key; });
+  if(!groups.length){
+    el.innerHTML='<div class="shell"><div class="state"><b>'+esc(cfg.headline)+
+      ' has no products loaded</b>Check /api/products?debug for this store.'+
+      '<br><br><a class="btn" href="#/">Back to the market</a></div></div>';
+    return;
+  }
+  /* biggest ranges first — that is how their own nav is ordered */
+  groups.sort(function(a,b){ return gvariants(b).length-gvariants(a).length; });
+
+  var rows=0, cheapest=null, cur='USD';
+  groups.forEach(function(g){
+    gvariants(g).forEach(function(v){
+      rows++;
+      var u=unitPrice(v);
+      if(u && (cheapest===null || u.value<cheapest)){ cheapest=u.value; cur=v.currency||'USD'; }
+    });
+  });
+
+  var usps=(cfg.usps||[]).map(function(u){
+    return '<div class="uspcard"><b>'+esc(u[0])+'</b><span>'+esc(u[1])+'</span></div>';
+  }).join('');
+
+  el.innerHTML=
+    '<div class="shell spot-brand" style="--spot:'+esc(cfg.accent||'var(--ember)')+
+      ';--spot2:'+esc(cfg.accent2||'var(--gold)')+'">'+
+      '<a class="sbacklink" href="#/">&larr; All stores</a>'+
+      '<header class="shero">'+
+        '<p class="eyebrow spot-eyebrow">'+esc(cfg.eyebrow)+'</p>'+
+        '<h1>'+esc(cfg.headline)+'</h1>'+
+        '<p class="sblurb">'+esc(cfg.blurb)+'</p>'+
+        '<div class="sstats">'+
+          '<div><b>'+rows.toLocaleString()+'</b><span>products</span></div>'+
+          '<div><b>'+groups.length+'</b><span>brands</span></div>'+
+          (cheapest!==null?'<div><b>'+unitFmt(cheapest,cur)+'</b><span>cheapest per pouch</span></div>':'')+
+        '</div>'+
+        (usps?'<div class="uspgrid">'+usps+'</div>':'')+
+      '</header>'+
+      '<div class="brandbar">'+groups.map(function(g){
+        return '<a class="brandpill" href="#brand-'+esc(nk(g.brand))+'">'+esc(g.brand)+
+               '<span>'+gvariants(g).length+'</span></a>';
+      }).join('')+'</div>'+
+      '<div class="grid">'+groups.map(function(g){
+        return '<div id="brand-'+esc(nk(g.brand))+'">'+card(g)+'</div>';
+      }).join('')+'</div>'+
+      '<footer class="sfoot">'+
+        '<button class="btn" data-storefilter="'+esc(key)+'">See '+esc(st.name)+
+          ' in the market</button>'+
+        '<p>'+esc(cfg.note||'')+' Add what you want, then check out at '+esc(st.name)+
+        ' from your cart. We earn a commission on purchases made through this page. '+
+        'It never changes your price.</p>'+
+      '</footer>'+
+    '</div>';
+}
+
 function renderSpotlight(key){
   var cfg=SPOTLIGHT[key], st=SMAP[key]||{name:key,domain:''};
-  var mine=ALL.filter(function(i){return i.key===key;});
   var el=document.getElementById('spotview');
   if(!ALL.length){ el.innerHTML='<div class="shell"><div class="state"><b>Loading…</b></div></div>'; return; }
+  if(cfg.layout==='brands') return renderBrandSpotlight(key,cfg,st);
+
+  var mine=ALL.filter(function(i){return i.key===key;});
   if(!mine.length){
     el.innerHTML='<div class="shell"><div class="state"><b>'+esc(cfg.headline)+
       ' has no products loaded</b>Run refreshInventory() in Apps Script, then reload.'+

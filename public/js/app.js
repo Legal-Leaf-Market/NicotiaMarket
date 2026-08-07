@@ -1474,8 +1474,53 @@ function renderRail(){
   var sh=document.getElementById('railShuffle');
   if(sh) sh.hidden = total<=want;
 
-  document.getElementById('rail').innerHTML=pick.map(card).join('');
+  /* THE STRIP IS RENDERED TWICE. That is what makes the loop seamless:
+     when the scroll passes the end of the first copy we subtract its
+     width, which lands on a pixel-identical frame, so the jump is
+     invisible and the carousel simply starts over.
+
+     The clones are aria-hidden — a screen reader should hear each
+     product once, not twice — and refreshCard() already updates EVERY
+     node carrying a gid rather than the first, so a flavour change
+     stays in step across both copies. */
+  var rail=document.getElementById('rail');
+  rail.scrollLeft=0;
+  rail.innerHTML=pick.concat(pick).map(card).join('');
+  for(var j=pick.length;j<rail.children.length;j++){
+    rail.children[j].setAttribute('aria-hidden','true');
+  }
 }
+
+/* One card-width-ish step, wrapping at both ends. Arrows exist because a
+   mouse has no horizontal scroll — without them a desktop visitor can
+   see the strip overflowing and have no way to move it. */
+function railStep(dir){
+  var rail=document.getElementById('rail'); if(!rail) return;
+  var first=rail.querySelector('.card'); if(!first) return;
+  var step=(first.getBoundingClientRect().width+14)*2;
+  var half=rail.scrollWidth/2;
+  /* going back from the very start jumps to the end of the first copy,
+     which is the same frame as the end of the strip */
+  if(dir<0 && rail.scrollLeft<=1){
+    rail.scrollLeft=half;
+    rail.scrollTo({left:half-step,behavior:'smooth'});
+    return;
+  }
+  rail.scrollTo({left:rail.scrollLeft+dir*step,behavior:'smooth'});
+}
+
+/* Attached once — #rail survives every re-render, so binding inside
+   renderRail() would stack a new listener on every shuffle. */
+(function(){
+  var rail=document.getElementById('rail'); if(!rail) return;
+  rail.addEventListener('scroll',function(){
+    var half=rail.scrollWidth/2;
+    if(half>0 && rail.scrollLeft>=half) rail.scrollLeft-=half;
+  },{passive:true});
+  var p=document.getElementById('railPrev'), n=document.getElementById('railNext');
+  if(p) p.addEventListener('click',function(){ railStep(-1); });
+  if(n) n.addEventListener('click',function(){ railStep(1); });
+})();
 
 /* Rebuild everything that reflects what is still reachable.
 

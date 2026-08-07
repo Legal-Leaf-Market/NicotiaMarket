@@ -443,9 +443,19 @@ header.top{position:sticky;top:0;z-index:50;
 .railhead h2{font-family:var(--display);font-weight:900;font-size:19px;
   letter-spacing:-.02em;margin:0}
 .railhead small{font-size:12px;color:var(--dim)}
-/* pushed to the far end of the head row; hidden when the strip already
-   holds everything there is to show */
-.railshuf{margin-left:auto;font-family:var(--sans);font-size:12px;font-weight:600;
+/* the control cluster sits at the far end of the head row */
+.railctl{margin-left:auto;display:flex;align-items:center;gap:8px}
+.railnav{width:32px;height:32px;flex:none;border-radius:999px;cursor:pointer;
+  border:1px solid var(--glass-line);background:var(--chip);color:var(--muted);
+  font-size:19px;line-height:1;display:inline-flex;align-items:center;justify-content:center;
+  transition:color .16s,border-color .16s,transform .1s}
+.railnav:hover{border-color:var(--gold);color:var(--gold)}
+.railnav:active{transform:scale(.93)}
+/* a finger already has a better control than an arrow */
+@media(max-width:560px){.railnav{display:none}}
+
+/* hidden when the strip already holds everything there is to show */
+.railshuf{font-family:var(--sans);font-size:12px;font-weight:600;
   letter-spacing:.02em;color:var(--dim);background:var(--chip);cursor:pointer;
   border:1px solid var(--glass-line);border-radius:999px;padding:7px 14px;
   display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
@@ -575,6 +585,52 @@ header.top{position:sticky;top:0;z-index:50;
 .shot-empty{width:100%;height:100%;background:var(--chip);display:flex;
   align-items:center;justify-content:center;font-size:11px;letter-spacing:.1em;
   text-transform:uppercase;color:var(--dim)}
+/* ============================================================
+   THE FLIP, MADE OBVIOUS
+   ------------------------------------------------------------
+   Turning the card over is the most useful thing on it — description,
+   strengths, unit price, where it ships from — and the only thing
+   announcing that was a small underlined "Details". A wash across the
+   photo says it at a glance.
+
+   The pink is deliberately NOT a token. --disposable is the pink in the
+   design system and it MEANS disposables; borrowing it here would make
+   every hovered pouch look like a vape. This one belongs to the
+   interaction, not the taxonomy, so it stays local to this rule and out
+   of tokens.css, which is shared with both sister sites (§4).
+
+   pointer-events:none so the wash never intercepts a click — the save
+   star underneath it stays hitable. z-index 4 clears the badges (2) and
+   the star (3), so it covers them rather than sitting behind. */
+.shot::after{
+  content:"Click for details";
+  position:absolute;inset:0;z-index:4;pointer-events:none;
+  display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;
+  background:rgba(255,64,146,.44);
+  color:#fff;font-family:var(--sans);font-weight:800;font-size:12.5px;
+  letter-spacing:.1em;text-transform:uppercase;
+  text-shadow:0 1px 10px rgba(0,0,0,.6);
+  opacity:0;transition:opacity .15s ease}
+.card:hover .shot::after,
+.card .front:focus-visible .shot::after{opacity:1}
+/* already turned over — there is nothing left to promise */
+.card.on .shot::after{opacity:0}
+
+/* TOUCH HAS NO HOVER, so it gets two answers rather than one.
+   The wash fires on :active, flashing under the finger at the moment of
+   the tap, which teaches the gesture the first time it happens. But a
+   state you can only see while pressing cannot advertise itself, so the
+   Details control also stops being a quiet underline and becomes a
+   permanent pill — the thing that tells you the flip exists BEFORE you
+   touch anything. */
+@media (hover:none){
+  .shot::after{content:"Tap for details"}
+  .card:active .shot::after{opacity:1;transition:none}
+  .turn{border:1px solid rgba(224,134,63,.5);border-radius:999px;
+    padding:7px 13px;text-decoration:none;color:var(--ember);font-weight:600}
+  .card:hover .turn{color:var(--ember)}
+}
+
 .badge{position:absolute;top:9px;left:9px;font-size:9.5px;letter-spacing:.07em;
   text-transform:uppercase;padding:4px 9px;border-radius:99px;font-weight:700;z-index:2}
 .badge.best{background:linear-gradient(90deg,#f0c74c,#e0a92a);color:#0b120d}

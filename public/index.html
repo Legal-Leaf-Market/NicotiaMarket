@@ -250,8 +250,12 @@
   <section class="railsec" id="railsec" hidden>
     <div class="railhead"><h2 id="railTitle">Best value right now</h2>
       <small id="railSub">cheapest per unit across every store</small>
-      <button class="railshuf" id="railShuffle" type="button" hidden
-        aria-label="Show the next best prices">&#8635; <span>Shuffle</span></button></div>
+      <div class="railctl">
+        <button class="railnav" id="railPrev" type="button" aria-label="Scroll back">&#8249;</button>
+        <button class="railnav" id="railNext" type="button" aria-label="Scroll forward">&#8250;</button>
+        <button class="railshuf" id="railShuffle" type="button" hidden
+          aria-label="Show the next best prices">&#8635; <span>Shuffle</span></button>
+      </div></div>
     <div class="rail" id="rail"></div>
   </section>
 

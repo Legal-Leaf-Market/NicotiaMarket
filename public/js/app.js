@@ -1382,49 +1382,18 @@ function renderRail(){
   document.getElementById('rail').innerHTML=pick.map(card).join('');
 }
 
-/* Rebuild every selector from what is still reachable. Each list is
-   counted with its own selection lifted, so picking a store narrows
-   the brand list without emptying the store list. */
+/* Rebuild everything that reflects what is still reachable.
+
+   This used to repopulate four <select> elements too. They are gone:
+   Store and Brand said the same thing as the logo strips below, only
+   slower to read, and strength and budget are printed on every card.
+   The counts they were built from are still needed — the logo strips
+   and the department tabs run on them — so only the selects went.
+
+   `facetCount('strength')` went with them; nothing reads it now. */
 function refreshFacets(){
   var cStore=facetCount('store'), cBrand=facetCount('brand'),
-      cDept=facetCount('dept'),  cStr=facetCount('strength');
-
-  var sel=document.getElementById('f-store');
-  if(sel){
-    var liveS=STORES.filter(function(s){ return cStore[s.key]; });
-    var prev=F.store;
-    sel.innerHTML='<option value="all">All stores</option>'+
-      liveS.map(function(s){
-        return '<option value="'+esc(s.key)+'">'+esc(s.name)+' ('+cStore[s.key]+')</option>';
-      }).join('');
-    sel.value=(prev&&cStore[prev])?prev:'all';
-    if(prev!=='all'&&!cStore[prev]) F.store='all';
-  }
-
-  var bsel=document.getElementById('f-brand');
-  if(bsel){
-    var bl=Object.keys(cBrand).sort();
-    var pb=F.brand;
-    bsel.innerHTML='<option value="all">All brands</option>'+
-      bl.map(function(b){
-        return '<option value="'+esc(b)+'">'+esc(b)+' ('+cBrand[b]+')</option>';
-      }).join('');
-    bsel.value=(pb&&cBrand[pb])?pb:'all';
-    if(pb!=='all'&&!cBrand[pb]) F.brand='all';
-  }
-
-  var stEl=document.getElementById('f-strength');
-  if(stEl){
-    var BANDS=[['all','Any strength'],['0','Nicotine-free'],['1-4','Light · 1–4 mg'],
-               ['5-8','Medium · 5–8 mg'],['9-15','Strong · 9–15 mg'],['16-99','Extra strong · 16 mg+']];
-    var ps=F.strength;
-    stEl.innerHTML=BANDS.filter(function(b){ return b[0]==='all'||cStr[b[0]]; })
-      .map(function(b){
-        return '<option value="'+b[0]+'">'+b[1]+(b[0]!=='all'?' ('+cStr[b[0]]+')':'')+'</option>';
-      }).join('');
-    stEl.value=(ps&&(ps==='all'||cStr[ps]))?ps:'all';
-    if(ps!=='all'&&!cStr[ps]) F.strength='all';
-  }
+      cDept=facetCount('dept');
 
   DEPT_ORDER.forEach(function(d){
     var el=document.getElementById('c-'+d);
@@ -2174,7 +2143,6 @@ document.addEventListener('click',function(e){
   if((el=hit('[data-storefilter]'))){ e.preventDefault();
     F.stores={}; F.stores[el.getAttribute('data-storefilter')]=1;
     F.store='all';
-    var sel=document.getElementById('f-store'); if(sel) sel.value='all';
     if(location.hash) location.hash='';
     drawer('list',false); drawer('board',false);
     apply(); window.scrollTo({top:0,behavior:'smooth'}); return; }
@@ -2212,8 +2180,13 @@ var _qt;
 document.getElementById('q').addEventListener('input',function(e){
   clearTimeout(_qt); var v=e.target.value;
   _qt=setTimeout(function(){F.q=v;apply();},170);});
-['store','brand','strength','price','sort'].forEach(function(k){
-  document.getElementById('f-'+k).addEventListener('change',function(e){F[k]=e.target.value;apply();});});
+/* Sort is the only <select> left in the bar — store and brand are the
+   logo strips now, and strength and budget are on every card. This was a
+   loop over five ids with NO null guard, so one missing element would
+   have thrown right here and silently killed every listener registered
+   below it, including the department tabs. */
+document.getElementById('f-sort').addEventListener('change',function(e){
+  F.sort=e.target.value; apply();});
 document.getElementById('f-deals').addEventListener('click',function(){
   F.deals=!F.deals; this.classList.toggle('active',F.deals);
   this.setAttribute('aria-pressed',F.deals); apply();});
@@ -2237,8 +2210,6 @@ document.getElementById('clear').addEventListener('click',function(){
   F={q:'',dept:'all',store:'all',brand:'all',strength:'all',price:'all',
      sort:'unit',deals:false,instock:false,stores:{},brands:{}};
   document.getElementById('q').value='';
-  ['store','brand','strength','price'].forEach(function(k){
-    var el=document.getElementById('f-'+k); if(el) el.value='all'; });
   document.getElementById('f-sort').value='unit';
   document.getElementById('f-deals').classList.remove('active');
   document.getElementById('f-instock').classList.remove('active');

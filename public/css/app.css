@@ -231,9 +231,8 @@ header.top{position:sticky;top:0;z-index:50;
    Every control now says what it does in words a customer uses.
    ============================================================ */
 .filterwrap{position:relative;z-index:2;margin:18px 0 0}
-.frow{display:grid;gap:14px 16px;
-  grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
-.frow.r1{margin-bottom:14px}
+/* `.frow` went with the Store / Brand / Strength / Budget grid. `.field`
+   stays — the age gate still uses it for country and region. */
 .field label{display:block;font-size:11px;font-weight:700;letter-spacing:.09em;
   color:var(--gold);text-transform:uppercase;margin:0 0 7px 4px}
 .field input,.field select{width:100%;padding:12px 15px;border-radius:999px;
@@ -274,7 +273,6 @@ header.top{position:sticky;top:0;z-index:50;
   body.filters-open .filterwrap{transform:translateX(0)}
   .filterwrap .panel{border:none;border-right:1px solid var(--glass-line);border-radius:0;
     background:#0c1210;backdrop-filter:none;box-shadow:none;min-height:100%;padding:0 16px 40px}
-  .frow{grid-template-columns:1fr}
   .mf-head{display:flex;position:sticky;top:0;z-index:5;align-items:center;
     justify-content:space-between;padding:16px 0 12px;margin-bottom:8px;
     background:#0c1210;border-bottom:1px solid var(--glass-line)}
@@ -284,7 +282,17 @@ header.top{position:sticky;top:0;z-index:50;
     opacity:0;pointer-events:none;transition:opacity .2s}
   body.filters-open .fscrim{opacity:1;pointer-events:auto}
 }
-@media(min-width:821px){.mf-head{display:none}.fscrim{display:none}}
+@media(min-width:821px){
+  .mf-head{display:none}.fscrim{display:none}
+  /* The glass panel earned its box when it held four dropdowns. It holds
+     two chips now, so on desktop it drops the surface and sits inline —
+     a bordered card around two toggles is the same wasted space the
+     dropdowns were. The mobile drawer above still needs .panel, hence
+     desktop-only. */
+  .filterwrap{margin:16px 0 0}
+  .filterwrap .panel{background:none;border:0;border-radius:0;padding:0;
+    backdrop-filter:none;box-shadow:none}
+}
 
 /* ============================================================
    RESULTS BAR — Legal-Leaf's .subbar, one line, no stacking

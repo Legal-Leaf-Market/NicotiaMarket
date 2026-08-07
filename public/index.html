@@ -176,22 +176,11 @@
   <div class="filterwrap" id="filterwrap">
     <div class="panel">
       <div class="mf-head"><b>Filters</b><button id="mfClose" type="button" aria-label="Close filters">&times;</button></div>
-      <div class="frow r1">
-        <div class="field"><label for="f-store">Store</label>
-          <select id="f-store"><option value="all">All stores</option></select></div>
-        <div class="field"><label for="f-brand">Brand</label>
-          <select id="f-brand"><option value="all">All brands</option></select></div>
-        <div class="field"><label for="f-strength">Nicotine strength</label>
-          <select id="f-strength"><option value="all">Any strength</option></select></div>
-        <div class="field"><label for="f-price">Budget</label>
-          <select id="f-price">
-            <option value="all">Any price</option>
-            <option value="0-10">Under $10</option>
-            <option value="10-20">$10 – $20</option>
-            <option value="20-40">$20 – $40</option>
-            <option value="40-99999">$40 and up</option>
-          </select></div>
-      </div>
+      <!-- The Store / Brand / Nicotine strength / Budget dropdowns lived
+           here. Store and Brand duplicated the logo strips below, which do
+           the same job and are quicker to read; strength and budget are
+           already on every card. Four selects of vertical space above the
+           fold, for nothing. -->
       <div class="ftoggles">
         <button class="chip deals" id="f-deals" aria-pressed="false">On sale</button>
         <button class="chip" id="f-instock" aria-pressed="false">Ships today</button>
@@ -199,6 +188,22 @@
       </div>
     </div>
   </div>
+
+  <!-- The logo strips ARE the store and brand filter now, so they sit up
+       here where the dropdowns were. Kept outside #filterwrap on purpose:
+       that collapses into a drawer on mobile, and these should stay
+       visible rather than hiding behind the Filters button. -->
+  <section class="logorow" id="storeRow" hidden>
+    <div class="lrhead"><h2>Shop by store</h2>
+      <button class="lrclear" id="clearStores" hidden>Show all</button></div>
+    <div class="lrscroll" id="storeLogos"></div>
+  </section>
+
+  <section class="logorow" id="brandRow" hidden>
+    <div class="lrhead"><h2>Shop by brand</h2><small id="brandNote"></small>
+      <button class="lrclear" id="clearBrands" hidden>Show all</button></div>
+    <div class="lrscroll" id="brandLogos"></div>
+  </section>
 
   <div class="subbar">
     <span class="cnt" id="rcount">&nbsp;</span>
@@ -222,18 +227,6 @@
       <button class="railshuf" id="railShuffle" type="button" hidden
         aria-label="Show the next best prices">&#8635; <span>Shuffle</span></button></div>
     <div class="rail" id="rail"></div>
-  </section>
-
-  <section class="logorow" id="storeRow" hidden>
-    <div class="lrhead"><h2>Shop by store</h2>
-      <button class="lrclear" id="clearStores" hidden>Show all</button></div>
-    <div class="lrscroll" id="storeLogos"></div>
-  </section>
-
-  <section class="logorow" id="brandRow" hidden>
-    <div class="lrhead"><h2>Shop by brand</h2><small id="brandNote"></small>
-      <button class="lrclear" id="clearBrands" hidden>Show all</button></div>
-    <div class="lrscroll" id="brandLogos"></div>
   </section>
 
   <div id="mount"></div>

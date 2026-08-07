@@ -84,25 +84,84 @@ var EUALL = '<b>Warning:</b> Nicotine is a highly addictive substance. Smoking s
 var LEGAL_CLASS = {pouch:'pouch', disposable:'vape', device:'vape',
                    liquid:'vape', cigar:'cigar', gear:'gear'};
 
-/* Fallback registry. Code.gs is the source of truth and overwrites
-   this at load; this only exists so the page renders if the API is
-   down. Add stores in Code.gs, not here. */
+/* ---- FALLBACK REGISTRY ----
+   `api/products.js` holds the real one and overwrites this at load, via
+   publicStores(). This exists only so the page still renders a store
+   list when the API is down — which, since the API is the thing that
+   currently 500s, is not hypothetical.
+
+   It had drifted badly from the registry:
+
+     - carried `freemax` and `beardedcigar`, both switched OFF upstream
+     - missing `nicokick` entirely — the US pouch store, the one with a
+       spotlight page in the nav, and the reason PREVIEW_MODE could be
+       turned off at all
+     - missing `eightvape`
+     - **nikopouches had no `only:['DK']`**. Their own terms say "Vi
+       leverer ikke til udlandet". storeShipsHere() checks `only` BEFORE
+       the zone, so without it every EU shopper was offered a
+       Denmark-only shop — the exact fault CLAUDE.md §7b records fixing,
+       silently reintroduced whenever the API failed. Now that
+       PREVIEW_MODE is false and shipping limits actually bite, this
+       stopped being theoretical.
+     - no `ageCheck` on any entry, so the cart's age-verification chip —
+       §7b's stated mitigation for putting ten vendors behind ten
+       identical Buy buttons — rendered blank in the fallback path.
+     - no `from`, `days` or `guess` either.
+
+   `featured` is gone: publicStores() never sends it and nothing here
+   reads it, so it only ever "worked" while the API was down.
+
+   FIELDS MUST MIRROR publicStores() EXACTLY. Add stores upstream in
+   api/products.js, then mirror them here — never only here. */
 var STORES = [
-  {key:'snusoclock',name:'Snus O’Clock',dept:'pouch',domain:'snusoclock.com',ref:'nicotinebaby',perPack:20,ships:['EU'],platform:'shopify'},
-  {key:'europesnus',name:'Europesnus',dept:'pouch',domain:'europesnus.com',ref:'rjuntxyu',perPack:20,ships:['EU'],platform:'shopify'},
-  {key:'nikopouches',name:'NikoPouches.dk',dept:'pouch',domain:'nikopouches.dk',ref:'idtzhxpu',perPack:20,ships:['EU'],platform:'shopify'},
-  /* Wave Vape — GoAffPro 10%, WooCommerce. Foger + Geek Bar, the two
-     disposable brands most people actually search for. Their cart lives
-     at /cart-2/, not /cart/, which is why cartPath exists. */
-  {key:'wavevape',name:'Wave Vape',dept:'disposable',domain:'wavevape.shop',ref:'nicotinebaby',
-   ships:['US'],platform:'woocommerce',cartPath:'/store/',featured:1,shipFlat:5.99,shipFree:55},
-  {key:'vaporesso',name:'Vaporesso',dept:'device',domain:'store.vaporesso.com',ref:'nicotinebaby',featured:1,ships:['US','INTL'],platform:'shopify'},
-  {key:'geekvape',name:'Geekvape',dept:'device',domain:'store.geekvape.com',ref:'nicotinebaby',featured:1,ships:['US','INTL'],platform:'shopify'},
-  {key:'freemax',name:'Freemax',dept:'device',domain:'www.freemaxvape.com',ref:'nicotinebaby',ships:['US'],platform:'woocommerce'},
-  {key:'relxuk',name:'RELX UK',dept:'device',domain:'www.relxvape.co.uk',ref:'nicotinebaby',ships:['UK'],platform:'shopify'},
-  {key:'montero',name:'Montero Cigars',dept:'cigar',domain:'monterocigars.com',ref:'nicotinebaby',featured:1,ships:['US'],platform:'shopify'},
-  {key:'beardedcigar',name:'Beard Cigars',dept:'cigar',domain:'beardcigars.com',ref:'nicotinebaby',ships:['US'],platform:'bigcommerce'},
-  {key:'xifei',name:'XIFEI',dept:'gear',domain:'xifeicigaraccessory.com',ref:'nicotinebaby',ships:['US','INTL'],platform:'shopify'}
+  /* --- pouches & snus --- */
+  {key:'snusoclock',name:"Snus O'Clock",dept:'pouch',domain:'snusoclock.com',
+   ref:'nicotinebaby',ships:['EU'],guess:1,perPack:20,platform:'shopify',
+   from:'GB',days:'3–7 days',ageCheck:'none'},
+  {key:'europesnus',name:'Europesnus',dept:'pouch',domain:'europesnus.com',
+   ref:'rjuntxyu',ships:['EU'],guess:1,perPack:20,platform:'shopify',
+   from:'EU',days:'3–5 business days',ageCheck:'none'},
+  /* US pouches. `ref` is empty on purpose — attribution is CJ's deep
+     link, and a second tracking param would conflict with it. */
+  {key:'nicokick',name:'Nicokick',dept:'pouch',domain:'nicokick.com',
+   ref:'',ships:['US'],perPack:15,platform:'magento',
+   from:'US',days:'2–5 days',ageCheck:'id'},
+  /* `only` is narrower than `ships` and is checked first. Do not drop it. */
+  {key:'nikopouches',name:'NikoPouches.dk',dept:'pouch',domain:'nikopouches.dk',
+   ref:'idtzhxpu',ships:['EU'],only:['DK'],perPack:20,platform:'shopify',
+   from:'DK',days:'1–3 days',ageCheck:'id'},
+
+  /* --- disposables ---
+     Wave Vape's cart is not at /cart/ and its own buttons post to
+     /store/?add-to-cart=, which is why cartPath exists. */
+  {key:'wavevape',name:'Wave Vape',dept:'disposable',domain:'wavevape.shop',
+   ref:'nicotinebaby',ships:['US'],platform:'woocommerce',cartPath:'/store/',
+   shipFlat:5.99,shipFree:55,from:'US',days:'3–7 days',ageCheck:'id'},
+  {key:'eightvape',name:'EightVape',dept:'disposable',domain:'eightvape.com',
+   ref:'',ships:['US'],guess:1,platform:'woocommerce',
+   from:'US',days:'3–8 days',ageCheck:'signature'},
+
+  /* --- devices --- */
+  {key:'vaporesso',name:'Vaporesso',dept:'device',domain:'store.vaporesso.com',
+   ref:'nicotinebaby',ships:['US','INTL'],guess:1,platform:'shopify',
+   from:'CN',days:'7–30 days',ageCheck:'dob'},
+  {key:'geekvape',name:'Geekvape',dept:'device',domain:'store.geekvape.com',
+   ref:'nicotinebaby',ships:['US','INTL'],guess:1,platform:'shopify',
+   from:'CN',days:'7–21 days',ageCheck:'none'},
+  {key:'relxuk',name:'RELX UK',dept:'device',domain:'www.relxvape.co.uk',
+   ref:'nicotinebaby',ships:['UK'],platform:'shopify',
+   from:'GB',days:'2–4 days',ageCheck:'dob'},
+
+  /* --- cigars --- */
+  {key:'montero',name:'Montero Cigars',dept:'cigar',domain:'monterocigars.com',
+   ref:'nicotinebaby',ships:['US'],guess:1,platform:'shopify',
+   from:'US',days:'2–5 days',ageCheck:'id'},
+
+  /* --- gear --- */
+  {key:'xifei',name:'XIFEI',dept:'gear',domain:'xifeicigaraccessory.com',
+   ref:'nicotinebaby',ships:['US','INTL'],guess:1,platform:'shopify',
+   from:'CN',days:'3–7 US / 15–30 intl',ageCheck:'none'}
 ];
 var SMAP = {};
 STORES.forEach(function(s){ SMAP[s.key]=s; });

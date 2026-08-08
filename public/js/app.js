@@ -1037,6 +1037,17 @@ function resetEntry(){
    STATE
    ============================================================ */
 var ALL=[],PGROUPS=[],VIEW=[],PAGE=0,PER=24,GROUPS={},BOARD={};
+/* Brands that are real, judged ONCE against the whole catalogue.
+   The brand strip used to decide this from the filtered view instead, with
+   `counts[b] > 1`. That silently broke the moment a filter narrowed things:
+   selecting Nicokick collapses its 409 rows into 16 product groups, so every
+   brand it carries lands on a count of exactly 1, the whole list is thrown
+   away and the strip hides itself. ZYN, VELO, Rogue and on! all vanished
+   behind the one retailer that stocks them.
+   The guard is still needed, because one-off junk does reach the brand slot
+   ("Pouch", "Christmas", "Better"), so it now asks the catalogue rather than
+   the current view. */
+var BRANDOK={};
 var CONN='',META=[],SRC={live:0,seeded:0},UPDATED=null;
 var BESTUNIT={};   /* dept -> cheapest unit value ON THE SITE, in USD */
 
@@ -1822,10 +1833,15 @@ function renderBrandRow(counts){
     if(!passes(g,'brand')) return;
     var f=g.flav[0]; if(f&&f.image) img[g.brand]=f.image;
   });
-  var list=Object.keys(counts).filter(function(b){ return counts[b]>1; });
+  /* Judged against the catalogue (BRANDOK), never against these counts.
+     `counts` is the CURRENT view, so testing it here hid every brand the
+     moment a single store was selected. */
+  var list=Object.keys(counts).filter(function(b){ return BRANDOK[nk(b)]; });
   list.sort(function(a,b){ return counts[b]-counts[a] || a.localeCompare(b); });
   list=list.slice(0,40);
-  if(list.length<3){ row.hidden=true; return; }
+  /* Two is a strip worth showing. Three was arbitrary and, with a store
+     selected, threw away a perfectly good pair. */
+  if(list.length<2){ row.hidden=true; return; }
   row.hidden=false;
   document.getElementById('brandNote').textContent=
     list.length+' brand'+(list.length===1?'':'s')+' available here';
@@ -2957,9 +2973,46 @@ function canonBrands(items){
   });
 }
 
+/* Words that reach the brand slot often enough to look plausible but are
+   never a brand: flavours, formats and marketing filler lifted out of a
+   title. Frequency alone cannot catch these, because "Mint" is on hundreds
+   of listings and sails through any count test you write.
+   Whole single words only. Nothing here is a nicotine brand, and anything
+   genuinely ambiguous is left out rather than guessed at. */
+var NOTBRAND={};
+/* NOT "ice". It looks like a flavour and it is not: ICE is a real pouch
+   brand with 26 listings here (Ice Frost, Ice Freeze XL, Ice Cola Slush,
+   Ice Jalapeno Lime). Checked before adding, and it stays out of this list.
+   Check the same way before you add anything else that looks obvious. */
+('mint wintergreen spearmint peppermint menthol citrus berry cherry apple '+
+ 'mango melon peach vanilla coffee cinnamon licorice liquorice original '+
+ 'classic cool fresh smooth strong bold extra slim mini regular '+
+ 'pouch pouches snus nicotine tobacco can cans roll tin tins flavour flavor '+
+ 'better best perfect premium value new sale clearance bundle sample '+
+ 'variety mixed assorted pack packs christmas holiday gift'
+).split(' ').forEach(function(w){ NOTBRAND[w]=1; });
+
+/* Counts LISTINGS, not groups. A brand that appears on two or more products
+   anywhere in the catalogue is a brand; one that appears exactly once is
+   almost always a stray word promoted out of a title. Must run after
+   canonBrands so "zone" and "Zone" are counted as the same thing. */
+function markRealBrands(items){
+  var n={};
+  items.forEach(function(it){
+    if(!it.brand) return;
+    var k=nk(it.brand); if(!k) return;
+    n[k]=(n[k]||0)+1;
+  });
+  BRANDOK={};
+  Object.keys(n).forEach(function(k){
+    if(n[k]>1 && !NOTBRAND[k]) BRANDOK[k]=1;
+  });
+}
+
 function ingest(items){
   ALL=items;
   canonBrands(ALL);
+  markRealBrands(ALL);
   PGROUPS=buildGroups(ALL);
   GROUPS={}; PGROUPS.forEach(function(g){
     var k=nk(g.brand); (GROUPS[k]=GROUPS[k]||[]).push(g); });

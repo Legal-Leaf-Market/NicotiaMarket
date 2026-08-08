@@ -359,7 +359,9 @@ header.top{position:sticky;top:0;z-index:50;
    It is a <section> with two separate links rather than one big <a>, because
    it holds an internal read and an outbound listen and those cannot be
    nested inside a single anchor. */
-.manifestoband{display:flex;align-items:center;gap:20px;margin:0 0 20px;
+/* Top margin because this now sits UNDER the grid, not stacked beneath
+   another band. Without it the banner crowds the last row of cards. */
+.manifestoband{display:flex;align-items:center;gap:20px;margin:38px 0 8px;
   padding:22px 24px;border-radius:var(--r);position:relative;overflow:hidden;
   border:1px solid rgba(129,178,255,.3);
   background:linear-gradient(105deg,rgba(96,140,220,.15),rgba(11,15,13,.25) 64%)}

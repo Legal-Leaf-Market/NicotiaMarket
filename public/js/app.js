@@ -84,7 +84,11 @@ var SUBS = {
   device: [['kit','Kits & devices'],['mod','Mods & batteries'],['pod','Pods & cartridges'],
            ['tank','Tanks & atomisers'],['coil','Coils'],['accessory','Accessories']],
   liquid: [['eliquid','E-liquid'],['shortfill','Shortfills'],['salt','Nic salts']],
-  cigar: [['premium','Cigars'],['cigarillo','Cigarillos & little cigars'],
+  /* "Cigarillos", not "Cigarillos & little cigars" — the shelf is
+     cigarillos. The classifier in api/products.js still MATCHES "little
+     cigars" and "small cigars", because that is how some vendors title
+     them and those rows belong here; it is only the label that changes. */
+  cigar: [['premium','Cigars'],['cigarillo','Cigarillos'],
           ['pipe','Pipe tobacco'],['rolling','Tubes & rolling'],['sampler','Samplers']],
   gear: [['wraps','Wraps & papers'],['cutter','Cutters & punches'],['lighter','Lighters & torches'],
          ['humidor','Humidors & humidity'],['case','Cases & stands'],['ashtray','Ashtrays'],

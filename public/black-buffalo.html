@@ -191,11 +191,26 @@
     var el = document.createElement('article');
     el.className = 'bb-card' + (r.nic0 ? ' is-zero' : '');
 
+    /* Two faces on a rotating inner: the main shelf's flip, scoped to
+       bb- classes because this page never loads js/app.js (the shelf's
+       delegated .card.on toggle is absent here) and reusing .card would
+       drag in shelf sizing. Built with createElement/textContent
+       throughout, same as before, because r.desc is third-party text. */
+    var inw = document.createElement('div');
+    inw.className = 'bb-in';
+    var front = document.createElement('div');
+    front.className = 'bb-face bb-front' + (r.image ? ' has-img' : '');
+    front.tabIndex = 0;
+    front.setAttribute('role', 'button');
+    front.setAttribute('aria-label', 'Show details');
+    var back = document.createElement('div');
+    back.className = 'bb-face bb-back';
+
     if (r.image) {
       var im = document.createElement('img');
       im.className = 'bb-img'; im.loading = 'lazy'; im.alt = '';
       im.src = r.image;
-      el.appendChild(im);
+      front.appendChild(im);
     }
 
     var body = document.createElement('div');
@@ -212,13 +227,13 @@
     body.appendChild(h);
 
     var price = parseFloat(r.price);
+    var full = r.title + ' ' + (r.variant || '');
+    var n = cans(full);
     if (isFinite(price)) {
       /* Title AND variant. The single-can listings are titled "Black
          Buffalo Nicotine" with the format only in the variant
          ("Wintergreen Pouches"), so testing the title alone silently
          denied every single can its per-pouch estimate. */
-      var full = r.title + ' ' + (r.variant || '');
-      var n = cans(full);
       var per = document.createElement('p');
       per.className = 'bb-price';
       per.textContent = money(price);
@@ -239,6 +254,12 @@
       body.appendChild(unit);
     }
 
+    var turn = document.createElement('button');
+    turn.type = 'button';
+    turn.className = 'bb-turn';
+    turn.textContent = '↻ Details';
+    body.appendChild(turn);
+
     var a = document.createElement('a');
     a.className = 'bb-go';
     a.href = r.url || 'https://blackbuffalo.com';
@@ -247,7 +268,82 @@
     a.textContent = 'View at Black Buffalo →';
     body.appendChild(a);
 
-    el.appendChild(body);
+    front.appendChild(body);
+
+    /* The back: the vendor's own description, then the unit arithmetic
+       with its honesty caveat spelled out (the FAQ's "approximately",
+       CLAUDE.md's perPackApprox rule). */
+    var bin = document.createElement('div');
+    bin.className = 'bb-back-in';
+
+    var eyebrow = document.createElement('div');
+    eyebrow.className = 'bb-bstore';
+    eyebrow.textContent = 'Black Buffalo · ' + (r.nic0 ? 'no nicotine' : 'contains nicotine');
+    bin.appendChild(eyebrow);
+
+    var h4 = document.createElement('h4');
+    h4.textContent = [r.title, r.variant].filter(Boolean).join(' · ');
+    bin.appendChild(h4);
+
+    var d = document.createElement('p');
+    d.className = 'bb-bdesc' + (r.desc ? '' : ' dim');
+    d.textContent = r.desc || 'Black Buffalo publishes no description for this one.';
+    bin.appendChild(d);
+
+    if (isFinite(price)) {
+      var dl = document.createElement('dl');
+      dl.className = 'bb-bspec';
+      var spec = function (k, v) {
+        var dt = document.createElement('dt'); dt.textContent = k;
+        var dd = document.createElement('dd'); dd.textContent = v;
+        dl.appendChild(dt); dl.appendChild(dd);
+      };
+      spec('Listing', money(price));
+      spec('Per can', money(price / n));
+      if (isPouches(full)) spec('Per pouch (est.)', '~$' + (price / n / PER_CAN_APPROX).toFixed(3));
+      bin.appendChild(dl);
+      if (isPouches(full)) {
+        var note = document.createElement('p');
+        note.className = 'bb-bnote';
+        note.textContent = 'Cans are filled by weight, not counted. The vendor says approximately ' +
+          PER_CAN_APPROX + ' pouches per can and independent counts found 14 to 18, so per-pouch is an estimate, never an exact price.';
+        bin.appendChild(note);
+      }
+    }
+    back.appendChild(bin);
+
+    var foot = document.createElement('div');
+    foot.className = 'bb-back-foot';
+    var go2 = document.createElement('a');
+    go2.className = 'bb-go';
+    go2.href = r.url || 'https://blackbuffalo.com';
+    go2.target = '_blank';
+    go2.rel = 'noopener nofollow';
+    go2.textContent = 'View at Black Buffalo →';
+    foot.appendChild(go2);
+    var tb = document.createElement('button');
+    tb.type = 'button';
+    tb.className = 'bb-turnback';
+    tb.setAttribute('aria-label', 'Turn back to the front');
+    tb.textContent = '↩';
+    foot.appendChild(tb);
+    back.appendChild(foot);
+
+    inw.appendChild(front);
+    inw.appendChild(back);
+    el.appendChild(inw);
+
+    /* Click anywhere flips; the outbound links pass through untouched. */
+    el.addEventListener('click', function (e) {
+      var t = e.target;
+      if (t.closest && t.closest('a')) return;
+      el.classList.toggle('on');
+    });
+    front.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      if (e.target !== front) return;
+      e.preventDefault(); el.classList.toggle('on');
+    });
     return el;
   }
 

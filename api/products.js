@@ -63,8 +63,17 @@ export const STORES = [
 
   /* ~150 destinations accepted at checkout, no excluded-country list,
      no age step. Mon–Fri processing; customs paperwork case-by-case. */
+  /* coupon FLASH25 is THEIR published code ("Get 25% off all flash
+     deals products — Use code FLASH25 at checkout", their own nav) and
+     was verified live 2026-08-08: the permalink's discount= param
+     applied FLASH25 (−€0.98) to a €3.95 flash-deals item at their
+     checkout. It is SCOPED to /collections/flash-deals, which is why
+     `off` stays unset — a site-wide 25% savings row would be the
+     phantom-£0.003 class of lie. The code rides every hand-off and
+     Shopify simply ignores it where nothing qualifies. */
   { key:'europesnus', name:'Europesnus', dept:'pouch', domain:'europesnus.com',
     ref:'rjuntxyu', ships:['EU'], guess:1, perPack:20, platform:'shopify',
+    coupon:'FLASH25',
     currency:'EUR', from:'EU', days:'3–5 business days', ageCheck:'none' },
 
   /* ==========================================================
@@ -154,17 +163,26 @@ export const STORES = [
   /* --- disposables ---
      Wave Vape: GoAffPro 10%, shop id 4QTSbUnS3TvZ. Foger 35 + Geek Bar 5.
      WooCommerce 10.9.4 with the Store API open, so no scraping needed.
-     cartPath is load-bearing: their basket is /cart-2/, not /cart/, and
-     their own buttons post to /store/?add-to-cart= — the default Woo
-     handoff 404s without it. */
+     cartPath is load-bearing: their basket is /cart-2/, not /cart/ —
+     the default Woo handoff 404s without it. add-to-cart is honoured on
+     any page load, and /cart-2/ both adds the line AND shows the basket
+     (verified live 2026-08-08), so the hand-off lands there rather than
+     on the /store/ grid their own buttons post to. checkoutPath was
+     verified the same day: /checkout/?add-to-cart= adds the line and
+     lands on their one-page checkout at /step/checkout-2/. */
   /* Age policy is solid — AgeChecker.net 21+ with ID-upload fallback,
      orders held until verified. But the page labelled "Shipping Policy"
      is a mislabelled returns/warranty page with no destination content
      at all, so there is no published state-exclusion list and no PACT
      Act adult-signature disclosure. days is our own estimate. */
+  /* NO coupon on purpose: their homepage banner reads "Buy Wave Vapes
+     At 10% Discount, Use Code OFF10", but their own cart rejects it —
+     "Coupon off10 cannot be applied because it does not exist", tried
+     live 2026-08-08. A code their checkout refuses would break every
+     hand-off's promise; worth raising with the store instead. */
   { key:'wavevape', name:'Wave Vape', dept:'disposable', domain:'wavevape.shop',
     ref:'nicotinebaby', ships:['US'], platform:'woocommerce', featured:1,
-    cartPath:'/store/', shipFlat:5.99, shipFree:55,
+    cartPath:'/cart-2/', checkoutPath:'/checkout/', shipFlat:5.99, shipFree:55,
     from:'US', days:'3–7 days', ageCheck:'id' },
 
   /* EightVape. AWIN 86487 applied, scraping meanwhile — so `ref` is
@@ -200,8 +218,12 @@ export const STORES = [
      check at the door, ships from Las Vegas to the 50 states "where
      deliverable", military/APO excluded. Matches PACT Act expectations,
      though the excluded states are not named. */
+  /* checkoutPath verified live 2026-08-08: /checkout/?add-to-cart=
+     adds the line and renders their checkout. Their cart is at the
+     default /cart/, also verified. */
   { key:'eightvape', name:'EightVape', dept:'disposable', domain:'eightvape.com',
     ref:'', ships:['US'], guess:1, platform:'woocommerce', awin:86487,
+    checkoutPath:'/checkout/',
     from:'US', days:'3–8 days', ageCheck:'signature',
     cats:['disposable-vape','kits','vape-mods','vape-pods','vape-tanks',
           'vape-coils','vape-accessories','juice','nicotine-pouch',
@@ -247,6 +269,11 @@ export const STORES = [
      branded and puff-rated like disposables. Many brands rebadged to
      refillable post-ban; whether these particular SKUs did is not
      answerable from the policy text. See CLAUDE.md. */
+  /* NO coupon on purpose: /pages/new-to-relx publishes "11NOV" (free
+     shipping, NEW customers only, bundle-scoped). Conditional and
+     campaign-named — unverifiable without a real first order, so it
+     stays out of the registry rather than promising strangers someone
+     else's discount. */
   { key:'relxuk', name:'RELX UK', dept:'device', domain:'www.relxvape.co.uk',
     ref:'nicotinebaby', ships:['UK'], platform:'shopify', currency:'GBP',
     from:'GB', days:'2–4 days', ageCheck:'dob' },
@@ -385,9 +412,16 @@ export const STORES = [
   { key:'kindjuice', name:'Kind Juice', dept:'liquid', domain:'www.kindjuice.com',
     ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:89381, feedId:0,
     from:'US' },                                                                // 10%, 90-day, organic/PG-free
-  { key:'humidors', name:'1st Class Humidors', dept:'gear', domain:'www.1stclasshumidors.com',
-    ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:105497, feedId:0,
-    from:'US' },                                                                // 90-day, fills the gear gap beside XIFEI
+  /* OFF until the AWIN feed is wired. The storefront is Magento 1
+     ("Magento, Varien, E-commerce" in its own meta keywords) — no
+     products.json, no GraphQL, no JSON-LD, so every fallback door in
+     the feedcsv ladder strikes out and the store shipped 0 products on
+     every scrape. The AWIN feed is the only honest way in: set
+     AWIN_API_KEY, put the real feed id here, and uncomment.
+  // { key:'humidors', name:'1st Class Humidors', dept:'gear', domain:'www.1stclasshumidors.com',
+  //   ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:105497, feedId:0,
+  //   from:'US' },                                                             // 90-day, fills the gear gap beside XIFEI
+  */
   { key:'bnbtobacco', name:'BnB Tobacco', dept:'cigar', domain:'www.bnbtobacco.com',
     ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:87969, feedId:0,
     from:'US' },                                                                // 100% approval, 8.5% conversion
@@ -404,7 +438,7 @@ function publicStores() {
     ref: s.ref, ships: s.ships, only: s.only || null, guess: s.guess ? 1 : 0,
     from: s.from || '', days: s.days || '', ageCheck: s.ageCheck || '',
     perPack: s.perPack || 0, platform: s.platform || '',
-    cartPath: s.cartPath || '', logo: s.logo || '',
+    cartPath: s.cartPath || '', checkoutPath: s.checkoutPath || '', logo: s.logo || '',
     coupon: s.coupon || '', off: Number(s.off) || 0,
     shipFlat: Number(s.shipFlat) || 0, shipFree: Number(s.shipFree) || 0,
   }))
@@ -1670,7 +1704,7 @@ async function scrapeStore(st) {
         if (!priced) detail += '  [WARNING: no prices — likely a brand site, not a storefront]'
         else if (priced < items.length / 2) detail += `  [only ${priced}/${items.length} priced]`
         if (items.length && !inStock) detail += '  [WARNING: nothing in stock]'
-        return { key: st.key, result: priced ? 'ok' : 'no prices', count: items.length, detail, items }
+        return { key: st.key, result: priced ? 'ok' : 'no prices', count: items.length, detail, door, items }
       }
       errors.push(`${door}: empty`)
     } catch (e) {
@@ -1800,10 +1834,29 @@ export default async function handler(req, res) {
 
   const meta = results.map(({ key, result, count, detail }) => ({ key, result, count, detail }))
 
+  /* The door that actually delivered decides the CHECKOUT hand-off, not
+     the registry's platform. A feedcsv store scraped through Shopify's
+     products.json is, for checkout purposes, a Shopify store: its rows
+     carry real variant ids and /cart/VID:QTY permalinks fill a basket
+     (verified live on relxnow, fruitia, kindjuice and bnbtobacco,
+     2026-08-08). Without this the drawer said those stores "cannot be
+     sent a basket by link" and opened one product page under a button
+     that read like a checkout. `eff` rides on the payload only — the
+     registry keeps platform:'feedcsv' so the AWIN feed stays first in
+     the ladder, and the day a feed comes online its rows carry
+     aw_deep_links instead of vids, so the front end must keep judging
+     by `eff`, which that scrape would no longer set to shopify. */
+  const DOOR_EFF = { 'products.json': 'shopify', 'collections': 'shopify',
+                     'woo store api': 'woocommerce', 'woo categories': 'woocommerce' }
+  const effByKey = {}
+  results.forEach(r => { if (DOOR_EFF[r.door]) effByKey[r.key] = DOOR_EFF[r.door] })
+
   const truncated = outOfTime()
   const payload = {
     ok: true,
-    stores: publicStores(),
+    stores: publicStores().map(s =>
+      effByKey[s.key] && effByKey[s.key] !== s.platform
+        ? { ...s, eff: effByKey[s.key] } : s),
     meta,
     count: items.length,
     truncated,

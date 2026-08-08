@@ -16,9 +16,24 @@ var SHOW_ALL = PREVIEW_MODE;
    blocked, so the layered approach covers both hosting setups. */
 var MEM={};
 function store_(k,v){
-  try{ var d=new Date(); d.setTime(d.getTime()+30*864e5);
-       document.cookie=k+'='+encodeURIComponent(v)+';expires='+d.toUTCString()+
-                       ';path=/;SameSite=Lax'; }catch(e){}
+  /* A browser cookie holds ~4KB of NAME+VALUE, and the write is
+     silently IGNORED past that — no throw, nothing. A cart of five or
+     six lines (titles + image URLs) URI-encodes past the limit, so the
+     cookie froze at the last state that fit while localStorage kept
+     the real one — and read_() below prefers the cookie, so every page
+     load REVERTED the cart to that stale snapshot. That is how "add to
+     cart" could look like it only ever kept the first few items.
+     Over the limit: expire the cookie so localStorage speaks; the
+     mirror only exists while it actually fits. */
+  var enc=encodeURIComponent(v);
+  try{
+    if(k.length+enc.length<3500){
+      var d=new Date(); d.setTime(d.getTime()+30*864e5);
+      document.cookie=k+'='+enc+';expires='+d.toUTCString()+';path=/;SameSite=Lax';
+    }else{
+      document.cookie=k+'=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+    }
+  }catch(e){}
   try{ localStorage.setItem(k,v); }catch(e){}
   MEM[k]=v;
 }
@@ -153,8 +168,10 @@ var STORES = [
   {key:'snusoclock',name:"Snus O'Clock",dept:'pouch',domain:'snusoclock.com',
    ref:'nicotinebaby',ships:['EU'],guess:1,perPack:20,platform:'shopify',
    from:'GB',days:'3–7 days',ageCheck:'none'},
+  /* coupon is scoped to their flash-deals collection — see the
+     registry comment upstream. off stays 0. */
   {key:'europesnus',name:'Europesnus',dept:'pouch',domain:'europesnus.com',
-   ref:'rjuntxyu',ships:['EU'],guess:1,perPack:20,platform:'shopify',
+   ref:'rjuntxyu',ships:['EU'],guess:1,perPack:20,platform:'shopify',coupon:'FLASH25',
    from:'EU',days:'3–5 business days',ageCheck:'none'},
   /* US pouches. `ref` is empty on purpose — attribution is CJ's deep
      link, and a second tracking param would conflict with it. */
@@ -167,13 +184,14 @@ var STORES = [
    from:'DK',days:'1–3 days',ageCheck:'id'},
 
   /* --- disposables ---
-     Wave Vape's cart is not at /cart/ and its own buttons post to
-     /store/?add-to-cart=, which is why cartPath exists. */
+     Wave Vape's cart is not at /cart/ but /cart-2/, which is why
+     cartPath exists; both paths accept ?add-to-cart= and /cart-2/
+     shows the basket it just filled. checkoutPath verified live. */
   {key:'wavevape',name:'Wave Vape',dept:'disposable',domain:'wavevape.shop',
-   ref:'nicotinebaby',ships:['US'],platform:'woocommerce',cartPath:'/store/',
-   shipFlat:5.99,shipFree:55,from:'US',days:'3–7 days',ageCheck:'id'},
+   ref:'nicotinebaby',ships:['US'],platform:'woocommerce',cartPath:'/cart-2/',
+   checkoutPath:'/checkout/',shipFlat:5.99,shipFree:55,from:'US',days:'3–7 days',ageCheck:'id'},
   {key:'eightvape',name:'EightVape',dept:'disposable',domain:'eightvape.com',
-   ref:'',ships:['US'],guess:1,platform:'woocommerce',
+   ref:'',ships:['US'],guess:1,platform:'woocommerce',checkoutPath:'/checkout/',
    from:'US',days:'3–8 days',ageCheck:'signature'},
 
   /* --- devices --- */
@@ -205,9 +223,9 @@ var STORES = [
   /* --- gear --- */
   {key:'xifei',name:'XIFEI',dept:'gear',domain:'xifeicigaraccessory.com',
    ref:'nicotinebaby',ships:['US','INTL'],guess:1,platform:'shopify',
-   from:'CN',days:'3–7 US / 15–30 intl',ageCheck:'none'},
-  {key:'humidors',name:'1st Class Humidors',dept:'gear',domain:'www.1stclasshumidors.com',
-   ref:'',ships:['US'],guess:1,platform:'feedcsv',from:'US'}
+   from:'CN',days:'3–7 US / 15–30 intl',ageCheck:'none'}
+  /* humidors is OFF upstream (Magento 1, no scrapeable door until its
+     AWIN feed is wired) — mirror api/products.js, do not re-add here. */
 ];
 var SMAP = {};
 STORES.forEach(function(s){ SMAP[s.key]=s; });
@@ -2399,28 +2417,95 @@ function stepQty(st, q, item){
 /* WHAT EACH PLATFORM'S URL SCHEME CAN ACTUALLY DO.
 
      all  — one URL fills the whole basket
-     one  — one URL adds a single line; the rest have to be added there
+     one  — one URL adds a single line; the REST become their own
+            one-tap add links, so every item still lands in the basket
      none — no URL can fill their basket at all
 
    This table is the difference between a working hand-off and the one
    reported broken. Nicokick is Magento: it matched neither branch
    below, fell to the final `return items[0].url`, and quietly opened
    THE FIRST ITEM'S PRODUCT PAGE under a button reading "Checkout at
-   Nicokick →". Every feedcsv store and BigCommerce did the same.
+   Nicokick →".
 
-   Magento has required a form_key on /checkout/cart/add since 2.2, and
-   our Magento rows carry a SKU rather than the numeric entity id, so
-   there is no honest URL to build for it. Saying so plainly beats
-   pretending — the shopper can still open each item, and now the
-   drawer says that is what will happen. */
+   Magento has required a form_key on /checkout/cart/add since 2.2 and
+   Nicokick enforces it (a form-key-less add was tried live 2026-08-08:
+   the cart stayed empty), so there is no honest URL to build for it.
+   Saying so plainly beats pretending — the shopper can still open each
+   item, and the drawer says that is what will happen.
+
+   The platform that matters is the one the SCRAPE went through, not
+   the registry's: `st.eff` arrives on the payload when a store's rows
+   came through a different door than its platform field says — the
+   AWIN feed stores are all really Shopify storefronts underneath, and
+   their /cart/VID:QTY permalinks fill a basket (verified live on
+   relxnow, fruitia, kindjuice and bnbtobacco, 2026-08-08). Until the
+   API answers, the fallback registry has no eff and a feed store
+   honestly degrades to 'none'. */
 var CHECKOUT_CAP={ shopify:'all', woocommerce:'one',
                    magento:'none', feedcsv:'none', bigcommerce:'none' };
+
+/* THE BASKET FILLER — a TEMPORARY workaround, remove when the store
+   link-ups are official.
+
+   Magento refuses a URL-built add because it wants the form_key
+   cookie — which only code running ON THE STORE'S OWN PAGE can read.
+   A bookmark whose address is javascript: is exactly that: the
+   shopper runs it on the store, first-party, using the store's own
+   endpoints and their own session. Nothing leaves their browser.
+
+   How the pieces meet: the Open-at-store hand-off appends
+   #nmb=SKU:QTY,SKU:QTY to the product URL (a fragment never reaches
+   the server, so it cannot break the page). The filler reads that
+   hash, resolves each SKU to its numeric id through the store's open
+   GraphQL (uid is base64 of the entity id), POSTs each line to
+   /checkout/cart/add with the form_key cookie, and lands on their
+   cart. Every call verified live on nicokick.com 2026-08-08 —
+   including that the classic controller shares its quote with their
+   headless frontend.
+
+   ES5 + callbacks on purpose: this string runs in whatever browser
+   the SHOPPER has, not in ours. */
+var NM_BMK="javascript:(function(){var h=location.hash.match(/nmb=([^&]*)/);"+
+  "if(!h||!h[1]){alert('Open your Nicotia Market cart, hit the Open at store button, then run this bookmark on the page that opens.');return;}"+
+  "var fk=decodeURIComponent((document.cookie.match(/(^|; )form_key=([^;]+)/)||[])[2]||'');"+
+  "if(!fk){alert('No store session yet. Refresh this page once, then run the bookmark again.');return;}"+
+  "var items=decodeURIComponent(h[1]).split(',').map(function(s){return s.split(':');});"+
+  "var i=0,bad=[];(function next(){"+
+  "if(i>=items.length){if(bad.length)alert('Could not add: '+bad.join(', '));location.href='/checkout/cart/';return;}"+
+  "var sku=items[i][0],qty=items[i][1]||'1';i++;"+
+  "fetch('/graphql?query='+encodeURIComponent('{products(filter:{sku:{eq:\"'+sku+'\"}}){items{uid}}}'))"+
+  ".then(function(r){return r.json()}).then(function(j){"+
+  "return fetch('/checkout/cart/add',{method:'POST',credentials:'include',"+
+  "headers:{'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'XMLHttpRequest'},"+
+  "body:'product='+atob(j.data.products.items[0].uid)+'&qty='+encodeURIComponent(qty)+'&form_key='+encodeURIComponent(fk)})"+
+  ".then(function(r){if(!r.ok)bad.push(sku)})})"+
+  ".catch(function(){bad.push(sku)}).then(next)})()})();";
+
+/* One WooCommerce add-to-cart URL for one line. Shape matters for
+   VARIABLE products and getting it wrong fails loudly:
+   ?add-to-cart=<variation_id> alone is rejected with "please choose
+   product options" and the cart lands empty. Woo wants the PARENT id,
+   variation_id, and each attribute as its own param. add-to-cart is
+   honoured on ANY page load, so `path` picks where the shopper lands
+   while the line is added. */
+function wooAddUrl(st, x, path){
+  var base='https://'+st.domain, url;
+  if(x.pid){
+    url=addParams(base+path,{'add-to-cart':x.pid, variation_id:x.vid,
+                             quantity:stepQty(st,x.qty,x), ref:st.ref});
+    if(x.attrs) url+='&'+x.attrs;      /* already url-encoded by the store */
+  }else{
+    url=addParams(base+path,{'add-to-cart':x.vid, quantity:stepQty(st,x.qty,x), ref:st.ref});
+  }
+  return url;
+}
 
 /* Returns {cap, url, filled, rest} so the drawer can describe the
    hand-off truthfully instead of every store getting one caption. */
 function checkoutPlan(st, items){
   var base='https://'+st.domain;
-  if(st.platform==='shopify'){
+  var plat=st.eff||st.platform;
+  if(plat==='shopify'){
     var parts=items.filter(function(x){return x.vid;})
                    .map(function(x){return encodeURIComponent(x.vid)+':'+stepQty(st,x.qty,x);});
     /* The cart permalink jumps straight to /cart, skipping any product
@@ -2439,39 +2524,44 @@ function checkoutPlan(st, items){
         ? addParams(base+'/discount/'+encodeURIComponent(st.coupon),{redirect:'/cart', ref:st.ref})
         : addParams(base+'/cart',{ref:st.ref})};
   }
-  /* WooCommerce takes ONE line per request — there is no core equivalent
-     of Shopify's multi-item cart permalink. So we send the first item
-     and say so plainly rather than pretending otherwise.
-
-     For a VARIABLE product the id shape matters and getting it wrong
-     fails loudly: ?add-to-cart=<variation_id> is rejected with "please
-     choose product options" and the cart lands empty. Woo wants the
-     PARENT id, variation_id, and each attribute as its own param. */
-  if(st.platform==='woocommerce' && items[0] && items[0].vid){
-    var x=items[0];
-    /* add-to-cart is honoured on ANY page load, so pointing it at the
-       checkout page adds the line and lands there in one hop. Only used
-       where the path is KNOWN: Wave Vape's cart is not at /cart/, so
-       guessing its checkout would 404, and a 404 is worse than a cart
-       page. Set checkoutPath in the registry once verified. */
-    var path=st.checkoutPath||st.cartPath||'/cart/';
-    var url;
-    if(x.pid){
-      url=addParams(base+path,{'add-to-cart':x.pid, variation_id:x.vid,
-                               quantity:stepQty(st,x.qty,x), ref:st.ref});
-      if(x.attrs) url+='&'+x.attrs;      /* already url-encoded by the store */
-    }else{
-      url=addParams(base+path,{'add-to-cart':x.vid, quantity:stepQty(st,x.qty,x), ref:st.ref});
-    }
-    return {cap:'one', filled:1, rest:items.slice(1), url:url};
+  /* WooCommerce takes ONE line per request — there is no core
+     equivalent of Shopify's multi-item cart permalink, and a
+     comma-separated add-to-cart adds nothing at all (tried live on
+     Wave Vape 2026-08-08). But adds CHAIN across page loads on the
+     same session, so every other line becomes its own real add link:
+     each tap opens the store's cart in a new tab with that item
+     landed. The old drawer linked the rest to their PRODUCT pages,
+     which asked the shopper to add each one again by hand — that is
+     the "only added 1 thing" report. */
+  if(plat==='woocommerce' && items[0] && items[0].vid){
+    /* The button lands on the checkout page where the path is KNOWN:
+       Wave Vape's cart is not at /cart/, so guessing a checkout would
+       404, and a 404 is worse than a cart page. Set checkoutPath in
+       the registry only once verified. The rest links always land on
+       the CART page so each tap shows the basket actually growing. */
+    var landPath=st.checkoutPath||st.cartPath||'/cart/';
+    var addPath=st.cartPath||'/cart/';
+    var rest=items.slice(1).map(function(r){
+      return Object.assign({addUrl:r.vid?wooAddUrl(st,r,addPath):''},r);
+    });
+    return {cap:'one', filled:1, rest:rest, url:wooAddUrl(st,items[0],landPath)};
   }
 
   /* Nothing can fill this basket by URL. Open the first item where it
      actually lives and hand the rest back, so the drawer can list them
      as their own links instead of stranding the shopper on one product
      page under a button that promised a checkout. */
-  return {cap:'none', filled:0, rest:items.slice(1),
-    url: items[0] ? (items[0].aff||items[0].url) : addParams(base+'/',{ref:st.ref})};
+  var noneUrl = items[0] ? (items[0].aff||items[0].url) : addParams(base+'/',{ref:st.ref});
+  /* For Magento the whole manifest rides the fragment, where the
+     basket-filler bookmark (NM_BMK) can read it on the store's page.
+     A fragment never reaches their server, so for everyone else this
+     is inert. */
+  if(plat==='magento'){
+    var manifest=items.filter(function(x){return x.vid;})
+      .map(function(x){return x.vid+':'+stepQty(st,x.qty,x);}).join(',');
+    if(manifest) noneUrl+='#nmb='+encodeURIComponent(manifest);
+  }
+  return {cap:'none', filled:0, rest:items.slice(1), url:noneUrl};
 }
 function checkoutStore(key){
   if(!isLoggedIn()) toast('One step first, we need an email to send your order details');
@@ -2572,10 +2662,11 @@ function renderCart(){
       note='All '+n+' item'+(n===1?'':'s')+' go into '+esc(st.name)+"'s basket"+code+
            ', and you land on their checkout.';
     }else if(plan.cap==='one'){
-      label=(n>1?'Add first item at ':'Checkout at ')+esc(st.name)+' →';
+      label='Checkout at '+esc(st.name)+' →';
       note=n>1
-        ? esc(st.name)+' can only be sent one item per link, so this adds the first. '+
-          'The rest are one tap each below.'
+        ? esc(st.name)+' takes one item per link, so add the others above first — '+
+          'each tap drops that item straight into their basket in a new tab. This button '+
+          'then carries the remaining item and lands you at their checkout'+code+'.'
         : 'Your item goes straight into '+esc(st.name)+"'s basket"+code+'.';
     }else{
       label='Open at '+esc(st.name)+' →';
@@ -2584,21 +2675,59 @@ function renderCart(){
            (st.coupon?', code '+esc(st.coupon)+' copied':'')+'.';
     }
 
-    /* Anything the link could not carry, as its own tap. This is the
-       only honest way to "handle multiple items" at a store whose URL
-       scheme takes one or none. */
-    var rest=plan.rest.length
-      ? '<div class="drest"><span>Then add at '+esc(st.name)+':</span>'+
-        plan.rest.map(function(x){
-          return '<a href="'+esc(x.aff||x.url||'#')+'" rel="noopener nofollow">'+
-                 esc(x.title)+(x.variant?', '+esc(x.variant):'')+'</a>';
-        }).join('')+'</div>'
-      : '';
+    /* Anything the button's one link cannot carry, as its own tap.
+       Where the store accepts add-to-cart by URL (cap 'one'), each tap
+       is a REAL add — the item lands in their basket, new tab, no
+       re-picking options on a product page — and the block sits above
+       the button because that is the order that fills the basket.
+       Where nothing can be added by link (cap 'none'), the links open
+       the product pages, after the button, and say so. */
+    var restLinks=plan.rest.map(function(x){
+      var add=x.addUrl||'';
+      return '<a href="'+esc(add||x.aff||x.url||'#')+
+             '" target="_blank" rel="noopener nofollow">'+(add?'+ ':'')+
+             esc(x.title)+(x.variant?', '+esc(x.variant):'')+'</a>';
+    }).join('');
+    var restBefore='', restAfter='';
+    if(plan.rest.length){
+      if(plan.cap==='one')
+        restBefore='<div class="drest"><span>First, add these to '+esc(st.name)+
+          "'s basket — one tap each, lands in a new tab:</span>"+restLinks+'</div>';
+      else
+        restAfter='<div class="drest"><span>Then add at '+esc(st.name)+':</span>'+
+          restLinks+'</div>';
+    }
+
+    /* The basket filler, offered only where it actually helps: a
+       Magento store, more than nothing to carry. TEMPORARY until the
+       store link-ups are official — see the note on NM_BMK. */
+    var bmk='';
+    if(plan.cap==='none' && (st.eff||st.platform)==='magento' &&
+       items.some(function(x){return x.vid;})){
+      bmk='<div class="dbmk"><span>One-time setup, then one tap fills the basket</span>'+
+        '<p>'+esc(st.name)+' cannot take a basket by link, but a bookmark run on '+
+        'their site can fill it. It uses the store’s own add-to-cart, in your '+
+        'browser, and nothing else.</p>'+
+        '<p class="bmkrow"><b>Desktop:</b> drag '+
+        '<a class="bmklink" href="'+esc(NM_BMK)+'" data-bmk>Fill my '+esc(st.name)+
+        ' basket</a> to your bookmarks bar once. Then hit Open at '+esc(st.name)+
+        ' and click the bookmark on the page that opens — every item lands in '+
+        'their basket and you finish on their cart.</p>'+
+        '<details><summary>On a phone?</summary><ol>'+
+        '<li><button class="bmkcopy" data-copybmk type="button">Copy the filler</button></li>'+
+        '<li>Bookmark any page, then edit that bookmark and paste the filler as its '+
+        'address. Name it something you’ll find, like “Fill basket”.</li>'+
+        '<li>Hit Open at '+esc(st.name)+' below. On iPhone open your bookmarks and '+
+        'tap it; on Android type its name in the address bar and tap it.</li>'+
+        '</ol></details>'+
+        '<p class="bmkfine">A workaround while the official store link-up is pending '+
+        '— delete the bookmark whenever you like.</p></div>';
+    }
 
     html+='<div class="dgroup"><h3>'+esc(st.name)+'</h3>'+rows+bd+
-      '<div class="dfacts">'+facts.filter(Boolean).join('')+'</div>'+
+      '<div class="dfacts">'+facts.filter(Boolean).join('')+'</div>'+restBefore+bmk+
       '<button class="dcheckout" data-checkout="'+esc(sk)+'">'+label+'</button>'+
-      '<p class="dnote">'+note+'</p>'+rest+'</div>';
+      '<p class="dnote">'+note+'</p>'+restAfter+'</div>';
   });
 
   var nStores=Object.keys(groups).length;
@@ -2653,6 +2782,18 @@ document.addEventListener('click',function(e){
     return; }
   if((el=hit('[data-unsave]'))){ delete BOARD[el.getAttribute('data-unsave')];
     saveBoard(); badges(); renderBoard(); apply(false); return; }
+  /* The bookmarklet link exists to be DRAGGED. A click would run it on
+     our own page, where there is no store session and no hash — so a
+     click just explains itself. Dragging never fires click, so the
+     real use is untouched. */
+  if((el=hit('[data-bmk]'))){ e.preventDefault();
+    toast('Drag this to your bookmarks bar. On a phone, use the steps under “On a phone?”'); return; }
+  if((el=hit('[data-copybmk]'))){
+    try{ navigator.clipboard.writeText(NM_BMK)
+      .then(function(){toast('Filler copied. Paste it as a bookmark’s address.');},
+            function(){toast('Could not copy — long-press the desktop link and copy its address instead.');});
+    }catch(err){ toast('Could not copy — long-press the desktop link and copy its address instead.'); }
+    return; }
   if((el=hit('[data-checkout]'))){ checkoutStore(el.getAttribute('data-checkout')); return; }
   if((el=hit('[data-qty]'))){ var d=Number(el.getAttribute('data-qty'));
     if(d===0) setQty(el.getAttribute('data-k'),0); else bumpQty(el.getAttribute('data-k'),d);

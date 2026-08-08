@@ -1403,6 +1403,26 @@ footer p{margin:0 0 9px;line-height:1.6}
 .rules-fine a{color:var(--gold);text-decoration:none}
 .rules-fine a:hover{text-decoration:underline}
 
+/* The construction notice. Amber rather than red: this is a "not yet",
+   not a fault, and a visitor should not think the site is broken. */
+.soonband{display:flex;align-items:flex-start;gap:14px;margin:0 0 26px;
+  padding:18px 20px;border-radius:var(--r);
+  border:1px solid rgba(240,185,60,.36);
+  background:linear-gradient(150deg,rgba(240,185,60,.11),rgba(11,15,13,0) 70%)}
+.soon-dot{flex:none;width:9px;height:9px;margin-top:6px;border-radius:50%;
+  background:var(--gold);box-shadow:0 0 0 0 rgba(240,185,60,.55);
+  animation:soonPulse 2.4s ease-out infinite}
+@keyframes soonPulse{
+  70%{box-shadow:0 0 0 11px rgba(240,185,60,0)}
+  100%{box-shadow:0 0 0 0 rgba(240,185,60,0)}
+}
+.soon-h{margin:0 0 5px;font-family:var(--display);font-weight:900;font-size:1.06rem;
+  letter-spacing:-.01em;color:var(--gold)}
+.soon-p{margin:0;color:var(--muted);font-size:.95rem;line-height:1.65}
+.sh-btn:disabled{opacity:.5;cursor:not-allowed}
+.sh-btn:disabled:hover{border-color:var(--line);color:var(--muted)}
+@media(prefers-reduced-motion:reduce){.soon-dot{animation:none}}
+
 .cm-state{margin:0 0 20px;padding:14px 18px;border-radius:var(--r-sm);
   font-size:.95rem;line-height:1.6;border:1px solid var(--line);color:var(--muted)}
 .cm-state.is-warn{border-color:rgba(240,185,60,.4);color:var(--gold);

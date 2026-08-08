@@ -36,6 +36,21 @@
 <main class="shell story">
   <a class="sbacklink" href="/">&larr; Back to the market</a>
 
+  <!-- Static, server-rendered, and NOT dependent on the API answering.
+       If the board is dark because storage is unprovisioned, the API is
+       exactly the thing that cannot tell you so — the notice has to be in
+       the HTML or a visitor gets a blank page and assumes we are broken.
+       Remove this block when the board goes live. -->
+  <div class="soonband">
+    <span class="soon-dot" aria-hidden="true"></span>
+    <div>
+      <p class="soon-h">Under construction — opening soon</p>
+      <p class="soon-p">The Back Door is built but not open yet. You can read the rules and
+        see how it will work; posting switches on shortly. Nothing below is live, and no
+        posts are being saved.</p>
+    </div>
+  </div>
+
   <header class="st-hero">
     <p class="eyebrow">The community</p>
     <h1><span class="st-lead">meet me</span>@ the back door</h1>
@@ -77,7 +92,7 @@
       <h2 id="cmTitle">Threads</h2>
       <div class="cm-headacts">
         <button type="button" class="sh-btn" id="cmRefresh">Refresh</button>
-        <button type="button" class="sh-btn sh-primary" id="cmNew">Start a thread</button>
+        <button type="button" class="sh-btn sh-primary" id="cmNew" disabled>Opening soon</button>
       </div>
     </div>
     <div id="cmList" class="cm-list"></div>

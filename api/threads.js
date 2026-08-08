@@ -155,11 +155,16 @@ export default async function handler(req, res) {
     const q = url.searchParams;
 
     if (!kvReady()) {
+      /* PUBLIC-FACING. This used to name the env vars, which meant every
+         visitor was shown our deployment checklist. The operator hint
+         belongs in `hint`, which nothing renders — the setup step is in
+         CLAUDE.md §11 where whoever needs it will actually look. */
       return send(res, 503, {
         ok: false,
         reason: 'no-store',
-        message: 'The community is not connected to storage yet. Set KV_REST_API_URL ' +
-                 'and KV_REST_API_TOKEN in Vercel to switch it on.'
+        message: 'The Back Door is still being built. It is not open yet — ' +
+                 'check back shortly.',
+        hint: 'operator: set KV_REST_API_URL and KV_REST_API_TOKEN to enable'
       });
     }
 

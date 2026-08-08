@@ -198,12 +198,28 @@
     el.list.replaceChildren(node('p', 'cm-empty', 'Loading…'));
 
     api({}).then(function (j) {
+      /* The board is dark until storage exists. Keep "Start a thread"
+         disabled rather than letting somebody type a post that has
+         nowhere to go — a composer that accepts text and then fails is
+         worse than a button that admits it is not ready. */
       if (j.reason === 'no-store') {
         el.list.replaceChildren();
-        say(j.message, 'warn');
+        el.newBtn.disabled = true;
+        el.newBtn.textContent = 'Opening soon';
+        say(j.message || 'The Back Door is still being built. It is not open yet.', 'warn');
         return;
       }
-      if (!j.ok) { el.list.replaceChildren(); say(j.message || 'Could not load threads.', 'bad'); return; }
+      if (!j.ok) {
+        el.list.replaceChildren();
+        el.newBtn.disabled = true;
+        say(j.message || 'Could not load threads.', 'bad');
+        return;
+      }
+      /* Live. Turn posting on and drop the construction notice. */
+      el.newBtn.disabled = false;
+      el.newBtn.textContent = 'Start a thread';
+      var band = document.querySelector('.soonband');
+      if (band) band.remove();
       quiet();
 
       if (!j.threads.length) {

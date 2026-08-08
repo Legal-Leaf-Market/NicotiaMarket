@@ -1251,6 +1251,25 @@ footer p{margin:0 0 9px;line-height:1.6}
   text-align:center;margin:24px 0 0 !important;
   text-shadow:0 2px 22px rgba(240,185,60,.3)}
 
+/* ---- catalogue loading state ----
+   Replaces an empty grid, which reads as a broken page. The first visitor
+   after a quiet spell is genuinely waiting on a live scrape of every
+   store, so this says so rather than spinning silently. */
+.loadwrap{display:flex;flex-direction:column;align-items:center;text-align:center;
+  gap:12px;padding:64px 24px 72px;max-width:46ch;margin:0 auto}
+.loadwrap b{font-family:var(--display);font-weight:900;font-size:1.15rem;
+  letter-spacing:-.01em;color:var(--text)}
+.loadwrap span{font-size:.95rem;line-height:1.65;color:var(--muted)}
+.loadwrap small{font-family:var(--sans);font-size:11.5px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--dim)}
+.loadspin{width:34px;height:34px;border-radius:50%;
+  border:2px solid rgba(240,185,60,.22);border-top-color:var(--gold);
+  animation:loadspin .85s linear infinite}
+@keyframes loadspin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){
+  .loadspin{animation-duration:2.4s}
+}
+
 /* ---- the TL;DR ----
    Sits above chapter 0 and exists to let somebody leave. Set tighter and
    smaller than body copy so it reads as a summary rather than a preamble,

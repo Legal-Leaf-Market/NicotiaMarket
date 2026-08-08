@@ -3168,13 +3168,61 @@ function mergeDept(res){
    carrying the payload win anyway, not the fan-out. */
 function loadCatalogue(){
   var refresh = location.search.indexOf('refresh')>-1;
-  fetch(API_URL+(refresh?'?refresh':''),{redirect:'follow'})
-    .then(function(r){
-      if(!r.ok) throw new Error('API returned HTTP '+r.status);
-      return r.json();
-    })
-    .then(received)
-    .catch(function(e){ failed(e.message||'Network error'); });
+  var url = API_URL+(refresh?'?refresh':'');
+
+  /* RETRY, because the first failure is usually not a real one.
+     A cold instance with nothing in the shared cache has to scrape 17
+     stores, which measures ~42s against a 60s ceiling. When one store
+     drags, that request 504s and the OLD code dead-ended on "Can't load
+     products right now" for good. But that failed request warmed the
+     function, so the very next one lands in a second. Dead-ending there
+     was throwing the page away one moment before it would have worked.
+
+     Waits are generous on purpose: retrying instantly just races the same
+     unfinished scrape. Only idempotent GETs, so a retry is always safe. */
+  var WAITS = [4000, 12000, 25000];
+  var tries = 0;
+
+  /* Paint the loading state before the first request, not just between
+     retries. An empty grid for 42 seconds is indistinguishable from a
+     dead page, and this is the state most first-time visitors will see. */
+  waiting(0, 0);
+
+  function attempt(){
+    fetch(url,{redirect:'follow'})
+      .then(function(r){
+        if(!r.ok) throw new Error('API returned HTTP '+r.status);
+        return r.json();
+      })
+      .then(received)
+      .catch(function(e){
+        if(tries < WAITS.length){
+          var wait = WAITS[tries++];
+          /* Say what is happening. A spinner that never changes reads as
+             broken, and this one can legitimately run for a minute. */
+          waiting(tries, Math.round(wait/1000));
+          setTimeout(attempt, wait);
+          return;
+        }
+        failed(e.message||'Network error');
+      });
+  }
+  attempt();
+}
+
+/* Shown between retries. Deliberately honest about the cause rather than
+   a bare spinner: the first visitor after a quiet spell really is waiting
+   on a live scrape of every store. */
+function waiting(n, secs){
+  var m=document.getElementById('mount'); if(!m) return;
+  m.innerHTML='<div class="loadwrap"><div class="loadspin" aria-hidden="true"></div>'+
+    '<b>Pulling live prices from every store</b>'+
+    '<span>Nobody has loaded the market in a while, so we are fetching it fresh. '+
+    'This can take up to a minute the first time, then it is instant for '+
+    'everybody after you.</span>'+
+    (n ? '<small>Attempt '+(n+1)+', retrying in '+secs+'s</small>' : '')+
+    '</div>';
+  var c=document.getElementById('rcount'); if(c) c.textContent='';
 }
 
 /* ============================================================

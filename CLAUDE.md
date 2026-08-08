@@ -184,6 +184,38 @@ Their buyer-assumes-all-risk disclaimers do not transfer that exposure to us,
 which is why `LEGAL[]` in the browser — not the vendor's dropdown — decides
 what a shopper is shown.
 
+## 7c. Cold starts — why the first visitor used to see an error
+
+A full scrape of the 17 active stores measures **41.6 seconds**. `maxDuration`
+is 60s and `BUDGET_MS` is 45s, so it fits, but only just. One slow store tips it
+over and the visitor gets a **504** and a dead "Can't load products right now".
+Even when it succeeded, the first visitor after a quiet spell waited 42 seconds.
+
+Three layers now stand between a visitor and that scrape. They are independent
+on purpose, because each covers a case the others do not:
+
+1. **In-memory `CACHE`** — 30 min TTL, but only helps a *warm* instance.
+2. **Shared KV cache** (`nm:catalogue:v1`) — a cold instance reads the last good
+   payload and serves it instantly instead of scraping. Written **only after a
+   complete scrape**: caching a truncated read would hand every later visitor
+   the gap this one instance happened to hit. The write is **awaited**, because
+   a serverless function is frozen the moment its response is sent and a
+   fire-and-forget write would simply never land.
+3. **CDN** — `s-maxage=600, stale-while-revalidate=86400`. The long SWR is the
+   point: past 10 minutes the edge serves a **stale copy instantly** and
+   revalidates behind it, so the window where nobody has anything to serve is
+   tiny. It was `3600`, which left an hour-plus hole every quiet night.
+
+The client backs all that up: `loadCatalogue()` retries on failure at 4s, 12s
+and 25s. A 504 warms the function, so the retry almost always lands. The old
+code dead-ended one moment before it would have worked.
+
+**Do not "simplify" any of this to a single cache.** The in-memory one dies with
+the instance, the CDN entry is per query string, and KV is the only layer that
+survives both.
+
+---
+
 ## 8. PREVIEW MODE
 
 `js/config.js` → `previewMode`. While `true` the site ignores shipping limits and local
@@ -202,7 +234,7 @@ visitor sees an empty Pouches shelf. Flip it once that gap is filled.
 | `AWIN_API_KEY` | **Required for `platform:'feedcsv'` stores.** One key covers every AWIN advertiser; each store then needs its own `feedId`. Without it those stores throw a clear error and fall through to their storefront-scrape fallback. |
 | `NM_CRM_WEBHOOK` | Forward `/api/subscribe` signups to an Apps Script `/exec` URL. |
 | `NM_EVENTS_WEBHOOK` | Forward `/api/track` events. |
-| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | **Required for `/community`.** Upstash Redis over REST. `UPSTASH_REDIS_REST_URL` / `_TOKEN` are accepted as aliases. Without them every board route returns `ok:false, reason:'no-store'` and the page shows an honest "not connected yet" state. |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | **Required for `/community`, and strongly wanted by `/api/products`.** Upstash Redis over REST. `UPSTASH_REDIS_REST_URL` / `_TOKEN` are accepted as aliases. Without them the board returns `ok:false, reason:'no-store'`, and the scraper falls back to making the first visitor wait ~42s for a live scrape (see §7c). |
 | `NM_ADMIN_TOKEN` | **Required for `/moderation`.** Without it every `action=mod:*` route 403s, so the queue is unreachable rather than open. |
 | `NM_BLOCKLIST` | Optional, comma-separated. Extra terms that send a post to the hold queue. Deliberately not hardcoded so it can be tuned without a deploy. |
 

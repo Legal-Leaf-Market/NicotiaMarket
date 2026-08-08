@@ -1690,6 +1690,61 @@ const TTL = 30 * 60 * 1000
    response. If you raise one, raise the other. */
 const BUDGET_MS = 45000
 
+/* ---- SHARED CACHE ----------------------------------------------------
+   A full scrape of 17 stores measures 41.6s. maxDuration is 60s, so it
+   fits, but only just: one slow store tips it over and the visitor gets a
+   504. Worse, even when it succeeds, THE FIRST VISITOR WAITED 42 SECONDS.
+
+   In-memory CACHE only helps a warm instance, and the CDN only helps once
+   somebody has already paid. This survives both, so nobody pays: the last
+   good payload is written to KV, and a cold instance serves that
+   immediately instead of scraping.
+
+   Same store and same env vars as the community board (§11), so wiring
+   one turns on the other. With no KV configured every call here no-ops
+   and the behaviour is exactly what it was before. */
+const KV_URL   = process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL   || ''
+const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || ''
+const KV_KEY = 'nm:catalogue:v1'
+/* Serve from KV rather than scrape while it is younger than this. Longer
+   than TTL on purpose: stale prices beat a spinner, and a background
+   refresh replaces them within the minute. */
+const KV_MAX_AGE = 6 * 60 * 60 * 1000
+
+async function kvGet() {
+  if (!KV_URL || !KV_TOKEN) return null
+  try {
+    const r = await fetch(KV_URL, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + KV_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify(['GET', KV_KEY]),
+      signal: AbortSignal.timeout(3000),
+    })
+    if (!r.ok) return null
+    const j = await r.json()
+    if (!j || !j.result) return null
+    const box = JSON.parse(j.result)
+    if (!box || !box.at || !box.payload) return null
+    if (Date.now() - box.at > KV_MAX_AGE) return null
+    return box
+  } catch { return null }
+}
+
+async function kvPut(payload) {
+  if (!KV_URL || !KV_TOKEN) return
+  try {
+    await fetch(KV_URL, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + KV_TOKEN, 'Content-Type': 'application/json' },
+      /* EX is seconds. Expiring the key means a catalogue nobody has
+         refreshed in a day disappears rather than being served forever. */
+      body: JSON.stringify(['SET', KV_KEY,
+        JSON.stringify({ at: Date.now(), payload }), 'EX', 60 * 60 * 24]),
+      signal: AbortSignal.timeout(5000),
+    })
+  } catch { /* never fail a request because the cache write failed */ }
+}
+
 export default async function handler(req, res) {
   const q = req.query || {}
   const fresh = 'refresh' in q
@@ -1702,6 +1757,18 @@ export default async function handler(req, res) {
   if (!fresh && CACHE.payload && Date.now() - CACHE.at < TTL) {
     res.setHeader('X-Cache', 'HIT')
     return respond(res, CACHE.payload, q)
+  }
+
+  /* Cold instance. Ask the shared cache BEFORE scraping. This is the step
+     that stops a first-time visitor waiting 42 seconds. */
+  if (!fresh) {
+    const box = await kvGet()
+    if (box) {
+      CACHE = { at: box.at, payload: box.payload }
+      res.setHeader('X-Cache', 'KV')
+      res.setHeader('X-Cache-Age', String(Math.round((Date.now() - box.at) / 1000)))
+      return respond(res, box.payload, q)
+    }
   }
 
   DEADLINE = Date.now() + BUDGET_MS
@@ -1756,6 +1823,15 @@ export default async function handler(req, res) {
      the scrape short, cache it briefly so the next visitor triggers a
      retry rather than inheriting the gap. */
   CACHE = { at: truncated ? Date.now() - (TTL - 3 * 60 * 1000) : Date.now(), payload }
+
+  /* Publish for every future cold instance, so this 42-second scrape is
+     the last one any visitor waits on. Only a complete read is worth
+     sharing: caching a truncated catalogue would hand everyone else the
+     gap this instance happened to hit. Awaited rather than fired and
+     forgotten, because a serverless function is frozen the moment the
+     response is sent and an unawaited write would simply never land. */
+  if (!truncated && items.length) await kvPut(payload)
+
   res.setHeader('X-Cache', fresh ? 'BYPASS' : 'MISS')
   if (truncated) res.setHeader('X-Scrape', 'truncated')
   return respond(res, payload, q)

@@ -51,10 +51,12 @@
     <priority>0.5</priority>
   </url>
   <!-- The only page here that is prose rather than pricing, and the only
-       one with a reason to be linked to from outside. -->
+       one with a reason to be linked to from outside — which, with no App
+       Store and no Play listing, makes it the acquisition channel rather
+       than an extra. Ranked second only to the homepage on purpose. -->
   <url>
     <loc>https://nicotiamarket.com/story</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.7</priority>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
   </url>
 </urlset>

@@ -38,10 +38,18 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://nicotiamarket.com/">
 <meta property="og:site_name" content="Nicotia Market">
-<meta property="og:image" content="https://nicotiamarket.com/assets/mark.svg">
+<!-- A REAL 1200x630 CARD. og:image was mark.svg — and most platforms do
+     not render SVG in a card at all, so every share of this site was
+     arriving blank. Rendered from the same mark and the same three house
+     faces, so a link looks like the site it points at. -->
+<meta property="og:image" content="https://nicotiamarket.com/assets/og-default.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Nicotia Market — what it actually costs. Pouches, disposables, e-liquid and cigars priced per pouch, per 1,000 puffs, per ml and per stick.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Nicotia Market — priced by the unit">
 <meta name="twitter:description" content="Compare pouches, disposables, e-liquid and cigars per pouch, per 1,000 puffs, per ml and per stick.">
+<meta name="twitter:image" content="https://nicotiamarket.com/assets/og-default.png">
 <meta name="rating" content="adult">
 <script type="application/ld+json">
 {
@@ -62,10 +70,21 @@
       "name": "Nicotia Market",
       "url": "https://nicotiamarket.com/",
       "logo": "https://nicotiamarket.com/assets/mark.svg",
+      "image": "https://nicotiamarket.com/assets/og-default.png",
+      "slogan": "From Jean Nicot to your front door",
+      "description": "A price comparison market for nicotine products, priced by the unit — per pouch, per 1,000 puffs, per ml and per stick. Named for Nicotia, the poets' name for tobacco and the root of the word nicotine.",
       "sameAs": [
         "https://legal-leafmarket.com",
         "https://herballeafmarket.com"
       ]
+    },
+    {
+      "@type": "AboutPage",
+      "@id": "https://nicotiamarket.com/story#page",
+      "url": "https://nicotiamarket.com/story",
+      "name": "From Jean Nicot to your front door",
+      "isPartOf": { "@id": "https://nicotiamarket.com/#website" },
+      "about": "The etymology of Nicotia — from a Taíno word through Jean Nicot, Linnaeus's Nicotiana and Victorian poetry to the naming of nicotine."
     },
     {
       "@type": "CollectionPage",
@@ -174,6 +193,10 @@
   <button class="dept" data-dept="cigar"      aria-pressed="false">Cigars <span id="c-cigar"></span></button>
   <button class="dept" data-dept="gear"       aria-pressed="false">Gear <span id="c-gear"></span></button>
   <a class="dept spot" id="spotLink" href="#/store/nicokick" data-route hidden>US Pouches &#9733;</a>
+  <!-- Not a shelf, so it sits apart at the end of the strip. A real <a>
+       to /story, not a hash route: it is a separate document and the one
+       page here with a reason to be linked to from outside. -->
+  <a class="dept ourstory" href="/story">Our Story</a>
 </div></nav>
 
 <!-- Subcategories for the chosen department. Hidden on "Everything",
@@ -229,6 +252,24 @@
       <button class="lrclear" id="clearBrands" hidden>Show all</button></div>
     <div class="lrscroll" id="brandLogos"></div>
   </section>
+
+  <!-- THE STORY, ON THE MONEY PAGE. Sits between the logo strips and the
+       grid: past the fold so it does not delay the pricing, but above the
+       products so it is not a footer link nobody finds. -->
+  <a class="storyband" href="/story">
+    <span class="sb-mark" aria-hidden="true">
+      <svg viewBox="0 0 60 72"><use href="#leafIcon"></use></svg>
+    </span>
+    <span class="sb-copy">
+      <span class="sb-eyebrow">Our story</span>
+      <span class="sb-tag">From Jean Nicot to your front door</span>
+      <span class="sb-fr" lang="fr">&laquo;&nbsp;De Jean Nicot jusqu&rsquo;&agrave; votre porte&nbsp;&raquo;</span>
+      <span class="sb-sub">A French ambassador, a Swedish botanist, a Victorian poet and a
+        Heidelberg laboratory. How <b>Nicotia</b> became <b>nicotine</b> — and why we took
+        the name back.</span>
+    </span>
+    <span class="sb-go">Read it &rarr;</span>
+  </a>
 
   <div class="subbar">
     <span class="cnt" id="rcount">&nbsp;</span>

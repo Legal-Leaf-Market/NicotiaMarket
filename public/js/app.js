@@ -2444,6 +2444,43 @@ function stepQty(st, q, item){
 var CHECKOUT_CAP={ shopify:'all', woocommerce:'one',
                    magento:'none', feedcsv:'none', bigcommerce:'none' };
 
+/* THE BASKET FILLER — a TEMPORARY workaround, remove when the store
+   link-ups are official.
+
+   Magento refuses a URL-built add because it wants the form_key
+   cookie — which only code running ON THE STORE'S OWN PAGE can read.
+   A bookmark whose address is javascript: is exactly that: the
+   shopper runs it on the store, first-party, using the store's own
+   endpoints and their own session. Nothing leaves their browser.
+
+   How the pieces meet: the Open-at-store hand-off appends
+   #nmb=SKU:QTY,SKU:QTY to the product URL (a fragment never reaches
+   the server, so it cannot break the page). The filler reads that
+   hash, resolves each SKU to its numeric id through the store's open
+   GraphQL (uid is base64 of the entity id), POSTs each line to
+   /checkout/cart/add with the form_key cookie, and lands on their
+   cart. Every call verified live on nicokick.com 2026-08-08 —
+   including that the classic controller shares its quote with their
+   headless frontend.
+
+   ES5 + callbacks on purpose: this string runs in whatever browser
+   the SHOPPER has, not in ours. */
+var NM_BMK="javascript:(function(){var h=location.hash.match(/nmb=([^&]*)/);"+
+  "if(!h||!h[1]){alert('Open your Nicotia Market cart, hit the Open at store button, then run this bookmark on the page that opens.');return;}"+
+  "var fk=decodeURIComponent((document.cookie.match(/(^|; )form_key=([^;]+)/)||[])[2]||'');"+
+  "if(!fk){alert('No store session yet. Refresh this page once, then run the bookmark again.');return;}"+
+  "var items=decodeURIComponent(h[1]).split(',').map(function(s){return s.split(':');});"+
+  "var i=0,bad=[];(function next(){"+
+  "if(i>=items.length){if(bad.length)alert('Could not add: '+bad.join(', '));location.href='/checkout/cart/';return;}"+
+  "var sku=items[i][0],qty=items[i][1]||'1';i++;"+
+  "fetch('/graphql?query='+encodeURIComponent('{products(filter:{sku:{eq:\"'+sku+'\"}}){items{uid}}}'))"+
+  ".then(function(r){return r.json()}).then(function(j){"+
+  "return fetch('/checkout/cart/add',{method:'POST',credentials:'include',"+
+  "headers:{'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'XMLHttpRequest'},"+
+  "body:'product='+atob(j.data.products.items[0].uid)+'&qty='+encodeURIComponent(qty)+'&form_key='+encodeURIComponent(fk)})"+
+  ".then(function(r){if(!r.ok)bad.push(sku)})})"+
+  ".catch(function(){bad.push(sku)}).then(next)})()})();";
+
 /* One WooCommerce add-to-cart URL for one line. Shape matters for
    VARIABLE products and getting it wrong fails loudly:
    ?add-to-cart=<variation_id> alone is rejected with "please choose
@@ -2514,8 +2551,17 @@ function checkoutPlan(st, items){
      actually lives and hand the rest back, so the drawer can list them
      as their own links instead of stranding the shopper on one product
      page under a button that promised a checkout. */
-  return {cap:'none', filled:0, rest:items.slice(1),
-    url: items[0] ? (items[0].aff||items[0].url) : addParams(base+'/',{ref:st.ref})};
+  var noneUrl = items[0] ? (items[0].aff||items[0].url) : addParams(base+'/',{ref:st.ref});
+  /* For Magento the whole manifest rides the fragment, where the
+     basket-filler bookmark (NM_BMK) can read it on the store's page.
+     A fragment never reaches their server, so for everyone else this
+     is inert. */
+  if(plat==='magento'){
+    var manifest=items.filter(function(x){return x.vid;})
+      .map(function(x){return x.vid+':'+stepQty(st,x.qty,x);}).join(',');
+    if(manifest) noneUrl+='#nmb='+encodeURIComponent(manifest);
+  }
+  return {cap:'none', filled:0, rest:items.slice(1), url:noneUrl};
 }
 function checkoutStore(key){
   if(!isLoggedIn()) toast('One step first, we need an email to send your order details');
@@ -2652,8 +2698,34 @@ function renderCart(){
           restLinks+'</div>';
     }
 
+    /* The basket filler, offered only where it actually helps: a
+       Magento store, more than nothing to carry. TEMPORARY until the
+       store link-ups are official — see the note on NM_BMK. */
+    var bmk='';
+    if(plan.cap==='none' && (st.eff||st.platform)==='magento' &&
+       items.some(function(x){return x.vid;})){
+      bmk='<div class="dbmk"><span>One-time setup, then one tap fills the basket</span>'+
+        '<p>'+esc(st.name)+' cannot take a basket by link, but a bookmark run on '+
+        'their site can fill it. It uses the store’s own add-to-cart, in your '+
+        'browser, and nothing else.</p>'+
+        '<p class="bmkrow"><b>Desktop:</b> drag '+
+        '<a class="bmklink" href="'+esc(NM_BMK)+'" data-bmk>Fill my '+esc(st.name)+
+        ' basket</a> to your bookmarks bar once. Then hit Open at '+esc(st.name)+
+        ' and click the bookmark on the page that opens — every item lands in '+
+        'their basket and you finish on their cart.</p>'+
+        '<details><summary>On a phone?</summary><ol>'+
+        '<li><button class="bmkcopy" data-copybmk type="button">Copy the filler</button></li>'+
+        '<li>Bookmark any page, then edit that bookmark and paste the filler as its '+
+        'address. Name it something you’ll find, like “Fill basket”.</li>'+
+        '<li>Hit Open at '+esc(st.name)+' below. On iPhone open your bookmarks and '+
+        'tap it; on Android type its name in the address bar and tap it.</li>'+
+        '</ol></details>'+
+        '<p class="bmkfine">A workaround while the official store link-up is pending '+
+        '— delete the bookmark whenever you like.</p></div>';
+    }
+
     html+='<div class="dgroup"><h3>'+esc(st.name)+'</h3>'+rows+bd+
-      '<div class="dfacts">'+facts.filter(Boolean).join('')+'</div>'+restBefore+
+      '<div class="dfacts">'+facts.filter(Boolean).join('')+'</div>'+restBefore+bmk+
       '<button class="dcheckout" data-checkout="'+esc(sk)+'">'+label+'</button>'+
       '<p class="dnote">'+note+'</p>'+restAfter+'</div>';
   });
@@ -2710,6 +2782,18 @@ document.addEventListener('click',function(e){
     return; }
   if((el=hit('[data-unsave]'))){ delete BOARD[el.getAttribute('data-unsave')];
     saveBoard(); badges(); renderBoard(); apply(false); return; }
+  /* The bookmarklet link exists to be DRAGGED. A click would run it on
+     our own page, where there is no store session and no hash — so a
+     click just explains itself. Dragging never fires click, so the
+     real use is untouched. */
+  if((el=hit('[data-bmk]'))){ e.preventDefault();
+    toast('Drag this to your bookmarks bar. On a phone, use the steps under “On a phone?”'); return; }
+  if((el=hit('[data-copybmk]'))){
+    try{ navigator.clipboard.writeText(NM_BMK)
+      .then(function(){toast('Filler copied. Paste it as a bookmark’s address.');},
+            function(){toast('Could not copy — long-press the desktop link and copy its address instead.');});
+    }catch(err){ toast('Could not copy — long-press the desktop link and copy its address instead.'); }
+    return; }
   if((el=hit('[data-checkout]'))){ checkoutStore(el.getAttribute('data-checkout')); return; }
   if((el=hit('[data-qty]'))){ var d=Number(el.getAttribute('data-qty'));
     if(d===0) setQty(el.getAttribute('data-k'),0); else bumpQty(el.getAttribute('data-k'),d);

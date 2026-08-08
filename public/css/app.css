@@ -1417,12 +1417,13 @@ footer p{margin:0 0 9px;line-height:1.6}
   grid-template-columns:repeat(auto-fill,minmax(216px,1fr))}
 /* Cards are a flex column with the link pinned to the bottom, so a row of
    them lines up regardless of how long the titles run. Same reason the
-   main grid equalises card heights. */
-.bb-card{display:flex;flex-direction:column;border:1px solid var(--line);
-  border-radius:var(--r-sm);overflow:hidden;background:rgba(255,255,255,.02);
-  transition:border-color .16s,transform .16s}
-.bb-card:hover{transform:translateY(-2px);border-color:var(--gold)}
-.bb-card.is-zero:hover{border-color:var(--sage)}
+   main grid equalises card heights.
+   The chrome (border/background/overflow) lives on .bb-face, not here,
+   because the card flips (below) and nothing static may sit behind the
+   spin. */
+.bb-card{display:flex;flex-direction:column;perspective:1400px;cursor:pointer;
+  transition:transform .16s}
+.bb-card:hover{transform:translateY(-2px)}
 .bb-img{width:100%;aspect-ratio:1/1;object-fit:cover;background:rgba(0,0,0,.3);
   display:block}
 .bb-body{flex:1;display:flex;flex-direction:column;padding:13px 14px 14px;gap:7px}
@@ -1442,6 +1443,81 @@ footer p{margin:0 0 9px;line-height:1.6}
   font-size:12px;color:var(--gold);text-decoration:none}
 .bb-go:hover{text-decoration:underline}
 .bb-card.is-zero .bb-price,.bb-card.is-zero .bb-go{color:var(--sage)}
+
+/* ---- the flip: the main shelf's interaction, on the brand page ----
+   Scoped to bb- classes because this page never loads js/app.js (the
+   shelf's delegated .card.on toggle is absent here) and .card would drag
+   in shelf sizing. The back is the shelf's espresso so a turned card
+   reads the same everywhere on the site. The wash pink is the same local
+   literal as every other flipping surface, never a token (§4). */
+.bb-in{position:relative;flex:1;display:flex;flex-direction:column;
+  transform-style:preserve-3d;transition:transform .6s cubic-bezier(.22,.72,.24,1)}
+.bb-card.on .bb-in{transform:rotateY(180deg)}
+.bb-face{border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;
+  background:rgba(255,255,255,.02);-webkit-backface-visibility:hidden;
+  backface-visibility:hidden;display:flex;flex-direction:column;
+  transition:border-color .16s}
+.bb-front{position:relative;flex:1}
+.bb-card:hover .bb-face{border-color:var(--gold)}
+.bb-card.is-zero:hover .bb-face{border-color:var(--sage)}
+.bb-front:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+.bb-back{position:absolute;inset:0;transform:rotateY(180deg);
+  background:linear-gradient(158deg,#1c1410 0%,#120d09 60%,#0a0706 100%);
+  border-color:rgba(224,134,63,.3);color:#f2eae0}
+.bb-back-in{padding:14px;flex:1;overflow-y:auto;scrollbar-width:thin}
+.bb-back-in::-webkit-scrollbar{width:3px}
+.bb-back-in::-webkit-scrollbar-thumb{background:rgba(224,134,63,.3);border-radius:99px}
+.bb-bstore{font-family:var(--sans);font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ember);margin-bottom:7px;font-weight:600}
+.bb-back h4{font-family:var(--display);font-weight:700;font-size:1rem;
+  letter-spacing:-.01em;margin:0 0 9px;color:#fff7ee;line-height:1.3}
+.bb-bdesc{font-family:var(--sans);font-size:12px;line-height:1.6;color:#d9ccbd;margin:0 0 12px}
+.bb-bdesc.dim{color:#9a8b7c;font-style:italic}
+.bb-bspec{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin:0;
+  font-family:var(--sans);font-size:11px;
+  border-top:1px solid rgba(224,134,63,.18);padding-top:10px}
+.bb-bspec dt{color:#9a8b7c;letter-spacing:.05em;text-transform:uppercase;
+  font-size:9.5px;align-self:center}
+.bb-bspec dd{margin:0;color:#f2eae0;text-align:right;font-weight:600}
+.bb-bnote{font-family:var(--sans);font-size:10.5px;line-height:1.55;color:#9a8b7c;margin:10px 0 0}
+.bb-back-foot{padding:10px 14px 13px;display:flex;gap:8px;align-items:center;
+  justify-content:space-between;border-top:1px solid rgba(224,134,63,.18)}
+.bb-back-foot .bb-go{margin-top:0;padding-top:0;color:var(--ember)}
+.bb-turnback{font-size:13px;background:none;cursor:pointer;
+  border:1px solid rgba(224,134,63,.35);color:#c9b49c;border-radius:999px;
+  padding:8px 12px;line-height:1;transition:all .16s}
+.bb-turnback:hover{border-color:var(--gold);color:var(--gold)}
+.bb-turn{align-self:flex-start;font-family:var(--sans);font-size:11.5px;
+  background:none;border:0;color:var(--dim);cursor:pointer;padding:2px 0;
+  text-decoration:underline;text-underline-offset:3px;transition:color .16s}
+.bb-card:hover .bb-turn{color:var(--ember)}
+/* The wash sits over the photo square only (the image is width:100% at
+   aspect 1/1, so the inset matches it exactly); a card with no photo
+   keeps its permanent Details control instead. */
+.bb-front.has-img::after{content:"Click for details";position:absolute;
+  top:0;left:0;right:0;aspect-ratio:1/1;z-index:4;pointer-events:none;
+  display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;
+  background:rgba(255,64,146,.44);color:#fff;font-family:var(--sans);font-weight:800;
+  font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;
+  text-shadow:0 1px 10px rgba(0,0,0,.6);opacity:0;transition:opacity .15s ease}
+.bb-card:hover .bb-front.has-img::after,
+.bb-front.has-img:focus-visible::after{opacity:1}
+.bb-card.on .bb-front.has-img::after{opacity:0}
+@media (hover:none){
+  .bb-front.has-img::after{content:"Tap for details"}
+  .bb-card:active .bb-front.has-img::after{opacity:1;transition:none}
+  .bb-turn{border:1px solid rgba(224,134,63,.5);border-radius:999px;
+    padding:7px 13px;text-decoration:none;color:var(--ember);font-weight:600}
+}
+/* No 3D for anyone who asked not to have it — cross-fade instead. */
+@media (prefers-reduced-motion:reduce){
+  .bb-in{transition:none}
+  .bb-card.on .bb-in{transform:none}
+  .bb-face{transition:opacity .18s}
+  .bb-back{transform:none;opacity:0;pointer-events:none}
+  .bb-card.on .bb-front{opacity:0;pointer-events:none}
+  .bb-card.on .bb-back{opacity:1;pointer-events:auto}
+}
 
 /* ---- the three sites ----
    Not a footer link farm. The claim being made is that these are three

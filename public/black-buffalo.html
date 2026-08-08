@@ -213,7 +213,12 @@
 
     var price = parseFloat(r.price);
     if (isFinite(price)) {
-      var n = cans(r.title + ' ' + (r.variant || ''));
+      /* Title AND variant. The single-can listings are titled "Black
+         Buffalo Nicotine" with the format only in the variant
+         ("Wintergreen Pouches"), so testing the title alone silently
+         denied every single can its per-pouch estimate. */
+      var full = r.title + ' ' + (r.variant || '');
+      var n = cans(full);
       var per = document.createElement('p');
       per.className = 'bb-price';
       per.textContent = money(price);
@@ -222,11 +227,15 @@
       var unit = document.createElement('p');
       unit.className = 'bb-unit';
       var bits = [];
-      if (n > 1) bits.push(money(price / n) + ' per can');
-      if (isPouches(r.title)) {
-        bits.push('~' + (price / n / PER_CAN_APPROX).toFixed(3) + ' per pouch (est.)');
+      bits.push(money(price / n) + ' per can');
+      if (isPouches(full)) {
+        /* Three decimals, not two: a pouch is ~$0.34, and money() would
+           round that to $0.34 losing the digit the whole site ranks on. */
+        bits.push('~$' + (price / n / PER_CAN_APPROX).toFixed(3) + ' per pouch (est.)');
+      } else {
+        bits.push('long cut — sold by weight, no per-pouch price');
       }
-      unit.textContent = bits.join('  ·  ') || 'per can';
+      unit.textContent = bits.join('  ·  ');
       body.appendChild(unit);
     }
 
@@ -248,8 +257,14 @@
       if (filter === 'zero') return !!r.nic0;
       return true;
     });
-    count.textContent = 'The catalogue — ' + show.length +
-      (show.length === 1 ? ' product' : ' products');
+    /* Listings, not products. The feed returns one row per VARIANT, so
+       "28 products" would overstate a 16-product catalogue. Count the
+       distinct titles for the honest number and show both. */
+    var titles = {};
+    show.forEach(function (r) { titles[r.title] = 1; });
+    var nProd = Object.keys(titles).length;
+    count.textContent = 'The catalogue — ' + nProd +
+      (nProd === 1 ? ' product' : ' products') + ', ' + show.length + ' listings';
     if (!show.length) {
       grid.replaceChildren(Object.assign(document.createElement('p'),
         { className: 'cm-empty', textContent: 'Nothing in this filter right now.' }));

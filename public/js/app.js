@@ -153,8 +153,10 @@ var STORES = [
   {key:'snusoclock',name:"Snus O'Clock",dept:'pouch',domain:'snusoclock.com',
    ref:'nicotinebaby',ships:['EU'],guess:1,perPack:20,platform:'shopify',
    from:'GB',days:'3–7 days',ageCheck:'none'},
+  /* coupon is scoped to their flash-deals collection — see the
+     registry comment upstream. off stays 0. */
   {key:'europesnus',name:'Europesnus',dept:'pouch',domain:'europesnus.com',
-   ref:'rjuntxyu',ships:['EU'],guess:1,perPack:20,platform:'shopify',
+   ref:'rjuntxyu',ships:['EU'],guess:1,perPack:20,platform:'shopify',coupon:'FLASH25',
    from:'EU',days:'3–5 business days',ageCheck:'none'},
   /* US pouches. `ref` is empty on purpose — attribution is CJ's deep
      link, and a second tracking param would conflict with it. */

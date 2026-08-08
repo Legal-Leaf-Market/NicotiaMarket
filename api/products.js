@@ -63,8 +63,17 @@ export const STORES = [
 
   /* ~150 destinations accepted at checkout, no excluded-country list,
      no age step. Mon–Fri processing; customs paperwork case-by-case. */
+  /* coupon FLASH25 is THEIR published code ("Get 25% off all flash
+     deals products — Use code FLASH25 at checkout", their own nav) and
+     was verified live 2026-08-08: the permalink's discount= param
+     applied FLASH25 (−€0.98) to a €3.95 flash-deals item at their
+     checkout. It is SCOPED to /collections/flash-deals, which is why
+     `off` stays unset — a site-wide 25% savings row would be the
+     phantom-£0.003 class of lie. The code rides every hand-off and
+     Shopify simply ignores it where nothing qualifies. */
   { key:'europesnus', name:'Europesnus', dept:'pouch', domain:'europesnus.com',
     ref:'rjuntxyu', ships:['EU'], guess:1, perPack:20, platform:'shopify',
+    coupon:'FLASH25',
     currency:'EUR', from:'EU', days:'3–5 business days', ageCheck:'none' },
 
   /* ==========================================================
@@ -166,6 +175,11 @@ export const STORES = [
      is a mislabelled returns/warranty page with no destination content
      at all, so there is no published state-exclusion list and no PACT
      Act adult-signature disclosure. days is our own estimate. */
+  /* NO coupon on purpose: their homepage banner reads "Buy Wave Vapes
+     At 10% Discount, Use Code OFF10", but their own cart rejects it —
+     "Coupon off10 cannot be applied because it does not exist", tried
+     live 2026-08-08. A code their checkout refuses would break every
+     hand-off's promise; worth raising with the store instead. */
   { key:'wavevape', name:'Wave Vape', dept:'disposable', domain:'wavevape.shop',
     ref:'nicotinebaby', ships:['US'], platform:'woocommerce', featured:1,
     cartPath:'/cart-2/', checkoutPath:'/checkout/', shipFlat:5.99, shipFree:55,
@@ -255,6 +269,11 @@ export const STORES = [
      branded and puff-rated like disposables. Many brands rebadged to
      refillable post-ban; whether these particular SKUs did is not
      answerable from the policy text. See CLAUDE.md. */
+  /* NO coupon on purpose: /pages/new-to-relx publishes "11NOV" (free
+     shipping, NEW customers only, bundle-scoped). Conditional and
+     campaign-named — unverifiable without a real first order, so it
+     stays out of the registry rather than promising strangers someone
+     else's discount. */
   { key:'relxuk', name:'RELX UK', dept:'device', domain:'www.relxvape.co.uk',
     ref:'nicotinebaby', ships:['UK'], platform:'shopify', currency:'GBP',
     from:'GB', days:'2–4 days', ageCheck:'dob' },

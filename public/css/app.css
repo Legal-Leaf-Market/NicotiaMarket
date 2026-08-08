@@ -1097,6 +1097,67 @@ footer p{margin:0 0 9px;line-height:1.6}
   background:var(--ember);color:#160c06;transition:background .16s}
 .st-cta:hover{background:var(--gold)}
 
+/* ---- the library index ----
+   Cards wide enough to carry a real dek. A headline alone tells nobody
+   whether a piece is worth ten minutes; the dek is what earns the click,
+   so it gets room rather than being truncated. */
+.lib-list{max-width:64ch;margin:0 auto;display:grid;gap:16px}
+.lib-item{display:block;padding:26px 26px 22px;border-radius:var(--r);
+  border:1px solid var(--line);background:rgba(255,255,255,.02);
+  transition:border-color .18s,transform .18s,background .18s}
+.lib-item:hover{border-color:var(--gold);transform:translateY(-2px);
+  background:rgba(240,185,60,.05)}
+.lib-kind{display:block;font-family:var(--sans);font-size:9.5px;font-weight:700;
+  letter-spacing:.22em;text-transform:uppercase;color:var(--dim);margin-bottom:9px}
+.lib-title{display:block;font-family:var(--display);font-weight:900;letter-spacing:-.02em;
+  font-size:clamp(1.35rem,3.2vw,1.85rem);line-height:1.15;color:var(--text)}
+.lib-tag{display:block;margin-top:5px;font-family:var(--script);font-style:italic;
+  font-weight:600;font-size:1.02rem;color:var(--gold)}
+.lib-dek{display:block;margin-top:12px;font-size:.97rem;line-height:1.65;color:var(--muted)}
+.lib-go{display:inline-block;margin-top:15px;font-family:var(--sans);font-weight:700;
+  font-size:12.5px;letter-spacing:.02em;color:var(--ember)}
+.lib-item:hover .lib-go{color:var(--gold)}
+
+/* the next-article card at the foot of a piece — the moment somebody has
+   just finished reading is the only moment they will start another */
+.lib-next{display:block;max-width:64ch;margin:44px auto 0;padding:22px 24px;
+  border-radius:var(--r);border:1px solid var(--line);border-left:3px solid var(--ember);
+  background:rgba(224,134,63,.05);transition:border-color .18s,background .18s}
+.lib-next:hover{border-color:var(--gold);background:rgba(240,185,60,.07)}
+.lib-next .lib-title{font-size:1.35rem}
+.lib-next .lib-dek{margin-top:8px;font-size:.93rem}
+
+/* ---- the pride beat ----
+   Louder than a chapter and quieter than the hero: this is the passage
+   meant to be screenshotted, so it has to hold together on its own when
+   it is torn out of the page and posted somewhere else. */
+.pridebeat{margin:0 0 52px;padding:34px 30px;border-radius:var(--r);
+  border:1px solid rgba(240,185,60,.34);position:relative;overflow:hidden;
+  background:linear-gradient(155deg,rgba(224,134,63,.16),rgba(240,185,60,.04) 60%)}
+.pridebeat::after{content:"";position:absolute;inset:auto -20% -60% auto;width:340px;
+  height:340px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(240,185,60,.13),transparent 70%)}
+.pridebeat .eyebrow{position:relative;z-index:1;color:var(--gold);opacity:.85}
+.pridebeat h2{position:relative;z-index:1;font-family:var(--display);font-weight:900;
+  font-size:clamp(1.6rem,4vw,2.35rem);line-height:1.12;letter-spacing:-.025em;
+  color:var(--text);margin:8px 0 18px}
+.pridebeat p{position:relative;z-index:1;color:var(--muted);font-size:1.05rem;
+  line-height:1.75;margin:0 0 16px}
+.pridebeat b{color:var(--gold);font-weight:700}
+.pride-viva{font-family:var(--script) !important;font-style:italic;font-weight:600;
+  font-size:clamp(1.5rem,4vw,2.1rem) !important;color:var(--gold) !important;
+  text-align:center;margin:24px 0 0 !important;
+  text-shadow:0 2px 22px rgba(240,185,60,.3)}
+
+/* the figures in the workplace piece, sized to be read at a glance */
+.art-stats{display:grid;gap:12px;margin:22px 0 24px;
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.art-stats div{border:1px solid var(--line);border-left:2px solid var(--gold);
+  border-radius:var(--r-sm);padding:14px 16px;background:rgba(255,255,255,.02)}
+.art-stats b{display:block;font-family:var(--display);font-weight:900;font-size:1.5rem;
+  letter-spacing:-.02em;color:var(--gold);margin-bottom:5px}
+.art-stats span{display:block;font-size:12.5px;line-height:1.55;color:var(--muted)}
+
 /* ---- share ----
    Buttons, not widgets: every network here is a plain documented link, so
    there is no SDK to load and nothing watching the reader. */

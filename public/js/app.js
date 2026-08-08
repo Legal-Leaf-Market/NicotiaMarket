@@ -2831,8 +2831,57 @@ function renderSpotlight(key){
 function skeleton(){var h='';for(var i=0;i<12;i++)h+='<div class="sk"></div>';
   document.getElementById('mount').innerHTML='<div class="skel">'+h+'</div>';}
 
+/* ONE SPELLING PER BRAND.
+
+   nk() strips case and punctuation, so grouping was already treating
+   "ON!" and "on!" as the same brand — but every LABEL came from the raw
+   string, so the same brand produced two pills, two logo chips and two
+   entries in every count. Sixteen stores describing the same
+   manufacturer their own way guarantees this.
+
+   Choosing the winner is not simply "most common". Measured against the
+   live catalogue, that alone returns "zone" over "Zone" (37 to 26) and
+   settles KILLA/Killa on a 39-39 tie by accident. So, in order:
+
+     1. discard all-lowercase spellings when any other exists — no brand
+        here is genuinely lowercase, so those are data entry, not style
+     2. most common wins
+     3. on a tie, prefer FEWER shouted words: "Killa" reads as a name,
+        "KILLA" reads as a warning. A brand that is genuinely
+        capitalised, like STIIIZY, still wins on count at step 2
+     4. alphabetical, purely so the result is deterministic */
+function canonBrands(items){
+  var spellings={};
+  items.forEach(function(it){
+    var b=it.brand; if(!b) return;
+    var k=nk(b); if(!k) return;
+    (spellings[k]||(spellings[k]={}))[b]=(spellings[k][b]||0)+1;
+  });
+  var shouted=function(s){
+    return s.split(/\s+/).filter(function(w){
+      return w.length>1 && w===w.toUpperCase() && w!==w.toLowerCase();
+    }).length;
+  };
+  var best={};
+  Object.keys(spellings).forEach(function(k){
+    var v=spellings[k], all=Object.keys(v);
+    var cased=all.filter(function(s){ return s!==s.toLowerCase(); });
+    var pool=cased.length?cased:all;
+    pool.sort(function(a,b){
+      return (v[b]-v[a]) || (shouted(a)-shouted(b)) || a.localeCompare(b);
+    });
+    best[k]=pool[0];
+  });
+  items.forEach(function(it){
+    if(!it.brand) return;
+    var k=nk(it.brand);
+    if(k&&best[k]) it.brand=best[k];
+  });
+}
+
 function ingest(items){
   ALL=items;
+  canonBrands(ALL);
   PGROUPS=buildGroups(ALL);
   GROUPS={}; PGROUPS.forEach(function(g){
     var k=nk(g.brand); (GROUPS[k]=GROUPS[k]||[]).push(g); });
@@ -2877,7 +2926,13 @@ function hydrate(it){
     key: it.k,
     dept: it.dept||st.dept||'',
     sub: it.sub||'',
-    brand: it.brand||st.name||'',
+    /* NO STORE-NAME FALLBACK. row() omits `brand` when it equals the
+       store's own name, and filling that gap with st.name here put the
+       shop back in as a brand — "EightVape" showed up as a 64-product
+       brand pill. buildGroups() already handles an empty brand by
+       promoting the product's own flavour or title, which is a truthful
+       label; the shop's name is not. */
+    brand: it.brand||'',
     title: it.title||'',
     variant: it.variant||'',
     strength: it.strength==null?'':it.strength,

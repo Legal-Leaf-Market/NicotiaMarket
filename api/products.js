@@ -1024,10 +1024,19 @@ async function wooStoreApi(st) {
      on these shops — Wave Vape files by Foger / Geek Bar, EightVape by
      the manufacturer — so use the shallowest category as the brand and
      the range groups correctly. */
+  /* Woo exposes no vendor field, so the shortest category name is the
+     best guess available — and when there are no categories this used to
+     return the STORE NAME, which then travelled all the way to the brand
+     facet as a pill reading "EightVape 64". A store is not a brand.
+
+     brandFrom() already solves this on the Shopify side: it rejects any
+     vendor that names a shop and falls back to the title's leading
+     token. Running the guess through it means the store name can never
+     survive as a brand again, whichever door the row came in by. */
   const brandOf = (p) => {
     const cats = (p?.categories || []).map(c => c.name).filter(Boolean)
-    if (!cats.length) return st.name
-    return cats.reduce((a, b) => (b.length < a.length ? b : a))
+    const guess = cats.length ? cats.reduce((a, b) => (b.length < a.length ? b : a)) : ''
+    return brandFrom(st, guess, p?.name)
   }
 
   for (const p of parents) {

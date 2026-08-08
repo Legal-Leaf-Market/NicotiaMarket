@@ -321,7 +321,9 @@ header.top{position:sticky;top:0;z-index:50;
    A link that behaves like an ad for the one page here that is prose.
    Deliberately not a hero: it sits past the fold so it never delays the
    pricing, and above the grid so it is not a footer link nobody finds. */
-.storyband{display:flex;align-items:center;gap:20px;margin:0 0 20px;
+/* Top margin because this is now the first thing inside <main>, directly
+   under the hero, rather than tucked between the logo strips and the grid. */
+.storyband{display:flex;align-items:center;gap:20px;margin:6px 0 22px;
   padding:20px 24px;border-radius:var(--r);position:relative;overflow:hidden;
   border:1px solid rgba(240,185,60,.28);
   background:linear-gradient(105deg,rgba(224,134,63,.13),rgba(11,15,13,.2) 62%);

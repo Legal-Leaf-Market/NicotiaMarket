@@ -350,6 +350,45 @@ header.top{position:sticky;top:0;z-index:50;
   .sb-go{width:100%;text-align:center}
 }
 
+/* ---- the manifesto band ----
+   Sits directly under the story band and is deliberately the coldest thing
+   on an otherwise warm page. The storyband is gold because it is about our
+   name; this one goes blue because it is about deep time, and the colour
+   shift is what stops the two reading as one repeated element.
+
+   It is a <section> with two separate links rather than one big <a>, because
+   it holds an internal read and an outbound listen and those cannot be
+   nested inside a single anchor. */
+.manifestoband{display:flex;align-items:center;gap:20px;margin:0 0 20px;
+  padding:22px 24px;border-radius:var(--r);position:relative;overflow:hidden;
+  border:1px solid rgba(129,178,255,.3);
+  background:linear-gradient(105deg,rgba(96,140,220,.15),rgba(11,15,13,.25) 64%)}
+.manifestoband::after{content:"";position:absolute;inset:auto -8% -70% auto;width:300px;
+  height:300px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(129,178,255,.14),transparent 70%)}
+.mb-copy{flex:1;min-width:0;position:relative;z-index:1}
+.mb-eyebrow{display:block;font-family:var(--sans);font-size:9.5px;font-weight:700;
+  letter-spacing:.24em;text-transform:uppercase;color:#9fc0ff;margin-bottom:6px}
+.mb-tag{display:block;font-family:var(--display);font-weight:900;letter-spacing:-.025em;
+  font-size:clamp(1.25rem,3vw,1.85rem);line-height:1.12;color:var(--text)}
+.mb-tag em{color:#9fc0ff;font-style:normal}
+.mb-sub{display:block;margin-top:9px;font-size:12.8px;line-height:1.6;color:var(--muted);
+  max-width:66ch}
+.mb-sub b{color:var(--text);font-weight:600}
+.mb-acts{flex:none;position:relative;z-index:1;display:flex;flex-direction:column;gap:8px}
+.mb-acts a{font-family:var(--sans);font-weight:700;font-size:12.5px;letter-spacing:.02em;
+  white-space:nowrap;padding:10px 18px;border-radius:999px;text-align:center;
+  text-decoration:none;transition:background .16s,color .16s,border-color .16s}
+.mb-read{border:1px solid #81b2ff;color:#cddcff}
+.mb-read:hover{background:#81b2ff;color:#08101f}
+.mb-listen{border:1px solid rgba(129,178,255,.4);color:#9fc0ff;font-weight:500 !important}
+.mb-listen:hover{border-color:#81b2ff;color:#cddcff;background:rgba(96,140,220,.16)}
+@media(max-width:700px){
+  .manifestoband{flex-wrap:wrap;gap:14px;padding:18px}
+  .mb-acts{width:100%;flex-direction:row}
+  .mb-acts a{flex:1}
+}
+
 .dept.spot{color:var(--ember);display:inline-flex;align-items:center;gap:6px}
 .dept.spot:hover{color:var(--gold)}
 .dept.spot[aria-current="page"]{border-bottom-color:var(--ember);color:var(--gold)}
@@ -1175,6 +1214,55 @@ footer p{margin:0 0 9px;line-height:1.6}
   text-align:center;margin:24px 0 0 !important;
   text-shadow:0 2px 22px rgba(240,185,60,.3)}
 
+/* ---- deep time + scripture ----
+   The cosmic chapter and the Hebrew chapters run cooler than the rest of
+   the page on purpose: the surrounding articles are warm gold and ember,
+   so a shift toward blue reads as "we have stepped outside the story" and
+   the reader feels the change of scale before they read a word of it. */
+.st-cosmic{border:1px solid rgba(129,178,255,.24);border-radius:var(--r);
+  padding:30px 28px 26px;
+  background:linear-gradient(158deg,rgba(96,140,220,.11),rgba(240,185,60,.03) 70%)}
+.st-cosmic .st-num,.st-cosmic .st-when{color:#9fc0ff}
+.st-cosmic .st-pull{color:#cddcff}
+
+/* the deep-time ladder. Each rung is a row so the dates form a scannable
+   column — the whole argument is the left column read top to bottom. */
+.ladder{list-style:none;margin:24px 0;padding:0;
+  border-left:1px solid rgba(129,178,255,.28)}
+.ladder li{position:relative;padding:0 0 18px 22px}
+.ladder li::before{content:"";position:absolute;left:-4.5px;top:8px;width:8px;height:8px;
+  border-radius:50%;background:#81b2ff;box-shadow:0 0 0 3px rgba(11,15,13,.9)}
+.ladder li:last-child{padding-bottom:0}
+.ladder li:last-child::before{background:var(--gold)}
+.ladder b{display:block;font-family:var(--display);font-weight:700;font-size:.95rem;
+  letter-spacing:.01em;color:#cddcff;margin-bottom:3px}
+.ladder li:last-child b{color:var(--gold)}
+.ladder span{display:block;color:var(--muted);font-size:.98rem;line-height:1.65}
+
+/* Hebrew set inline inside English sentences. The bidi algorithm handles
+   the direction on its own for a single word; this is purely about giving
+   it enough size to be legible, since the vowel points are tiny. */
+.heb{font-size:1.24em;line-height:1;letter-spacing:0;color:var(--gold);
+  font-weight:400;padding:0 .12em}
+.gloss{color:var(--sage);font-style:italic}
+
+/* the listen block — links out to music we did not make and do not host */
+.listen{margin:0 0 52px;padding:28px 28px 24px;border-radius:var(--r);
+  border:1px solid rgba(129,178,255,.26);
+  background:linear-gradient(155deg,rgba(96,140,220,.1),rgba(11,15,13,0) 70%)}
+.listen .eyebrow{color:#9fc0ff}
+.listen h2{font-family:var(--display);font-weight:900;letter-spacing:-.02em;
+  font-size:clamp(1.4rem,3.4vw,1.95rem);color:var(--text);margin:8px 0 14px}
+.listen p{color:var(--muted);font-size:1.02rem;line-height:1.75;margin:0 0 16px}
+.listen b{color:var(--text);font-weight:600}
+.listen-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.listen-links a{display:inline-flex;align-items:center;gap:8px;text-decoration:none;
+  border:1px solid rgba(129,178,255,.34);border-radius:999px;padding:9px 16px;
+  font-family:var(--sans);font-weight:500;font-size:.9rem;color:#cddcff;
+  background:rgba(96,140,220,.08);transition:border-color .16s,background .16s}
+.listen-links a:hover{border-color:#81b2ff;background:rgba(96,140,220,.18)}
+.listen-fine{font-size:.85rem !important;color:var(--dim) !important;margin:16px 0 0 !important}
+
 /* the figures in the workplace piece, sized to be read at a glance */
 .art-stats{display:grid;gap:12px;margin:22px 0 24px;
   grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
@@ -1206,6 +1294,241 @@ footer p{margin:0 0 9px;line-height:1.6}
 .sh-quiet{background:none}
 /* the Instagram and TikTok route: an image and some words, because neither
    can be posted to from a browser */
+/* ---- the three sites ----
+   Not a footer link farm. The claim being made is that these are three
+   branches of one habit, so they get equal weight in a row rather than
+   one host site plus two afterthoughts. Each card keeps its own hue so
+   the family reads as a family without any of them looking subordinate. */
+.trio{margin:52px 0 0;padding:30px 28px;border-radius:var(--r);
+  border:1px solid var(--line);background:rgba(255,255,255,.02)}
+.trio h2{font-family:var(--display);font-weight:900;letter-spacing:-.02em;
+  font-size:clamp(1.4rem,3.4vw,1.95rem);color:var(--text);margin:8px 0 12px}
+.trio .lede{color:var(--muted);font-size:1rem;line-height:1.7;margin:0 0 22px;
+  max-width:68ch}
+.trio .lede b{color:var(--text);font-weight:600}
+.trio-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
+.trio-card{display:block;text-decoration:none;padding:18px 18px 16px;
+  border-radius:var(--r-sm);border:1px solid var(--line);
+  background:rgba(0,0,0,.22);transition:border-color .16s,transform .16s}
+.trio-card:hover{transform:translateY(-2px)}
+.trio-card b{display:block;font-family:var(--display);font-weight:900;font-size:1.08rem;
+  letter-spacing:-.01em;margin-bottom:5px}
+.trio-card span{display:block;font-size:12.6px;line-height:1.58;color:var(--muted)}
+.trio-card em{display:block;margin-top:9px;font-family:var(--sans);font-size:11px;
+  font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-style:normal}
+.trio-nic b{color:var(--gold)}   .trio-nic{border-left:2px solid var(--gold)}
+.trio-nic em{color:var(--gold)}
+.trio-leg b{color:var(--sage)}   .trio-leg{border-left:2px solid var(--sage)}
+.trio-leg em{color:var(--sage)}
+.trio-leg:hover{border-color:var(--sage)}
+.trio-nic:hover{border-color:var(--gold)}
+.trio-herb b{color:#81b2ff}      .trio-herb{border-left:2px solid #81b2ff}
+.trio-herb em{color:#81b2ff}
+.trio-herb:hover{border-color:#81b2ff}
+.trio-fine{margin:18px 0 0;font-size:.85rem;line-height:1.6;color:var(--dim)}
+
+/* ============================================================
+   THE COMMUNITY — /community
+   Deliberately plainer than the articles. An old-school board should
+   look like a board: dense rows, readable body copy, no card shadows,
+   nothing that reads as "content marketing". The one piece of colour is
+   the per-handle dot, which is doing the job an avatar would do on a
+   site that had accounts.
+   ============================================================ */
+.rulesbox{margin:0 0 26px;padding:24px 26px;border-radius:var(--r);
+  border:1px solid rgba(239,83,80,.26);
+  background:linear-gradient(155deg,rgba(239,83,80,.08),rgba(11,15,13,0) 66%)}
+.rulesbox .eyebrow{color:var(--red)}
+.rules{margin:14px 0 0;padding-left:20px;display:grid;gap:11px}
+.rules li{color:var(--muted);font-size:1rem;line-height:1.66}
+.rules b{color:var(--text);font-weight:600}
+.rules-fine{margin:16px 0 0;font-size:.85rem;line-height:1.6;color:var(--dim)}
+.rules-fine a{color:var(--gold);text-decoration:none}
+.rules-fine a:hover{text-decoration:underline}
+
+.cm-state{margin:0 0 20px;padding:14px 18px;border-radius:var(--r-sm);
+  font-size:.95rem;line-height:1.6;border:1px solid var(--line);color:var(--muted)}
+.cm-state.is-warn{border-color:rgba(240,185,60,.4);color:var(--gold);
+  background:rgba(240,185,60,.06)}
+.cm-state.is-bad{border-color:rgba(239,83,80,.45);color:var(--red);
+  background:rgba(239,83,80,.06)}
+
+.cm-wrap{margin:0 0 40px}
+.cm-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;margin-bottom:16px}
+.cm-head h2{font-family:var(--display);font-weight:900;letter-spacing:-.02em;
+  font-size:1.5rem;color:var(--text);margin:0}
+.cm-headacts{display:flex;gap:8px}
+
+.cm-list{display:grid;gap:8px}
+.cm-row{display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;
+  cursor:pointer;padding:14px 16px;border-radius:var(--r-sm);
+  border:1px solid var(--line);background:rgba(255,255,255,.02);
+  transition:border-color .16s,background .16s}
+.cm-row:hover{border-color:var(--gold);background:rgba(240,185,60,.05)}
+.cm-dot{flex:none;width:9px;height:9px;border-radius:50%;margin-top:6px}
+.cm-row-main{flex:1;min-width:0;display:block}
+.cm-row-title{display:block;font-family:var(--sans);font-weight:600;font-size:1rem;
+  line-height:1.35;color:var(--text)}
+.cm-row-meta{display:block;margin-top:4px;font-family:var(--sans);font-size:12px;
+  color:var(--dim)}
+.cm-lock{flex:none;font-family:var(--sans);font-size:10px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--red);
+  border:1px solid rgba(239,83,80,.4);border-radius:999px;padding:3px 9px}
+.cm-empty{color:var(--dim);font-size:.98rem;line-height:1.6;padding:18px 2px;margin:0}
+
+.cm-ttitle{font-family:var(--display);font-weight:900;letter-spacing:-.02em;
+  font-size:clamp(1.4rem,3.4vw,2rem);line-height:1.18;color:var(--text);margin:0 0 20px}
+.cm-posts{display:grid;gap:2px;margin-bottom:24px}
+.cm-post{padding:16px 18px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:rgba(255,255,255,.015)}
+.cm-post.is-op{border-left:2px solid var(--gold)}
+.cm-post-head{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-bottom:10px}
+.cm-post-head .cm-dot{margin-top:0}
+.cm-handle{font-family:var(--sans);font-weight:600;font-size:13px;color:var(--text)}
+.cm-op{font-family:var(--sans);font-size:9.5px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--gold);border:1px solid rgba(240,185,60,.4);
+  border-radius:999px;padding:2px 7px}
+.cm-when,.cm-nth{font-family:var(--sans);font-size:11.5px;color:var(--dim)}
+.cm-nth{margin-left:auto}
+.cm-report{cursor:pointer;background:none;border:0;padding:0 0 0 4px;
+  font-family:var(--sans);font-size:11px;color:var(--dim);text-decoration:underline;
+  text-underline-offset:2px}
+.cm-report:hover{color:var(--red)}
+.cm-report.is-done{color:var(--sage);text-decoration:none}
+.cm-body p{margin:0 0 10px;color:var(--muted);font-size:1rem;line-height:1.66;
+  overflow-wrap:anywhere}
+.cm-body p:last-child{margin-bottom:0}
+.cm-deleted{margin:0;color:var(--dim);font-style:italic;font-size:.95rem}
+
+.cm-newwrap{margin-bottom:16px}
+.cm-form{display:grid;gap:10px;padding:18px;border-radius:var(--r-sm);
+  border:1px solid var(--line);background:rgba(255,255,255,.02)}
+.cm-in,.cm-ta{width:100%;font-family:var(--sans);font-size:.98rem;color:var(--text);
+  background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:11px 13px;line-height:1.55}
+.cm-ta{resize:vertical;min-height:96px}
+.cm-in:focus,.cm-ta:focus{outline:none;border-color:var(--gold)}
+.cm-in::placeholder,.cm-ta::placeholder{color:var(--dim)}
+.cm-form-acts{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cm-note{font-family:var(--sans);font-size:12.5px;color:var(--dim);line-height:1.5}
+.cm-note.is-held{color:var(--gold)}
+.cm-note.is-bad{color:var(--red)}
+
+.cm-gate{padding:20px 22px;border-radius:var(--r-sm);
+  border:1px solid rgba(240,185,60,.34);background:rgba(240,185,60,.05)}
+.cm-gate-h{margin:0 0 8px;font-family:var(--display);font-weight:900;font-size:1.1rem;
+  color:var(--gold)}
+.cm-gate p{margin:0 0 12px;color:var(--muted);font-size:.96rem;line-height:1.62}
+.cm-gate-acts{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ---- THE LISTENING ROOM ----
+   A facade player. NOTHING from YouTube is requested until the reader
+   presses play — no iframe, no script, no cookie, no thumbnail hotlink.
+   That keeps the "no third-party widgets loading on arrival" rule this repo
+   already follows for share buttons, keeps the page fast, and means a
+   reader who never presses play is never handed to Google.
+
+   It cannot autoplay on page load. No browser permits audio without a
+   prior user gesture, so the design leans the other way: make the press
+   itself the moment. */
+.listenroom{position:relative;margin:0 0 52px;border-radius:var(--r);overflow:hidden;
+  border:1px solid rgba(129,178,255,.3);
+  background:radial-gradient(120% 140% at 15% 0%,rgba(96,140,220,.22),rgba(11,15,13,1) 62%)}
+.lr-stage{position:relative;aspect-ratio:16/9;width:100%;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  padding:28px;text-align:center;cursor:pointer;border:0;background:none;
+  font:inherit;color:inherit}
+/* drifting vapour behind the button — slow enough to read over */
+.lr-stage::before{content:"";position:absolute;inset:-30%;pointer-events:none;
+  background:radial-gradient(circle at 30% 60%,rgba(129,178,255,.16),transparent 60%),
+             radial-gradient(circle at 72% 35%,rgba(240,185,60,.10),transparent 55%);
+  animation:lrDrift 26s ease-in-out infinite alternate}
+@keyframes lrDrift{
+  from{transform:translate3d(-3%,2%,0) scale(1)}
+  to{transform:translate3d(4%,-3%,0) scale(1.12)}
+}
+.lr-play{position:relative;z-index:1;width:84px;height:84px;border-radius:50%;flex:none;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(205,220,255,.5);background:rgba(11,15,13,.42);
+  backdrop-filter:blur(3px);transition:transform .22s ease,background .22s,border-color .22s}
+.lr-play svg{width:26px;height:30px;margin-left:5px;fill:#cddcff}
+.lr-stage:hover .lr-play,.lr-stage:focus-visible .lr-play{
+  transform:scale(1.08);border-color:#81b2ff;background:rgba(96,140,220,.28)}
+/* the halo pulse, so the thing reads as playable at a glance */
+.lr-play::after{content:"";position:absolute;inset:-1px;border-radius:50%;
+  border:1px solid rgba(129,178,255,.55);animation:lrPulse 2.8s ease-out infinite}
+@keyframes lrPulse{
+  0%{transform:scale(1);opacity:.7}
+  100%{transform:scale(1.55);opacity:0}
+}
+.lr-track{position:relative;z-index:1;font-family:var(--display);font-weight:900;
+  letter-spacing:-.02em;font-size:clamp(1.5rem,4.2vw,2.5rem);color:var(--text);margin:0}
+.lr-by{position:relative;z-index:1;font-family:var(--script);font-style:italic;
+  font-size:clamp(1rem,2.4vw,1.25rem);color:#cddcff;margin:0}
+.lr-hint{position:relative;z-index:1;font-family:var(--sans);font-size:11px;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin:0}
+.lr-stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.lr-under{padding:20px 26px 22px;border-top:1px solid rgba(129,178,255,.2)}
+.lr-under p{color:var(--muted);font-size:1rem;line-height:1.72;margin:0 0 14px}
+.lr-under b{color:var(--text);font-weight:600}
+@media(prefers-reduced-motion:reduce){
+  .lr-stage::before,.lr-play::after{animation:none}
+  .lr-play{transition:none}
+}
+
+/* ---- bite-size: one sentence, with its source already attached ---- */
+.sh-mini{font-size:11px !important;padding:6px 12px !important;font-weight:600 !important}
+.sh-quotes{margin-top:20px;padding-top:18px;border-top:1px dashed var(--line)}
+.sh-q-grid{display:grid;gap:10px;margin-top:12px;text-align:left}
+.sh-q{margin:0;padding:15px 16px 13px;border-radius:var(--r-sm);
+  border:1px solid var(--line);border-left:2px solid var(--gold);
+  background:rgba(255,255,255,.02)}
+.sh-q blockquote{margin:0;font-family:var(--script);font-style:italic;font-size:1.06rem;
+  line-height:1.5;color:var(--text)}
+.sh-q figcaption{margin-top:8px;font-family:var(--sans);font-size:11px;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--dim)}
+.sh-q-acts{display:flex;gap:7px;margin-top:11px}
+
+/* ---- the quote carousel ----
+   Two columns on desktop: the sentence gets the room, the controls stay
+   out of its way. The fade is opacity only — no transform — so a long
+   quote re-flowing to a different height does not visibly slide. */
+.qcar{display:flex;align-items:center;gap:22px;margin:0 0 20px;padding:22px 24px;
+  border-radius:var(--r);position:relative;overflow:hidden;
+  border:1px solid rgba(240,185,60,.24);
+  background:linear-gradient(100deg,rgba(240,185,60,.07),rgba(11,15,13,.25) 68%)}
+.qcar-inner{flex:1;min-width:0}
+.qcar-eyebrow{display:block;font-family:var(--sans);font-size:9.5px;font-weight:700;
+  letter-spacing:.24em;text-transform:uppercase;color:var(--dim);margin-bottom:9px}
+.qcar-q{margin:0;font-family:var(--script);font-style:italic;font-weight:600;
+  font-size:clamp(1.08rem,2.3vw,1.42rem);line-height:1.42;color:var(--text);
+  opacity:0;transition:opacity .42s ease}
+.qcar-q.is-in{opacity:1}
+.qcar-foot{display:flex;flex-wrap:wrap;align-items:baseline;gap:5px 14px;margin-top:11px}
+.qcar-cite{font-family:var(--sans);font-size:11px;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--dim)}
+.qcar-src{font-family:var(--sans);font-size:11.5px;font-weight:600;color:var(--gold);
+  text-decoration:none;opacity:.85}
+.qcar-src:hover{opacity:1;text-decoration:underline}
+.qcar-side{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.qcar-acts{display:flex;gap:7px}
+.qcar-nav{display:flex;align-items:center;gap:10px}
+.qcar-arrow{cursor:pointer;background:none;border:1px solid var(--line);border-radius:50%;
+  width:26px;height:26px;line-height:1;font-size:15px;color:var(--muted);
+  transition:border-color .16s,color .16s}
+.qcar-arrow:hover{border-color:var(--gold);color:var(--gold)}
+.qcar-dots{font-family:var(--sans);font-size:11px;color:var(--dim);
+  font-variant-numeric:tabular-nums;min-width:46px;text-align:center}
+@media(max-width:760px){
+  .qcar{flex-wrap:wrap;gap:14px;padding:18px}
+  .qcar-side{width:100%;flex-direction:row;align-items:center;
+    justify-content:space-between}
+}
+@media(prefers-reduced-motion:reduce){
+  .qcar-q{transition:none}
+}
+
 .sh-social{margin-top:20px;padding-top:18px;border-top:1px dashed var(--line)}
 .sh-social-note{display:block;font-size:12.5px;line-height:1.6;color:var(--dim);
   margin-bottom:12px}

@@ -2238,6 +2238,24 @@ var CART = {};
 function loadCart(){ try{CART=JSON.parse(read_('nm_cart'))||{};}catch(e){CART={};}
   if(typeof CART!=='object'||!CART) CART={}; }
 function saveCart(){ store_('nm_cart', JSON.stringify(CART)); }
+/* The saved board persists exactly the way the cart does (Legal-Leaf keeps
+   its watchlist across visits; ours evaporated on refresh, which made the
+   star a lie). Board entries are gitem() snapshots, so they serialize. */
+function loadBoard(){ try{BOARD=JSON.parse(read_('nm_board'))||{};}catch(e){BOARD={};}
+  if(typeof BOARD!=='object'||!BOARD) BOARD={}; }
+function saveBoard(){ store_('nm_board', JSON.stringify(BOARD)); }
+/* Fire-and-forget beacon to /api/track, which has existed since launch with
+   nothing ever calling it. sendBeacon survives the same-tab checkout
+   navigation that follows immediately, the one moment a fetch would be
+   cancelled mid-flight. Anonymous by design: event, store, product, value,
+   country. No id, no email. */
+function track(ev,extra){
+  try{
+    var body=JSON.stringify(Object.assign({event:ev,country:LOC.country||''},extra||{}));
+    if(navigator.sendBeacon){ navigator.sendBeacon('/api/track', new Blob([body],{type:'application/json'})); }
+    else{ fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true}).catch(function(){}); }
+  }catch(e){}
+}
 function cartCount(){ var n=0; for(var k in CART) n+=CART[k].qty||0; return n; }
 function addToCart(it){
   var k=it.id;
@@ -2249,6 +2267,7 @@ function addToCart(it){
                 aff:it.aff||it.url||''};
   saveCart(); badges(); renderCart(); pulseCart();
   toast((it.title||'Item')+' added');
+  track('add_to_cart',{store:it.key||'',product:it.title||'',value:Number(it.price)||0});
 }
 function setQty(k,q){ q=parseInt(q,10); if(isNaN(q)||q<=0) delete CART[k];
   else CART[k].qty=q; saveCart(); badges(); renderCart(); }
@@ -2318,6 +2337,13 @@ function submitAuth(){
   err.style.display='none';
   setUser({email:email,name:name||email.split('@')[0],joined:Date.now(),
            country:LOC.country,region:LOC.region});
+  /* New signups reach /api/subscribe, which has sat wired-to-nothing since
+     launch. Signup only, not sign-in: a returning email is already on
+     whatever list the webhook feeds, and double-forwarding makes dupes. */
+  if(AUTH_MODE==='signup'){
+    try{ fetch('/api/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:email,name:name||'',country:LOC.country||'',region:LOC.region||''})}).catch(function(){}); }catch(e){}
+  }
   closeAuth();
   toast('Welcome'+(name?', '+name.split(' ')[0]:''));
   var fn=PENDING; PENDING=null; if(typeof fn==='function') setTimeout(fn,140);
@@ -2454,6 +2480,8 @@ function checkoutStore(key){
     var items=itemsForStore(key); if(!items.length) return;
     if(st.coupon){ try{navigator.clipboard.writeText(st.coupon);}catch(e){} }
     var plan=checkoutPlan(st,items);
+    track('checkout_handoff',{store:key,
+      value:items.reduce(function(a,x){return a+(Number(x.price)||0)*(x.qty||1);},0)});
     /* SAME TAB. The cart lives in localStorage, so coming back is one
        Back press — and a new tab per store meant the shopper lost track
        of which of them they had actually paid. */
@@ -2617,14 +2645,14 @@ document.addEventListener('click',function(e){
   if((el=hit('[data-save]'))){ e.preventDefault(); e.stopPropagation();
     var g=groupById(el.getAttribute('data-save'));
     if(g){ if(BOARD[g.gid]) delete BOARD[g.gid]; else BOARD[g.gid]=gitem(g);
-      badges(); apply(false); }
+      saveBoard(); badges(); apply(false); }
     return; }
   if((el=hit('[data-add]'))){ e.preventDefault(); e.stopPropagation();
     var gg=groupById(el.getAttribute('data-add'));
     if(gg) addToCart(gitem(gg));
     return; }
   if((el=hit('[data-unsave]'))){ delete BOARD[el.getAttribute('data-unsave')];
-    badges(); renderBoard(); apply(false); return; }
+    saveBoard(); badges(); renderBoard(); apply(false); return; }
   if((el=hit('[data-checkout]'))){ checkoutStore(el.getAttribute('data-checkout')); return; }
   if((el=hit('[data-qty]'))){ var d=Number(el.getAttribute('data-qty'));
     if(d===0) setQty(el.getAttribute('data-k'),0); else bumpQty(el.getAttribute('data-k'),d);
@@ -3334,7 +3362,7 @@ if('serviceWorker' in navigator){
 
 /* boot */
 loadLoc(); restoreUserLoc(); locPillUI(); setAgeCopy(); setWarn(); setNotices();
-loadSelv(); loadCart(); badges(); accountUI(); setAuthMode('signup'); renderCart();
+loadSelv(); loadCart(); loadBoard(); badges(); accountUI(); setAuthMode('signup'); renderCart();
 /* The path picks the opening shelf BEFORE the first render, so /pouches
    opens on Pouches instead of dumping the visitor into Everything. */
 F.dept=deptFromPath()||'all'; syncDeptTabs(); setRouteMeta();

@@ -59,7 +59,7 @@ var DEPTS = {
                accent:'var(--liquid)', warn:NIC_WARN},
   cigar:      {label:'Cigars',         unit:'stick', unitLabel:'per stick',
                accent:'var(--cigar)',
-               warn:'<b>Cigar smoking</b> can cause cancers of the mouth and throat, even if you do not inhale. <em>Shown voluntarily — federal cigar warning rules were vacated and are not enforced.</em>'},
+               warn:'<b>Cigar smoking</b> can cause cancers of the mouth and throat, even if you do not inhale. <em>Shown voluntarily, federal cigar warning rules were vacated and are not enforced.</em>'},
   gear:       {label:'Gear & Accessories', unit:'flat', unitLabel:'',
                accent:'var(--gear)',
                warn:'<b>Accessories.</b> Age 21+ still applies. Items containing nicotine are on the other shelves.'}
@@ -256,7 +256,7 @@ var COUNTRIES={
    not by department. Verified Aug 2026 — re-check quarterly. */
 var LEGAL = {
   US: { pouch:['ok'], vape:['ok'], cigar:['ok'], gear:['ok'] },
-  FR: { pouch:['banned','France banned nicotine pouches on 1 April 2026 under Decree n°2025-898. It is the strictest ban in Europe — manufacture, sale, import, possession and use are all prohibited, not just retail. We will not link you to them.'],
+  FR: { pouch:['banned','France banned nicotine pouches on 1 April 2026 under Decree n°2025-898. It is the strictest ban in Europe, manufacture, sale, import, possession and use are all prohibited, not just retail. We will not link you to them.'],
         vape:['ok'], cigar:['ok'], gear:['ok'] },
   BE: { pouch:['banned','Belgium banned the sale and distribution of nicotine pouches in October 2023.'], vape:['ok'], cigar:['ok'], gear:['ok'] },
   NL: { pouch:['banned','The Netherlands banned retail sale of nicotine pouches from January 2025.'], vape:['ok'], cigar:['ok'], gear:['ok'] },
@@ -539,7 +539,7 @@ var SPOTLIGHT = {
     headline: 'Every pouch America’s actually buying',
     blurb   : 'ZYN, on!, VELO and Rogue are owned by Swedish Match, Altria, BAT '+
               'and Turning Point, and none of them sell to you directly. Nicokick '+
-              'carries all four plus the challengers — and every can here is '+
+              'carries all four plus the challengers, and every can here is '+
               'priced per pouch, so a 15-count ZYN and a 20-count VELO finally '+
               'compare.',
     accent  : '#2C6777',            /* Nicokick's own teal */
@@ -775,7 +775,7 @@ function buildGroups(items){
     var brand=String(it.brand==null?'':it.brand).trim();
     /* the dropdown label: the store's own option name when it has one,
        otherwise whatever distinguishes this title from its siblings */
-    var flav=it.variant || flavourOf(brand,it.title) || it.title || '—';
+    var flav=it.variant || flavourOf(brand,it.title) || it.title || '-';
     /* WITH NO BRAND, FALL BACK TO THE TITLE — NOT THE VARIANT.
        This used to take `flav`, which is the variant when the store
        supplies one, so a row with no brand was labelled "20MG",
@@ -784,7 +784,7 @@ function buildGroups(items){
        product's own title is at least a truthful name for itself.
        Grouping is unaffected: groupKeyFor() already falls back to the
        title for a brandless row. */
-    if(!brand){ brand=it.title||flav; flav=it.variant||'—'; }
+    if(!brand){ brand=it.title||flav; flav=it.variant||'-'; }
     var dept=deptOf(it);
     var gid=groupKeyFor(it);
     var g=map[gid]||(map[gid]={gid:gid, key:it.key, dept:dept, brand:brand,
@@ -852,14 +852,14 @@ function gvariants(g){ var out=[]; g.flav.forEach(function(f){
 function strengthOptions(f,sel){
   return f.variants.map(function(v,i){
     return '<option value="'+i+'"'+(i===sel?' selected':'')+'>'+
-      esc(variantLabel(v))+' — '+money(v.price,v.currency)+'</option>';
+      esc(variantLabel(v))+', '+money(v.price,v.currency)+'</option>';
   }).join('');
 }
 function strengthList(vars){
   var mg={};
   vars.forEach(function(v){ if(v.strength!==''&&v.strength!=null) mg[v.strength]=1; });
   var k=Object.keys(mg).sort(function(a,b){ return a-b; });
-  return k.length ? k.join(', ')+' mg' : '—';
+  return k.length ? k.join(', ')+' mg' : '-';
 }
 
 /* Re-render every card carrying this gid. querySelector (singular) used
@@ -888,7 +888,7 @@ function refreshCard(gid){
     if(shot){
       var src=(it&&it.image)||f.image||g.image||'';
       var img=shot.querySelector('img');
-      var alt=g.brand+(f.name&&f.name!=='—'?' '+f.name:'');
+      var alt=g.brand+(f.name&&f.name!=='-'?' '+f.name:'');
       if(src){
         if(img){
           if(img.getAttribute('src')!==src){
@@ -912,7 +912,7 @@ function refreshCard(gid){
     var pr=card.querySelector('.cprice');
     if(pr) pr.innerHTML=priceHtml(it,cur,off,u,best);
     var buy=card.querySelector('.buy');
-    if(buy) buy.textContent='Add to cart — '+(money(it.price,cur)||'see store');
+    if(buy) buy.textContent='Add to cart, '+(money(it.price,cur)||'see store');
     /* whole back panel, not just the heading — description, unit price,
        puff count and market list are all per-variant */
     var bk=card.querySelector('.backin');
@@ -1119,7 +1119,7 @@ function backInnerHtml(g){
   var s=gsel(g), f=g.flav[s.f], it=gitem(g), cur=it.currency;
   var u=unitPrice(it), allV=gvariants(g);
   var nFlav=g.flav.length;
-  var hasFlav=!g.split && (nFlav>1||(g.flav[0]&&g.flav[0].name!=='—'));
+  var hasFlav=!g.split && (nFlav>1||(g.flav[0]&&g.flav[0].name!=='-'));
   var peers=GROUPS[nk(g.brand)]||[];
   var nSt={}; peers.forEach(function(x){ nSt[x.key]=1; });
   var nStores=Object.keys(nSt).length||1;
@@ -1127,11 +1127,11 @@ function backInnerHtml(g){
   var approx=u?usdApprox(u.value,cur):'';
 
   return '<div class="bstore">'+esc(st.name||g.key)+'</div>'+
-    '<h4>'+esc(g.split?g.title:(g.brand+(f.name!=='—'?' '+f.name:'')))+'</h4>'+
+    '<h4>'+esc(g.split?g.title:(g.brand+(f.name!=='-'?' '+f.name:'')))+'</h4>'+
     (desc?'<p class="bdesc">'+esc(desc)+'</p>'
          :'<p class="bdesc dim">No description published for this one.</p>')+
     '<dl class="bspec">'+
-      '<dt>Department</dt><dd>'+esc(d.label||'—')+'</dd>'+
+      '<dt>Department</dt><dd>'+esc(d.label||'-')+'</dd>'+
       '<dt>Brand</dt><dd>'+esc(g.brand)+'</dd>'+
       (hasFlav?'<dt>Flavours</dt><dd>'+nFlav+'</dd>':'')+
       (deptOf(g)==='disposable'&&u?'<dt>Puffs</dt><dd>'+u.count.toLocaleString()+'</dd>'
@@ -1154,7 +1154,7 @@ function card(g){
   var u=unitPrice(it), best=isBestUnit(g,u);
   var allV=gvariants(g);
   var nFlav=g.flav.length, nStr=f.variants.length;
-  var hasFlav=!g.split && (nFlav>1||(g.flav[0]&&g.flav[0].name!=='—'));
+  var hasFlav=!g.split && (nFlav>1||(g.flav[0]&&g.flav[0].name!=='-'));
   var peers=GROUPS[nk(g.brand)]||[];
   var nSt={}; peers.forEach(function(x){ nSt[x.key]=1; });
   var nStores=Object.keys(nSt).length||1;
@@ -1211,7 +1211,7 @@ function card(g){
     '<div class="face back">'+
       '<div class="backin">'+backInnerHtml(g)+'</div>'+
       '<div class="backfoot">'+
-        '<button class="buy" type="button" data-add="'+gid+'">Add to cart — '+
+        '<button class="buy" type="button" data-add="'+gid+'">Add to cart, '+
           (money(it.price,cur)||'see store')+'</button>'+
         '<button class="turn-back" type="button" aria-label="Back to product">↺</button>'+
       '</div>'+
@@ -1367,7 +1367,7 @@ function apply(reset){
     mount.innerHTML='<div class="state"><b>No catalogue connected yet</b>'+
       'The design is live but no store data has been pulled. In your Apps Script '+
       'project run <code>setup()</code>, then <code>diagnose()</code>, then '+
-      '<code>refreshInventory()</code> — then reload this page.'+
+      '<code>refreshInventory()</code>, then reload this page.'+
       (CONN?'<br><br><span style="font-size:12px;color:var(--dim)">'+esc(CONN)+'</span>':'')+'</div>';
   }else if(!VIEW.length){
     var st2=F.store!=='all'?SMAP[F.store]:null;
@@ -1789,7 +1789,7 @@ function renderStoreList(){
   el.innerHTML=STORES.map(function(s){
     var n=ALL.filter(function(i){return i.key===s.key;}).length;
     var here=storeShipsHere(s);
-    var zones=(s.ships||[]).join(' / ').replace('INTL','Worldwide')||'—';
+    var zones=(s.ships||[]).join(' / ').replace('INTL','Worldwide')||'-';
     var note=!here ? 'doesn’t ship here' : (n? n+' listed · '+zones : zones);
     var accent=(DEPTS[s.dept]||{}).accent||'var(--dim)';
     return '<button class="schip'+(here?'':' away')+'" data-storefilter="'+esc(s.key)+'">'+
@@ -1853,7 +1853,7 @@ function setNotices(){
   var box=document.getElementById('notices'); if(!box) return;
   var html='';
   if(PREVIEW_MODE){
-    html+='<div class="previewbar">PREVIEW MODE — shipping limits and local law are '+
+    html+='<div class="previewbar">PREVIEW MODE, shipping limits and local law are '+
           'being ignored. Set <code>PREVIEW_MODE = false</code> before launch.</div>';
   }
   html+=reachNotice();
@@ -1880,13 +1880,13 @@ function setNotices(){
 var HEROES={
   all:{ eyebrow:'every store, one price you can compare',
     lead:'what it actually', head:'costs',
-    sub:'Pouches, disposables, e-liquid and cigars from every shop we carry — priced '+
+    sub:'Pouches, disposables, e-liquid and cigars from every shop we carry, priced '+
         'per pouch, per 1,000 puffs, per ml and per stick, so a five-can roll and a '+
         'single tin finally compare honestly.' },
   pouch:{ eyebrow:'pouches & snus · priced per pouch',
     lead:'the only number', head:'that matters',
     sub:'A tin of 20 and a roll of five never compared on the shelf price. Every pouch '+
-        'here carries its own per-pouch cost, converted to one currency — so a kroner '+
+        'here carries its own per-pouch cost, converted to one currency, so a kroner '+
         'listing and a euro listing can actually be ranked against each other.' },
   disposable:{ eyebrow:'disposables · priced per 1,000 puffs',
     lead:'puffs, not', head:'packaging',
@@ -1894,7 +1894,7 @@ var HEROES={
         'Pricing by the thousand puffs is the entire reason this shelf exists.' },
   device:{ eyebrow:'devices & pods · priced flat',
     lead:'hardware, judged', head:'honestly',
-    sub:'Mods, kits, pods, tanks and coils. No invented unit here — a device is a device, '+
+    sub:'Mods, kits, pods, tanks and coils. No invented unit here. A device is a device, '+
         'so this shelf compares on flat price, stock, and what each store will ship you.' },
   liquid:{ eyebrow:'e-liquid · priced per ml',
     lead:'per millilitre,', head:'not per bottle',
@@ -1903,7 +1903,7 @@ var HEROES={
   cigar:{ eyebrow:'cigars · priced per stick',
     lead:'per stick,', head:'every time',
     sub:'Singles, fivers and full boxes reduced to one comparable number. Cutters, cases '+
-        'and humidors live on the Gear shelf — a $199 humidor is not a $199 cigar.' },
+        'and humidors live on the Gear shelf. A $199 humidor is not a $199 cigar.' },
   gear:{ eyebrow:'gear & accessories · priced flat',
     lead:'everything', head:'around it',
     sub:'Humidors, cutters, cases and pipe gear. This shelf exists so that nothing without '+
@@ -1945,20 +1945,20 @@ var DEPT_PATH={pouch:'pouches', disposable:'disposables', device:'devices',
 var PATH_DEPT={}; Object.keys(DEPT_PATH).forEach(function(d){ PATH_DEPT[DEPT_PATH[d]]=d; });
 
 var DEPT_SEO={
-  all:{ t:'Nicotia Market — Pouches, Vape & Cigars, Priced by the Unit',
+  all:{ t:'Nicotia Market, Pouches, Vape & Cigars, Priced by the Unit',
     d:'Compare nicotine pouches, snus, disposables, e-liquid and cigars across every store we carry. Priced per pouch, per 1,000 puffs, per ml and per stick. Adults 21+.' },
-  pouch:{ t:'Nicotine Pouches & Snus — Compared Per Pouch | Nicotia Market',
+  pouch:{ t:'Nicotine Pouches & Snus, Compared Per Pouch | Nicotia Market',
     d:'Every nicotine pouch and snus tin we track, priced per pouch and converted to one currency so a five-can roll and a single tin compare honestly. ZYN, VELO, Pablo, Iceberg and more. Adults 21+.' },
-  disposable:{ t:'Disposable Vapes — Compared Per 1,000 Puffs | Nicotia Market',
-    d:'Disposable vapes priced per 1,000 puffs, not per device. A 30K and a 60K look three dollars apart and are 42% apart — see the real cost. Adults 21+.' },
-  device:{ t:'Vape Devices, Pods, Kits & Coils — Compared | Nicotia Market',
+  disposable:{ t:'Disposable Vapes, Compared Per 1,000 Puffs | Nicotia Market',
+    d:'Disposable vapes priced per 1,000 puffs, not per device. A 30K and a 60K look three dollars apart and are 42% apart, see the real cost. Adults 21+.' },
+  device:{ t:'Vape Devices, Pods, Kits & Coils, Compared | Nicotia Market',
     d:'Mods, kits, pods, tanks and coils compared across every store we carry, on flat price, stock and where each one actually ships. Adults 21+.' },
-  liquid:{ t:'E-Liquid & Vape Juice — Compared Per ml | Nicotia Market',
+  liquid:{ t:'E-Liquid & Vape Juice, Compared Per ml | Nicotia Market',
     d:'Shortfills, nic salts and freebase e-liquid priced per millilitre, so a 100ml bottle has to earn its shelf price against a 10ml. Adults 21+.' },
-  cigar:{ t:'Cigars — Compared Per Stick | Nicotia Market',
+  cigar:{ t:'Cigars, Compared Per Stick | Nicotia Market',
     d:'Singles, fivers and full boxes reduced to one comparable number: the price per stick. Cutters, cases and humidors live on the Gear shelf. Adults 21+.' },
   gear:{ t:'Humidors, Cutters, Cases & Pipe Gear | Nicotia Market',
-    d:'Humidors, cutters, cases and pipe gear compared across every store we carry. Accessories only — nothing here contains nicotine. Adults 21+.' }
+    d:'Humidors, cutters, cases and pipe gear compared across every store we carry. Accessories only, nothing here contains nicotine. Adults 21+.' }
 };
 
 function deptFromPath(){
@@ -2105,13 +2105,13 @@ function stamp(){
   el.querySelector('.how').onclick=showDiag;
 }
 function showDiag(){
-  if(!META.length){ toast('No refresh report yet — run refreshInventory() in Apps Script.'); return; }
+  if(!META.length){ toast('No refresh report yet, run refreshInventory() in Apps Script.'); return; }
   var rows=META.map(function(m){
     var st=SMAP[m.key]||{name:m.key};
     var mine=ALL.filter(function(i){return i.key===m.key;});
     var inStock=mine.filter(function(i){return i.available;}).length;
     return {name:st.name||m.key, result:m.result, count:m.count,
-            stock:mine.length?inStock+' / '+mine.length:'—', detail:m.detail};
+            stock:mine.length?inStock+' / '+mine.length:'-', detail:m.detail};
   });
   var body=rows.map(function(r){
     var col=r.result==='ok'?'var(--sage)':'var(--red)';
@@ -2349,7 +2349,7 @@ function checkoutPlan(st, items){
     url: items[0] ? (items[0].aff||items[0].url) : addParams(base+'/',{ref:st.ref})};
 }
 function checkoutStore(key){
-  if(!isLoggedIn()) toast('One step first — we need an email to send your order details');
+  if(!isLoggedIn()) toast('One step first, we need an email to send your order details');
   requireLoginThen(function(){
     var st=SMAP[key]; if(!st) return;
     var items=itemsForStore(key); if(!items.length) return;
@@ -2464,7 +2464,7 @@ function renderCart(){
       ? '<div class="drest"><span>Then add at '+esc(st.name)+':</span>'+
         plan.rest.map(function(x){
           return '<a href="'+esc(x.aff||x.url||'#')+'" rel="noopener nofollow">'+
-                 esc(x.title)+(x.variant?' — '+esc(x.variant):'')+'</a>';
+                 esc(x.title)+(x.variant?', '+esc(x.variant):'')+'</a>';
         }).join('')+'</div>'
       : '';
 
@@ -2484,7 +2484,7 @@ function renderCart(){
 
   body.innerHTML=html+grand+
     (isLoggedIn()?'':'<p class="dlogin">A free sign-in is needed at checkout. '+
-      'No password — just an email, so your basket stays linked to you across stores.</p>')+
+      'No password, just an email, so your basket stays linked to you across stores.</p>')+
     '<p class="dfine">Totals are estimates. Each store shows final price, tax and shipping '+
     'at its own checkout. Mixed currencies are not converted.</p>'+
     '<button class="dclear" data-clearcart>Empty cart</button>';
@@ -2817,7 +2817,7 @@ function renderSpotlight(key){
           '<dt>Stock</dt><dd>'+(it.available?'In stock':'Out of stock')+'</dd></dl>'+
         (p.coupon?'<div class="sdeal">Code <b>'+esc(p.coupon)+'</b> at checkout</div>':'')+
       '</div><div class="backfoot">'+
-        '<button class="buy" type="button" data-sadd="'+ix+'">Add — '+money(p.now,cur)+'</button>'+
+        '<button class="buy" type="button" data-sadd="'+ix+'">Add, '+money(p.now,cur)+'</button>'+
         '<button class="turn-back" type="button">↺</button>'+
       '</div></div></div></article>';
   }).join('');
@@ -2832,13 +2832,13 @@ function renderSpotlight(key){
       '</div>'+
       (cfg.coupon&&cfg.off>0
         ? '<div class="sdeal">Prices shown include <b>'+Math.round(cfg.off*100)+
-          '% off</b> — enter <b>'+esc(cfg.coupon)+'</b> at checkout</div>':'')+
+          '% off</b>, enter <b>'+esc(cfg.coupon)+'</b> at checkout</div>':'')+
     '</header><div class="grid">'+cards+'</div>'+
     '<footer class="sfoot">'+
       '<button class="btn" data-addall="'+esc(key)+'">Add everything in stock to cart</button>'+
       '<button class="btn" data-storefilter="'+esc(key)+'">See '+esc(st.name)+' in the market</button>'+
       '<p>'+esc(cfg.note||'')+' Add what you want, then check out at '+esc(st.name)+
-      ' from your cart — it arrives filled. We earn a commission on purchases '+
+      ' from your cart, it arrives filled. We earn a commission on purchases '+
       'made through this page. It never changes your price.</p>'+
     '</footer></div>';
 }

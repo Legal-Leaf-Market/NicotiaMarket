@@ -92,7 +92,7 @@
     box.appendChild(node('p', 'cm-gate-h', 'Before you post'));
     box.appendChild(node('p', null,
       'This board is for adults who already use nicotine. Confirm you are 21 or over. ' +
-      'We do not check ID — we are asking you straight.'));
+      'We do not check ID, we are asking you straight.'));
     var row = node('div', 'cm-gate-acts');
     var yes = node('button', 'sh-btn sh-primary', 'I am 21 or over');
     var no  = node('button', 'sh-btn', 'I am not');
@@ -118,7 +118,7 @@
     var handle = node('input', 'cm-in');
     handle.type = 'text';
     handle.maxLength = 24;
-    handle.placeholder = 'A name (anything — it is not an account)';
+    handle.placeholder = 'A name (anything, it is not an account)';
     handle.value = localStorage.getItem(LS_HANDLE) || '';
 
     var title = null;
@@ -224,7 +224,7 @@
 
       if (!j.threads.length) {
         el.list.replaceChildren(node('p', 'cm-empty',
-          'Nothing here yet. Somebody has to go first — it might as well be you.'));
+          'Nothing here yet. Somebody has to go first, it might as well be you.'));
         return;
       }
 

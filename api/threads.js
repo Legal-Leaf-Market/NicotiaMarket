@@ -123,7 +123,7 @@ async function rateLimit(ip) {
   const key = 'rl:' + ip + ':' + win;
   const n = await kv('INCR', key);
   if (n === 1) await kv('EXPIRE', key, 120);
-  if (n > 4) return 'Slow down — a few posts a minute is plenty.';
+  if (n > 4) return 'Slow down. A few posts a minute is plenty.';
   const hKey = 'rl:' + ip + ':h' + Math.floor(Date.now() / 3600000);
   const h = await kv('INCR', hKey);
   if (h === 1) await kv('EXPIRE', hKey, 7200);
@@ -162,7 +162,7 @@ export default async function handler(req, res) {
       return send(res, 503, {
         ok: false,
         reason: 'no-store',
-        message: 'The Back Door is still being built. It is not open yet — ' +
+        message: 'The Back Door is still being built. It is not open yet, ' +
                  'check back shortly.',
         hint: 'operator: set KV_REST_API_URL and KV_REST_API_TOKEN to enable'
       });
@@ -382,11 +382,11 @@ async function hidePost(threadId, postId) {
    precise enough to tune against. */
 function heldMessage(reasons) {
   if (reasons.includes('payment') || reasons.includes('sale') || reasons.includes('meetup')) {
-    return 'Held for review. This board does not host sales, trades or meetups — ' +
+    return 'Held for review. This board does not host sales, trades or meetups, ' +
            'talk about anything else and it will go straight up.';
   }
   if (reasons.includes('email') || reasons.includes('phone') || reasons.includes('messenger')) {
-    return 'Held for review. Please do not post contact details — for your safety as ' +
+    return 'Held for review. Please do not post contact details, for your safety as ' +
            'much as anyone else’s.';
   }
   return 'Held for review. A human will look at it shortly.';

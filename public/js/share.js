@@ -26,7 +26,7 @@ window.NM_SHARE = (function () {
     title: 'Nicotia: A Word for the People',
     /* What actually lands in a post. Kept short enough to survive X's
        limit with the URL attached. */
-    text:  'Nicotia: A Word for the People. It’s a love story, really — ' +
+    text:  'Nicotia: A Word for the People. It’s a love story, really, ' +
            'four hundred years of people reaching for the same name. ' +
            'From Jean Nicot to your front door.',
     /* The longer version, for the platforms where you paste a caption
@@ -34,7 +34,7 @@ window.NM_SHARE = (function () {
        paste into Instagram and TikTok; they would be noise in a tweet. */
     caption: 'Nicotia: A Word for the People.\n\n' +
              'It’s a love story, really. Four hundred years of people reaching for the ' +
-             'same name — a French ambassador, a Swedish botanist, a Victorian poet, ' +
+             'same name, a French ambassador, a Swedish botanist, a Victorian poet, ' +
              'and a laboratory in Heidelberg.\n\n' +
              'Nicotia was what people called it long before chemistry called it nicotine. ' +
              'We took the name back.\n\n' +
@@ -81,12 +81,12 @@ window.NM_SHARE = (function () {
       title: 'The Word for Smoke Is the Word for Soul',
       media: '/assets/og-smoke.png',
       text:  'In Biblical Hebrew, breath, wind, spirit and soul are nearly the same ' +
-             'handful of words — and “hevel,” the word Ecclesiastes repeats, doesn’t ' +
+             'handful of words, and “hevel,” the word Ecclesiastes repeats, doesn’t ' +
              'mean vanity. It means vapor. Everything is vapor. Including you.',
       caption: 'The word for smoke is the word for soul.\n\n' +
                'In Biblical Hebrew, breath, wind, spirit and soul are nearly the same ' +
-               'handful of words. “Nefesh” — the word translated soul for four hundred ' +
-               'years — is rooted in the word for THROAT. They put the self at the place ' +
+               'handful of words. “Nefesh”, the word translated soul for four hundred ' +
+               'years, is rooted in the word for THROAT. They put the self at the place ' +
                'where the air goes through.\n\n' +
                '“Hevel,” the word Ecclesiastes repeats over and over, has been ' +
                'translated “vanity” since 1611. It actually means VAPOR. Everything is ' +
@@ -98,12 +98,12 @@ window.NM_SHARE = (function () {
                '#Nicotia #NicotiaMarket #hevel #Ecclesiastes #etymology #Hebrew #Sabbath',
       quotes: [
         { q: '“Hevel” doesn’t mean vanity. It means vapor. So Ecclesiastes isn’t saying ' +
-             'none of this matters — it’s saying everything is a breath you can see for ' +
+             'none of this matters. It’s saying everything is a breath you can see for ' +
              'a second. Including you.',
-          cite: 'Ecclesiastes 1:2 — havel havalim' },
+          cite: 'Ecclesiastes 1:2, havel havalim' },
         { q: '“God rested and caught His breath.”',
           cite: 'Robert Alter’s translation of Exodus 31:17' },
-        { q: 'The Hebrew word translated “soul” for four hundred years — nefesh — is ' +
+        { q: 'The Hebrew word translated “soul” for four hundred years, nefesh, is ' +
              'rooted in the word for THROAT. They located the self at the place where ' +
              'the air goes through.',
           cite: 'Biblical Hebrew, standard lexicography' },
@@ -111,10 +111,10 @@ window.NM_SHARE = (function () {
              'person. It is a day. The first holy thing in the book is a break.',
           cite: 'Genesis 2:3; Heschel, “The Sabbath” (1951)' },
         { q: 'The first person in the Bible to die is named Vapor. Abel, in Hebrew, is ' +
-             'Hevel — the same word Ecclesiastes repeats two hundred times.',
+             'Hevel, the same word Ecclesiastes repeats two hundred times.',
           cite: 'Genesis 4:2' },
         { q: 'For most of human history, smoke was how you talked to whatever was above ' +
-             'you. Not a side effect of worship — the medium of it. Smoke was the ' +
+             'you. Not a side effect of worship, the medium of it. Smoke was the ' +
              'visible part of the prayer.',
           cite: 'Psalm 141:2; incense across most traditions' },
         { q: '“If there aren’t cigarette butts in your parking lot, you’re not doing ' +
@@ -127,7 +127,7 @@ window.NM_SHARE = (function () {
       title: 'The Appetite Is Older Than the Word',
       media: '/assets/og-older.png',
       text:  'Our name is 190 years old. The molecule is about a hundred million. ' +
-             'The atoms are 13.8 billion — the hydrogen is from the Big Bang and the ' +
+             'The atoms are 13.8 billion. The hydrogen is from the Big Bang and the ' +
              'carbon and nitrogen were made inside stars. We named a relationship. ' +
              'We did not invent one.',
       caption: 'The appetite is older than the word.\n\n' +
@@ -137,7 +137,7 @@ window.NM_SHARE = (function () {
                'for them to land on.\n\n' +
                'The word “Nicotia” is 190 years old. The molecule is around a hundred ' +
                'million. The atoms are 13.8 billion.\n\n' +
-               'There’s also a serious scientific argument — Ed Hagen’s — that the ' +
+               'There’s also a serious scientific argument, Ed Hagen’s, that the ' +
                'mainstream “hijack” explanation quietly assumes a drug-free human past ' +
                'that never existed.\n\n' +
                'We named a relationship. We did not invent one.\n\n' +
@@ -168,11 +168,11 @@ window.NM_SHARE = (function () {
       title: 'Nicotine at Work',
       media: '/assets/og-work.png',
       text:  'Offices used to come with ashtrays. Sixty years of policy was aimed at ' +
-             'smoke, not nicotine — and now that the two have come apart, most ' +
+             'smoke, not nicotine, and now that the two have come apart, most ' +
              'workplace rules point at something that is no longer there.',
-      caption: 'Nicotine at Work — the history of the smoke break, and what replaced it.' +
+      caption: 'Nicotine at Work, the history of the smoke break, and what replaced it.' +
                '\n\nOffices used to come with ashtrays. Then sixty years of policy was ' +
-               'aimed at SMOKE — the shared air, the ashtrays, the indoor haze.\n\n' +
+               'aimed at SMOKE, the shared air, the ashtrays, the indoor haze.\n\n' +
                'Smoke and nicotine have now come apart. Most workplace rules are still ' +
                'pointing at something that isn’t there any more, and a lot of them have ' +
                'quietly stopped being about air quality at all.\n\n' +
@@ -180,7 +180,7 @@ window.NM_SHARE = (function () {
                'nicotiamarket.com/nicotine-at-work\n\nAdults 21+ only.\n\n' +
                '#Nicotia #NicotiaMarket #workplace #HR #smokebreak #policy',
       quotes: [
-        { q: 'Sixty years of workplace policy was aimed at SMOKE — the shared air, the ' +
+        { q: 'Sixty years of workplace policy was aimed at SMOKE, the shared air, the ' +
              'ashtrays, the haze. Smoke and nicotine have now come apart, and most of ' +
              'those rules are pointing at something that is no longer there.',
           cite: 'Nicotia Market' },
@@ -196,10 +196,10 @@ window.NM_SHARE = (function () {
       title: 'The Poets of Tobacco',
       media: '/assets/og-poets.png',
       text:  'In 1898 somebody published an entire anthology of tobacco poetry. Four ' +
-             'centuries of poets wrote love letters to this plant — and then it stopped.',
-      caption: 'The Poets of Tobacco — four centuries of verse about the leaf.\n\n' +
+             'centuries of poets wrote love letters to this plant, and then it stopped.',
+      caption: 'The Poets of Tobacco, four centuries of verse about the leaf.\n\n' +
                'In 1898 somebody published “Lyra Nicotiana,” a whole anthology of ' +
-               'tobacco poetry. Barclay, Rowlands, Holiday, Southey, Lowell — real ' +
+               'tobacco poetry. Barclay, Rowlands, Holiday, Southey, Lowell, real ' +
                'poets, writing real love poems to this plant, for four hundred years.\n\n' +
                'Somebody wrote an elegy for a used quid of tobacco in 1798 and it is ' +
                'genuinely good.\n\nAnd then it stopped.\n\n' +
@@ -208,14 +208,14 @@ window.NM_SHARE = (function () {
                '#Nicotia #NicotiaMarket #poetry #literature #tobaccohistory',
       quotes: [
         { q: 'In 1898 somebody published an entire anthology of tobacco poetry. Not a ' +
-             'pamphlet — an anthology. Four centuries of poets writing love letters to ' +
+             'pamphlet, an anthology. Four centuries of poets writing love letters to ' +
              'one plant.',
           cite: '“Lyra Nicotiana” (1898)' },
         { q: 'Somebody wrote an elegy for a used quid of tobacco in 1798, and it is ' +
              'genuinely good.',
           cite: 'Collected in “Lyra Nicotiana” (1898)' },
         { q: 'Poets wrote about this plant for four hundred years. Then, quite abruptly, ' +
-             'it stopped — and nobody has really written one since.',
+             'it stopped, and nobody has really written one since.',
           cite: 'Nicotia Market' }
       ]
     },
@@ -224,7 +224,7 @@ window.NM_SHARE = (function () {
       title: 'The Nicotia Market Library',
       media: '/assets/og-story.png',
       text:  'A price comparison site that writes. Etymology, evolution, Hebrew, ' +
-             'workplace policy and four centuries of tobacco verse — all of it checked ' +
+             'workplace policy and four centuries of tobacco verse, all of it checked ' +
              'before it was written.',
       caption: 'The Nicotia Market Library.\n\n' +
                'We are a price comparison site. We also write, and we check it before ' +
@@ -238,14 +238,14 @@ window.NM_SHARE = (function () {
     },
     '/': {
       url:   ORIGIN + '/',
-      title: 'Nicotia Market — every price, by the unit',
+      title: 'Nicotia Market, every price, by the unit',
       media: '/assets/og-default.png',
       text:  'Nicotine priced honestly: per pouch, per 1,000 puffs, per ml, per stick. ' +
-             'We hold no stock and sell nothing — we just show you the real number.',
-      caption: 'Nicotia Market — every price, by the unit.\n\n' +
+             'We hold no stock and sell nothing, we just show you the real number.',
+      caption: 'Nicotia Market, every price, by the unit.\n\n' +
                'Per pouch. Per 1,000 puffs. Per ml. Per stick.\n\n' +
                'Shelf prices hide the actual cost. A 30K disposable at $16.99 and a 60K ' +
-               'at $19.99 are not close — one is 42% cheaper per puff, and you cannot ' +
+               'at $19.99 are not close, one is 42% cheaper per puff, and you cannot ' +
                'see that on the shelf.\n\n' +
                'We hold no stock and we sell nothing. We just do the division.\n\n' +
                'From Jean Nicot to your front door.\n\n' +
@@ -255,7 +255,7 @@ window.NM_SHARE = (function () {
         { q: 'A 30K disposable at $16.99 and a 60K at $19.99 are not close. One is 42% ' +
              'cheaper per puff. You cannot see that on the shelf price, which is exactly ' +
              'why the shelf price is the one they show you.',
-          cite: 'Nicotia Market — priced per 1,000 puffs' },
+          cite: 'Nicotia Market, priced per 1,000 puffs' },
         { q: 'Per pouch. Per 1,000 puffs. Per ml. Per stick. Everything else is packaging.',
           cite: 'Nicotia Market' },
         { q: 'We hold no stock and we sell nothing. We just do the division.',
@@ -366,7 +366,7 @@ window.NM_SHARE = (function () {
      The X link carries quote + cite + URL because a stat with no source is
      how a true thing becomes an unbelievable one. */
   function quoteCard(o, item, i) {
-    var line = item.q + ' — ' + item.cite;
+    var line = item.q + ', ' + item.cite;
     var xurl = 'https://twitter.com/intent/tweet?text=' + enc(line) + '&url=' + enc(o.url);
     return '<figure class="sh-q" data-q="' + i + '">' +
              '<blockquote>' + esc(item.q) + '</blockquote>' +
@@ -435,7 +435,7 @@ window.NM_SHARE = (function () {
       if (what === 'quote') {
         var item = (o.quotes || [])[+b.getAttribute('data-i')];
         if (!item) return;
-        copy({ url: item.q + ' — ' + item.cite + '\n\n' + o.url })
+        copy({ url: item.q + ', ' + item.cite + '\n\n' + o.url })
           .then(function () { flash(b, 'Copied &#10003;'); })
           .catch(function () { flash(b, 'Could not copy'); });
         return;
@@ -530,7 +530,7 @@ window.NM_SHARE = (function () {
         elSrc.textContent = it.from + ' →';
         elSrc.setAttribute('href', it.path);
         elX.setAttribute('href', 'https://twitter.com/intent/tweet?text=' +
-          enc(it.q + ' — ' + it.cite) + '&url=' + enc(it.url));
+          enc(it.q + ', ' + it.cite) + '&url=' + enc(it.url));
         elDots.textContent = (i + 1) + ' / ' + items.length;
         requestAnimationFrame(function () { elQ.classList.add('is-in'); });
       });
@@ -548,7 +548,7 @@ window.NM_SHARE = (function () {
       else if (what === 'prev') { stop(); go(i - 1); }
       else if (what === 'copy') {
         var it = items[i];
-        copy({ url: it.q + ' — ' + it.cite + '\n\n' + it.url })
+        copy({ url: it.q + ', ' + it.cite + '\n\n' + it.url })
           .then(function () { flash(t, 'Copied &#10003;'); })
           .catch(function () { flash(t, 'Could not copy'); });
       }

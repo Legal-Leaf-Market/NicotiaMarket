@@ -2,7 +2,7 @@
   "name": "nicotia-market",
   "private": true,
   "version": "1.0.0",
-  "description": "Nicotia Market — static pages + serverless product scraper. Nicotine pouches, disposables, e-liquid and cigars priced by the unit.",
+  "description": "Nicotia Market, static pages + serverless product scraper. Nicotine pouches, disposables, e-liquid and cigars priced by the unit.",
   "type": "module",
   "scripts": {
     "dev": "node server.mjs",

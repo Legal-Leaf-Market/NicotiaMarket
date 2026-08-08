@@ -9,6 +9,9 @@
   "functions": {
     "api/products.js": { "maxDuration": 60 }
   },
+  "crons": [
+    { "path": "/api/products?refresh=1", "schedule": "0 6 * * *" }
+  ],
   "rewrites": [
     { "source": "/pouches",     "destination": "/" },
     { "source": "/disposables", "destination": "/" },

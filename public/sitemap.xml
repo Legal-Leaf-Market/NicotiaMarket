@@ -50,4 +50,11 @@
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
+  <!-- The only page here that is prose rather than pricing, and the only
+       one with a reason to be linked to from outside. -->
+  <url>
+    <loc>https://nicotiamarket.com/story</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
 </urlset>

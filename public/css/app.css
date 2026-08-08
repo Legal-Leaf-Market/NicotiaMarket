@@ -314,6 +314,13 @@ header.top{position:sticky;top:0;z-index:50;
   font-weight:600;font-size:1.05rem;letter-spacing:.02em;text-transform:none;
   margin-left:6px;padding-left:16px;border-left:1px solid var(--line);
   display:inline-flex;align-items:center}
+/* One divider for the whole gold run, not one before each link. The rule
+   keys off the first VISIBLE sibling rather than the first in the DOM:
+   #spotLink carries [hidden] until the catalogue proves that store has
+   stock, and a plain `+` would have handed its divider to nobody on every
+   cold load, since a hidden element is still a sibling. */
+.dept.ourstory:not([hidden]) ~ .dept.ourstory{
+  margin-left:0;padding-left:13px;border-left:0}
 .dept.ourstory:hover{color:var(--text)}
 .dept.ourstory[aria-current="page"]{border-bottom-color:var(--gold)}
 
@@ -393,9 +400,10 @@ header.top{position:sticky;top:0;z-index:50;
   .mb-acts a{flex:1}
 }
 
-.dept.spot{color:var(--ember);display:inline-flex;align-items:center;gap:6px}
-.dept.spot:hover{color:var(--gold)}
-.dept.spot[aria-current="page"]{border-bottom-color:var(--ember);color:var(--gold)}
+/* .dept.spot is gone. The spotlight link now wears .ourstory so it reads
+   as gold script with the rest of the non-shelf group. Its old ember
+   styling was the only thing using the class, and #spotLink is what the
+   JS targets, so nothing else referenced it. */
 @media(max-width:900px){.depts{top:auto;position:static}}
 
 /* ============================================================

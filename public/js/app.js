@@ -1679,6 +1679,66 @@ function railStep(dir){
   if(n) n.addEventListener('click',function(){ railStep(1); });
 })();
 
+/* ---- logo strip carousels: Shop by store / Shop by brand ----
+   The scrollbar under these was the ugliest thing on the page, so the
+   arrows replace it. Unlike #rail these strips are REBUILT on every
+   filter change, so the click handler is delegated on document and the
+   state is driven by a MutationObserver. Binding per button would either
+   die with the old nodes or stack a new listener on each render.
+
+   Deliberately not looping like #rail does: that works for an endless
+   deals carousel, but a brand list has a first and a last brand and
+   wrapping past Z back to A reads as a bug. */
+(function(){
+  var IDS=['storeLogos','brandLogos'];
+
+  function sync(box){
+    var wrap=box.parentElement;
+    if(!wrap||!wrap.classList.contains('lrwrap')) return;
+    var max=box.scrollWidth-box.clientWidth;
+    var scrollable=max>2,
+        canPrev=scrollable&&box.scrollLeft>2,
+        canNext=scrollable&&box.scrollLeft<max-2;
+    /* Fades double as the affordance now that the scrollbar is gone. */
+    wrap.classList.toggle('can-prev',canPrev);
+    wrap.classList.toggle('can-next',canNext);
+    var btns=document.querySelectorAll('.lrnav[data-lr="'+box.id+'"]');
+    for(var i=0;i<btns.length;i++){
+      var back=btns[i].getAttribute('data-dir')==='-1';
+      btns[i].hidden=!scrollable;
+      btns[i].disabled=back?!canPrev:!canNext;
+    }
+  }
+
+  function step(box,dir){
+    /* 80% of a screenful, so one column of context survives the jump and
+       the eye has something to anchor to on the other side. */
+    box.scrollBy({left:dir*Math.max(160,box.clientWidth*0.8),behavior:'smooth'});
+  }
+
+  document.addEventListener('click',function(e){
+    var t=e.target, b=(t&&t.closest)?t.closest('.lrnav'):null;
+    if(!b||b.disabled) return;
+    var box=document.getElementById(b.getAttribute('data-lr'));
+    if(box) step(box,parseInt(b.getAttribute('data-dir'),10));
+  });
+
+  IDS.forEach(function(id){
+    var box=document.getElementById(id); if(!box) return;
+    box.addEventListener('scroll',function(){ sync(box); },{passive:true});
+    if(window.MutationObserver)
+      new MutationObserver(function(){ sync(box); }).observe(box,{childList:true});
+    /* Logos arrive as images, so the strip's width changes after the
+       chips do. ResizeObserver catches that; the observers above do not. */
+    if(window.ResizeObserver) new ResizeObserver(function(){ sync(box); }).observe(box);
+    sync(box);
+  });
+
+  window.addEventListener('resize',function(){
+    IDS.forEach(function(id){ var b=document.getElementById(id); if(b) sync(b); });
+  },{passive:true});
+})();
+
 /* Rebuild everything that reflects what is still reachable.
 
    This used to repopulate four <select> elements too. They are gone:

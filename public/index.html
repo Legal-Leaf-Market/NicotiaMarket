@@ -265,14 +265,26 @@
        visible rather than hiding behind the Filters button. -->
   <section class="logorow" id="storeRow" hidden>
     <div class="lrhead"><h2>Shop by store</h2>
-      <button class="lrclear" id="clearStores" hidden>Show all</button></div>
-    <div class="lrscroll" id="storeLogos"></div>
+      <div class="lrctl">
+        <button class="lrclear" id="clearStores" hidden>Show all</button>
+        <button class="lrnav" type="button" data-lr="storeLogos" data-dir="-1"
+                aria-label="Scroll stores back">&#8249;</button>
+        <button class="lrnav" type="button" data-lr="storeLogos" data-dir="1"
+                aria-label="Scroll stores forward">&#8250;</button>
+      </div></div>
+    <div class="lrwrap"><div class="lrscroll" id="storeLogos"></div></div>
   </section>
 
   <section class="logorow" id="brandRow" hidden>
     <div class="lrhead"><h2>Shop by brand</h2><small id="brandNote"></small>
-      <button class="lrclear" id="clearBrands" hidden>Show all</button></div>
-    <div class="lrscroll" id="brandLogos"></div>
+      <div class="lrctl">
+        <button class="lrclear" id="clearBrands" hidden>Show all</button>
+        <button class="lrnav" type="button" data-lr="brandLogos" data-dir="-1"
+                aria-label="Scroll brands back">&#8249;</button>
+        <button class="lrnav" type="button" data-lr="brandLogos" data-dir="1"
+                aria-label="Scroll brands forward">&#8250;</button>
+      </div></div>
+    <div class="lrwrap"><div class="lrscroll" id="brandLogos"></div></div>
   </section>
 
   <!-- One line from anywhere in the library, rotating, each with its source

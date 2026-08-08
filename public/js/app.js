@@ -1692,6 +1692,25 @@ function railStep(dir){
   var p=document.getElementById('railPrev'), n=document.getElementById('railNext');
   if(p) p.addEventListener('click',function(){ railStep(-1); });
   if(n) n.addEventListener('click',function(){ railStep(1); });
+
+  /* Edge fades, now that the scrollbar is hidden. Both sides light up
+     together because this rail loops: there is no first or last card, so
+     dimming one would claim an end that is not there. Only the "does it
+     overflow at all" question matters, which is why this is one class
+     rather than the can-prev/can-next pair the logo strips use.
+     The rail is rebuilt on every shuffle and filter change, so this is
+     observed rather than called from renderRail(). */
+  var wrap=rail.parentElement;
+  if(wrap&&wrap.classList.contains('railwrap')){
+    var sync=function(){
+      wrap.classList.toggle('can-scroll', rail.scrollWidth-rail.clientWidth>2);
+    };
+    if(window.MutationObserver)
+      new MutationObserver(sync).observe(rail,{childList:true});
+    if(window.ResizeObserver) new ResizeObserver(sync).observe(rail);
+    window.addEventListener('resize',sync,{passive:true});
+    sync();
+  }
 })();
 
 /* ---- logo strip carousels: Shop by store / Shop by brand ----

@@ -591,12 +591,24 @@ header.top{position:sticky;top:0;z-index:50;
 .railshuf[hidden]{display:none}
 @media(max-width:480px){.railshuf span{display:none}}
 
+/* Scrollbar gone, same as the logo strips. The arrows and the fades are
+   the controls now. This rail LOOPS (renderRail duplicates the set and
+   railStep wraps at the halfway mark), so both fades stay lit whenever it
+   overflows: there is always more content in either direction, and
+   dimming one would tell the reader they had reached an end that does
+   not exist. */
+.railwrap{position:relative}
 .rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,1fr);gap:14px;
   align-items:stretch;
-  overflow-x:auto;padding-bottom:14px;scroll-snap-type:x proximity;scrollbar-width:thin}
-.rail::-webkit-scrollbar{height:5px}
-.rail::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
+  overflow-x:auto;padding-bottom:14px;scroll-snap-type:x proximity;
+  scrollbar-width:none;-ms-overflow-style:none}
+.rail::-webkit-scrollbar{display:none;width:0;height:0}
 .rail>*{scroll-snap-align:start}
+.railwrap::before,.railwrap::after{content:"";position:absolute;top:0;bottom:14px;
+  width:52px;pointer-events:none;opacity:0;transition:opacity .2s;z-index:1}
+.railwrap::before{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
+.railwrap::after{right:0;background:linear-gradient(270deg,var(--bg),transparent)}
+.railwrap.can-scroll::before,.railwrap.can-scroll::after{opacity:1}
 
 /* ============================================================
    LOGO STRIPS

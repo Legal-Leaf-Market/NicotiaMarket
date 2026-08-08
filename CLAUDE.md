@@ -202,6 +202,9 @@ visitor sees an empty Pouches shelf. Flip it once that gap is filled.
 | `AWIN_API_KEY` | **Required for `platform:'feedcsv'` stores.** One key covers every AWIN advertiser; each store then needs its own `feedId`. Without it those stores throw a clear error and fall through to their storefront-scrape fallback. |
 | `NM_CRM_WEBHOOK` | Forward `/api/subscribe` signups to an Apps Script `/exec` URL. |
 | `NM_EVENTS_WEBHOOK` | Forward `/api/track` events. |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | **Required for `/community`.** Upstash Redis over REST. `UPSTASH_REDIS_REST_URL` / `_TOKEN` are accepted as aliases. Without them every board route returns `ok:false, reason:'no-store'` and the page shows an honest "not connected yet" state. |
+| `NM_ADMIN_TOKEN` | **Required for `/moderation`.** Without it every `action=mod:*` route 403s, so the queue is unreachable rather than open. |
+| `NM_BLOCKLIST` | Optional, comma-separated. Extra terms that send a post to the hold queue. Deliberately not hardcoded so it can be tuned without a deploy. |
 
 Never commit secrets. `.env*` is gitignored; see `.env.example`.
 
@@ -235,7 +238,39 @@ No test suite, so verify by hand:
 
 ---
 
-## 11. Hard "do not" list
+## 11. The community — `/community` ("The Back Door")
+
+Public threads. `api/threads.js` + `public/community.html` + `public/js/community.js`,
+moderated from `public/moderation.html`.
+
+**Scope was chosen deliberately and narrowing it is not a limitation to "fix":**
+
+- **No accounts, no sign-up, no email, no passwords.** Identity is a handle you type,
+  kept in `localStorage` for convenience. The cheapest way to never leak personal data
+  is to never accept it.
+- **No DMs.** Everything is public.
+- **NO SALES, TRADES OR MEETUPS.** This is the load-bearing one. A board that lets
+  strangers arrange to ship each other nicotine is an unlicensed distribution channel
+  regardless of what the footer says — PACT Act and state law both apply. `HOLD_PATTERNS`
+  in `api/threads.js` auto-holds posts matching payment, sale, contact-detail and meetup
+  language. **Do not weaken those patterns.**
+
+Moderation, all four on by default: report button → `mod:reports`; auto-hide at
+`AUTOHIDE_REPORTS` (3); 21+ affirmation enforced **server-side**, not just in the UI;
+per-IP rate limits (4/min, 30/hr); blocklist + auto-hold queue.
+
+Deletion is a **tombstone**, not a splice — `LSET` keeps every other post's index stable
+so permalinks and reply counts don't shift under readers mid-thread.
+
+**Posts are rendered with `textContent`, never `innerHTML`**, and the API strips angle
+brackets on the way in. Two locks on the same door. On a board with no accounts a
+stored-XSS bug would be the whole ballgame — do not "simplify" this to `innerHTML`.
+
+`/community` and `/moderation` are both `noindex, nofollow`.
+
+---
+
+## 12. Hard "do not" list
 
 - Do NOT reintroduce a base64 engine blob (§5).
 - Do NOT hardcode routes in `server.mjs` — `vercel.json` only (§3).

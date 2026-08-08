@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moderation — Nicotia Market</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://nicotiamarket.com/moderation">
+<meta name="theme-color" content="#0b0f0d">
+<link rel="icon" href="/assets/mark.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Cormorant+Garamond:ital,wght@1,600&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<main class="shell story">
+  <a class="sbacklink" href="/community">&larr; The board</a>
+
+  <header class="st-hero">
+    <p class="eyebrow">Staff only</p>
+    <h1><span class="st-lead">the</span>moderation queue</h1>
+    <p class="st-standfirst">
+      Held posts and reports. The token is never stored anywhere on this page or in this
+      browser — it is typed, held in memory for the session, and sent as a header. Close
+      the tab and it is gone.
+    </p>
+  </header>
+
+  <section class="cm-wrap">
+    <form class="cm-form" id="modAuth">
+      <input class="cm-in" id="modToken" type="password" autocomplete="off"
+             placeholder="Admin token (NM_ADMIN_TOKEN)">
+      <div class="cm-form-acts">
+        <button class="sh-btn sh-primary" type="submit">Open the queue</button>
+        <span class="cm-note" id="modNote"></span>
+      </div>
+    </form>
+  </section>
+
+  <section class="cm-wrap" id="modHeldWrap" hidden>
+    <div class="cm-head">
+      <h2>Held for review (<span id="modHeldN">0</span>)</h2>
+      <button class="sh-btn" type="button" id="modRefresh">Refresh</button>
+    </div>
+    <div class="cm-list" id="modHeld"></div>
+  </section>
+
+  <section class="cm-wrap" id="modRepWrap" hidden>
+    <div class="cm-head">
+      <h2>Reports (<span id="modRepN">0</span>)</h2>
+      <button class="sh-btn" type="button" id="modClear">Clear all reports</button>
+    </div>
+    <div class="cm-list" id="modReports"></div>
+  </section>
+</main>
+
+<script>
+/* Token lives in a closure for the life of the tab. Deliberately NOT in
+   localStorage — a moderation token sitting in web storage on a machine
+   that also browses a public board is a bad trade for saving one typed
+   field. */
+(function () {
+  'use strict';
+  var TOKEN = '';
+  var $ = function (id) { return document.getElementById(id); };
+
+  function node(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function call(action, body) {
+    return fetch('/api/threads?action=' + action, {
+      method: body ? 'POST' : 'GET',
+      headers: Object.assign({ 'X-Admin-Token': TOKEN },
+                             body ? { 'Content-Type': 'application/json' } : {}),
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) { return r.json(); });
+  }
+
+  function load() {
+    call('mod:queue').then(function (j) {
+      if (!j.ok) {
+        $('modNote').className = 'cm-note is-bad';
+        $('modNote').textContent = j.message || j.error || 'Rejected.';
+        return;
+      }
+      $('modNote').textContent = '';
+      $('modHeldWrap').hidden = false;
+      $('modRepWrap').hidden = false;
+      renderHeld(j.held || []);
+      renderReports(j.reports || []);
+    });
+  }
+
+  function renderHeld(rows) {
+    $('modHeldN').textContent = rows.length;
+    if (!rows.length) {
+      $('modHeld').replaceChildren(node('p', 'cm-empty', 'Nothing held. Good.'));
+      return;
+    }
+    var frag = document.createDocumentFragment();
+    rows.forEach(function (p) {
+      var box = node('article', 'cm-post');
+      var head = node('div', 'cm-post-head');
+      head.appendChild(node('span', 'cm-handle', p.handle || 'anon'));
+      head.appendChild(node('span', 'cm-when', new Date(p.at).toLocaleString()));
+      (p.holdReasons || []).forEach(function (r) {
+        head.appendChild(node('span', 'cm-lock', r));
+      });
+      box.appendChild(head);
+
+      if (p.pendingThread) {
+        box.appendChild(node('p', 'cm-row-title', 'New thread: ' + p.pendingThread.title));
+      }
+      var body = node('div', 'cm-body');
+      body.appendChild(node('p', null, p.body));
+      box.appendChild(body);
+
+      var acts = node('div', 'cm-form-acts');
+      var ok = node('button', 'sh-btn sh-primary', 'Publish');
+      var no = node('button', 'sh-btn', 'Delete');
+      ok.type = no.type = 'button';
+      ok.addEventListener('click', function () {
+        ok.disabled = true;
+        call('mod:approve', { id: p.id }).then(load);
+      });
+      no.addEventListener('click', function () {
+        no.disabled = true;
+        call('mod:delete', { id: p.id, thread: p.thread }).then(load);
+      });
+      acts.appendChild(ok); acts.appendChild(no);
+      box.appendChild(acts);
+      frag.appendChild(box);
+    });
+    $('modHeld').replaceChildren(frag);
+  }
+
+  function renderReports(rows) {
+    $('modRepN').textContent = rows.length;
+    if (!rows.length) {
+      $('modReports').replaceChildren(node('p', 'cm-empty', 'No open reports.'));
+      return;
+    }
+    var frag = document.createDocumentFragment();
+    rows.forEach(function (r) {
+      var box = node('article', 'cm-post');
+      var head = node('div', 'cm-post-head');
+      head.appendChild(node('span', 'cm-handle', 'post ' + r.post));
+      head.appendChild(node('span', 'cm-when', new Date(r.at).toLocaleString()));
+      box.appendChild(head);
+      var body = node('div', 'cm-body');
+      body.appendChild(node('p', null, r.why || '(no reason given)'));
+      box.appendChild(body);
+
+      var acts = node('div', 'cm-form-acts');
+      var view = node('a', 'sh-btn', 'Open thread');
+      view.href = '/community#t=' + encodeURIComponent(r.thread);
+      view.target = '_blank';
+      var kill = node('button', 'sh-btn', 'Delete that post');
+      kill.type = 'button';
+      kill.addEventListener('click', function () {
+        kill.disabled = true;
+        call('mod:delete', { id: r.post, thread: r.thread }).then(load);
+      });
+      acts.appendChild(view); acts.appendChild(kill);
+      box.appendChild(acts);
+      frag.appendChild(box);
+    });
+    $('modReports').replaceChildren(frag);
+  }
+
+  $('modAuth').addEventListener('submit', function (e) {
+    e.preventDefault();
+    TOKEN = $('modToken').value.trim();
+    $('modToken').value = '';
+    if (!TOKEN) return;
+    $('modNote').className = 'cm-note';
+    $('modNote').textContent = 'Checking…';
+    load();
+  });
+  $('modRefresh').addEventListener('click', load);
+  $('modClear').addEventListener('click', function () {
+    call('mod:clearReports', {}).then(load);
+  });
+})();
+</script>
+</body>
+</html>

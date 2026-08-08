@@ -1294,6 +1294,134 @@ footer p{margin:0 0 9px;line-height:1.6}
 .sh-quiet{background:none}
 /* the Instagram and TikTok route: an image and some words, because neither
    can be posted to from a browser */
+/* ---- the three sites ----
+   Not a footer link farm. The claim being made is that these are three
+   branches of one habit, so they get equal weight in a row rather than
+   one host site plus two afterthoughts. Each card keeps its own hue so
+   the family reads as a family without any of them looking subordinate. */
+.trio{margin:52px 0 0;padding:30px 28px;border-radius:var(--r);
+  border:1px solid var(--line);background:rgba(255,255,255,.02)}
+.trio h2{font-family:var(--display);font-weight:900;letter-spacing:-.02em;
+  font-size:clamp(1.4rem,3.4vw,1.95rem);color:var(--text);margin:8px 0 12px}
+.trio .lede{color:var(--muted);font-size:1rem;line-height:1.7;margin:0 0 22px;
+  max-width:68ch}
+.trio .lede b{color:var(--text);font-weight:600}
+.trio-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
+.trio-card{display:block;text-decoration:none;padding:18px 18px 16px;
+  border-radius:var(--r-sm);border:1px solid var(--line);
+  background:rgba(0,0,0,.22);transition:border-color .16s,transform .16s}
+.trio-card:hover{transform:translateY(-2px)}
+.trio-card b{display:block;font-family:var(--display);font-weight:900;font-size:1.08rem;
+  letter-spacing:-.01em;margin-bottom:5px}
+.trio-card span{display:block;font-size:12.6px;line-height:1.58;color:var(--muted)}
+.trio-card em{display:block;margin-top:9px;font-family:var(--sans);font-size:11px;
+  font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-style:normal}
+.trio-nic b{color:var(--gold)}   .trio-nic{border-left:2px solid var(--gold)}
+.trio-nic em{color:var(--gold)}
+.trio-leg b{color:var(--sage)}   .trio-leg{border-left:2px solid var(--sage)}
+.trio-leg em{color:var(--sage)}
+.trio-leg:hover{border-color:var(--sage)}
+.trio-nic:hover{border-color:var(--gold)}
+.trio-herb b{color:#81b2ff}      .trio-herb{border-left:2px solid #81b2ff}
+.trio-herb em{color:#81b2ff}
+.trio-herb:hover{border-color:#81b2ff}
+.trio-fine{margin:18px 0 0;font-size:.85rem;line-height:1.6;color:var(--dim)}
+
+/* ============================================================
+   THE COMMUNITY — /community
+   Deliberately plainer than the articles. An old-school board should
+   look like a board: dense rows, readable body copy, no card shadows,
+   nothing that reads as "content marketing". The one piece of colour is
+   the per-handle dot, which is doing the job an avatar would do on a
+   site that had accounts.
+   ============================================================ */
+.rulesbox{margin:0 0 26px;padding:24px 26px;border-radius:var(--r);
+  border:1px solid rgba(239,83,80,.26);
+  background:linear-gradient(155deg,rgba(239,83,80,.08),rgba(11,15,13,0) 66%)}
+.rulesbox .eyebrow{color:var(--red)}
+.rules{margin:14px 0 0;padding-left:20px;display:grid;gap:11px}
+.rules li{color:var(--muted);font-size:1rem;line-height:1.66}
+.rules b{color:var(--text);font-weight:600}
+.rules-fine{margin:16px 0 0;font-size:.85rem;line-height:1.6;color:var(--dim)}
+.rules-fine a{color:var(--gold);text-decoration:none}
+.rules-fine a:hover{text-decoration:underline}
+
+.cm-state{margin:0 0 20px;padding:14px 18px;border-radius:var(--r-sm);
+  font-size:.95rem;line-height:1.6;border:1px solid var(--line);color:var(--muted)}
+.cm-state.is-warn{border-color:rgba(240,185,60,.4);color:var(--gold);
+  background:rgba(240,185,60,.06)}
+.cm-state.is-bad{border-color:rgba(239,83,80,.45);color:var(--red);
+  background:rgba(239,83,80,.06)}
+
+.cm-wrap{margin:0 0 40px}
+.cm-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;margin-bottom:16px}
+.cm-head h2{font-family:var(--display);font-weight:900;letter-spacing:-.02em;
+  font-size:1.5rem;color:var(--text);margin:0}
+.cm-headacts{display:flex;gap:8px}
+
+.cm-list{display:grid;gap:8px}
+.cm-row{display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;
+  cursor:pointer;padding:14px 16px;border-radius:var(--r-sm);
+  border:1px solid var(--line);background:rgba(255,255,255,.02);
+  transition:border-color .16s,background .16s}
+.cm-row:hover{border-color:var(--gold);background:rgba(240,185,60,.05)}
+.cm-dot{flex:none;width:9px;height:9px;border-radius:50%;margin-top:6px}
+.cm-row-main{flex:1;min-width:0;display:block}
+.cm-row-title{display:block;font-family:var(--sans);font-weight:600;font-size:1rem;
+  line-height:1.35;color:var(--text)}
+.cm-row-meta{display:block;margin-top:4px;font-family:var(--sans);font-size:12px;
+  color:var(--dim)}
+.cm-lock{flex:none;font-family:var(--sans);font-size:10px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--red);
+  border:1px solid rgba(239,83,80,.4);border-radius:999px;padding:3px 9px}
+.cm-empty{color:var(--dim);font-size:.98rem;line-height:1.6;padding:18px 2px;margin:0}
+
+.cm-ttitle{font-family:var(--display);font-weight:900;letter-spacing:-.02em;
+  font-size:clamp(1.4rem,3.4vw,2rem);line-height:1.18;color:var(--text);margin:0 0 20px}
+.cm-posts{display:grid;gap:2px;margin-bottom:24px}
+.cm-post{padding:16px 18px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:rgba(255,255,255,.015)}
+.cm-post.is-op{border-left:2px solid var(--gold)}
+.cm-post-head{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-bottom:10px}
+.cm-post-head .cm-dot{margin-top:0}
+.cm-handle{font-family:var(--sans);font-weight:600;font-size:13px;color:var(--text)}
+.cm-op{font-family:var(--sans);font-size:9.5px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--gold);border:1px solid rgba(240,185,60,.4);
+  border-radius:999px;padding:2px 7px}
+.cm-when,.cm-nth{font-family:var(--sans);font-size:11.5px;color:var(--dim)}
+.cm-nth{margin-left:auto}
+.cm-report{cursor:pointer;background:none;border:0;padding:0 0 0 4px;
+  font-family:var(--sans);font-size:11px;color:var(--dim);text-decoration:underline;
+  text-underline-offset:2px}
+.cm-report:hover{color:var(--red)}
+.cm-report.is-done{color:var(--sage);text-decoration:none}
+.cm-body p{margin:0 0 10px;color:var(--muted);font-size:1rem;line-height:1.66;
+  overflow-wrap:anywhere}
+.cm-body p:last-child{margin-bottom:0}
+.cm-deleted{margin:0;color:var(--dim);font-style:italic;font-size:.95rem}
+
+.cm-newwrap{margin-bottom:16px}
+.cm-form{display:grid;gap:10px;padding:18px;border-radius:var(--r-sm);
+  border:1px solid var(--line);background:rgba(255,255,255,.02)}
+.cm-in,.cm-ta{width:100%;font-family:var(--sans);font-size:.98rem;color:var(--text);
+  background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:11px 13px;line-height:1.55}
+.cm-ta{resize:vertical;min-height:96px}
+.cm-in:focus,.cm-ta:focus{outline:none;border-color:var(--gold)}
+.cm-in::placeholder,.cm-ta::placeholder{color:var(--dim)}
+.cm-form-acts{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cm-note{font-family:var(--sans);font-size:12.5px;color:var(--dim);line-height:1.5}
+.cm-note.is-held{color:var(--gold)}
+.cm-note.is-bad{color:var(--red)}
+
+.cm-gate{padding:20px 22px;border-radius:var(--r-sm);
+  border:1px solid rgba(240,185,60,.34);background:rgba(240,185,60,.05)}
+.cm-gate-h{margin:0 0 8px;font-family:var(--display);font-weight:900;font-size:1.1rem;
+  color:var(--gold)}
+.cm-gate p{margin:0 0 12px;color:var(--muted);font-size:.96rem;line-height:1.62}
+.cm-gate-acts{display:flex;gap:8px;flex-wrap:wrap}
+
 /* ---- THE LISTENING ROOM ----
    A facade player. NOTHING from YouTube is requested until the reader
    presses play — no iframe, no script, no cookie, no thumbnail hotlink.

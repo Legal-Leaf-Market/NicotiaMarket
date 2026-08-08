@@ -988,7 +988,10 @@ function locPillUI(){
 function setAgeCopy(){
   var a=minAge();
   var t=document.getElementById('gt'); if(t) t.innerHTML='Are you <em>'+a+'</em><br>or older?';
-  var y=document.getElementById('gyes'); if(y&&!y.disabled) y.textContent="Yes, I'm "+a+'+';
+  /* No !disabled guard here: on first open the button IS disabled until a
+     country/state is chosen, which froze this label at "Yes, I'm 18+" while
+     the headline above it already said 21 (US audit finding N1). */
+  var y=document.getElementById('gyes'); if(y) y.textContent="Yes, I'm "+a+'+';
   var s=document.getElementById('gsub');
   if(s) s.textContent='This site sells tobacco and vapour products for adults '+a+
     ' and over who already use them. It is not for anyone under '+a+
@@ -1488,21 +1491,74 @@ function renderSubnav(){
       if(counts[k]) live.push({key:k,dept:d,label:p[1],n:counts[k]});
     });
   });
-  if(live.length<2){ off(); return; }
 
+  /* THE COMBINED SHELF GETS THE BUSIEST TEN, NOT ALL OF THEM. Every
+     subcategory at once was 24 chips — an index, not a shortcut, and
+     nobody reads to the end of it. Ranked by count, then put back into
+     department order so the row still reads as shelves rather than a
+     leaderboard. */
+  var TOP=10;
+  if(F.dept==='all' && live.length>TOP){
+    live=live.slice().sort(function(a,b){ return b.n-a.n; }).slice(0,TOP)
+      .sort(function(a,b){
+        return DEPT_ORDER.indexOf(a.dept)-DEPT_ORDER.indexOf(b.dept) || b.n-a.n;
+      });
+  }
+
+  if(live.length>=2){ paintSubPills(nav,box,live); return; }
+
+  /* NOTHING TO FACET, SO FACET SOMETHING ELSE.
+     Pouches and Disposables each have exactly ONE reachable
+     subcategory from the US — the energy, lozenge and snus pouches all
+     come from EU stores that cannot ship there — so the row simply
+     vanished on the two shelves the front page is built around. A
+     single chip would have been worse than none: it filters to
+     everything already.
+     Brands are the real second axis on those shelves, so they take
+     over. F.brands is the SAME set the logo strip writes to, so the two
+     controls stay in step rather than disagreeing. */
+  var bc={};
+  PGROUPS.forEach(function(g){
+    if(!passes(g,'brand')) return;
+    if(!g.brand) return;
+    bc[g.brand]=(bc[g.brand]||0)+1;
+  });
+  var brands=Object.keys(bc).map(function(b){ return {brand:b,n:bc[b]}; })
+    .sort(function(a,b){ return b.n-a.n || a.brand.localeCompare(b.brand); })
+    .slice(0,14);
+  if(brands.length<2){ off(); return; }
+  paintBrandPills(nav,box,brands);
+}
+
+function paintSubPills(nav,box,live){
   var active=Object.keys(F.subs).length;
   nav.hidden=false;
   box.innerHTML=
     (active?'<button class="subchip sc-clear" data-subclear="1">&times; Clear '+
        active+'</button>':'')+
     live.map(function(x){
-      /* the department hue rides on each chip, which is what makes a flat
-         row of 27 readable — "Coils" and "Snus" are obviously different
+      /* the department hue rides on each chip, which is what makes a
+         mixed row readable — "Coils" and "Snus" are obviously different
          shelves at a glance rather than two similar words */
       return '<button class="subchip'+(F.subs[x.key]?' on':'')+
         '" data-sub="'+esc(x.key)+'" style="--sc:'+
         esc((DEPTS[x.dept]||{}).accent||'var(--gold)')+'">'+
         '<i class="scdot"></i>'+esc(x.label)+' <span>'+x.n+'</span></button>';
+    }).join('');
+}
+
+function paintBrandPills(nav,box,brands){
+  var active=Object.keys(F.brands).length;
+  var accent=(DEPTS[F.dept]||{}).accent||'var(--gold)';
+  nav.hidden=false;
+  box.innerHTML=
+    '<span class="scnote">Brand</span>'+
+    (active?'<button class="subchip sc-clear" data-brandclear="1">&times; Clear '+
+       active+'</button>':'')+
+    brands.map(function(x){
+      return '<button class="subchip'+(F.brands[x.brand]?' on':'')+
+        '" data-brandpill="'+esc(x.brand)+'" style="--sc:'+esc(accent)+'">'+
+        '<i class="scdot"></i>'+esc(x.brand)+' <span>'+x.n+'</span></button>';
     }).join('');
 }
 
@@ -2525,12 +2581,21 @@ document.getElementById('depts').addEventListener('click',function(e){
   var b=e.target.closest('.dept'); if(!b||b.tagName==='A') return;
   this.querySelectorAll('.dept').forEach(function(x){x.setAttribute('aria-pressed','false');});
   b.setAttribute('aria-pressed','true'); F.dept=b.getAttribute('data-dept');
-  /* keep only the subcategories that still belong to this shelf */
-  F.subs=pruneSubs(F.dept);
+  /* keep only the subcategories that still belong to this shelf; a brand
+     picked on another shelf would filter this one to nothing */
+  F.subs=pruneSubs(F.dept); F.brands={};
   leaveSpotlight(); pushDeptPath(); apply();});
 document.getElementById('subchips').addEventListener('click',function(e){
   var b=e.target.closest('.subchip'); if(!b) return;
   if(b.getAttribute('data-subclear')){ F.subs={}; apply(); return; }
+  if(b.getAttribute('data-brandclear')){ F.brands={}; apply(); return; }
+  /* brand pills write to the same set as the logo strip, so toggling one
+     here lights up the matching logo and vice versa */
+  var bp=b.getAttribute('data-brandpill');
+  if(bp){
+    if(F.brands[bp]) delete F.brands[bp]; else F.brands[bp]=1;
+    F.brand='all'; apply(); return;
+  }
   var k=b.getAttribute('data-sub'); if(!k) return;
   if(F.subs[k]) delete F.subs[k]; else F.subs[k]=1;   /* toggle, multi-select */
   apply();});

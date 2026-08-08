@@ -448,6 +448,15 @@ function classify(st, blob, name) {
      Title-only, and \bwraps?\b deliberately cannot match "wrapper",
      which is what every real cigar description calls its leaf. */
   if (/\b(wraps?|rolling papers?)\b/.test(n)) return 'gear'
+  /* CIGARETTE TUBES ARE GEAR, NOT CIGARS. "Sago Tubes Blue - King (84mm) /
+     200ct Carton" is an empty filter tube for make-your-own smokes: an
+     accessory, so a per-stick unit is as invented for it as per-stick was
+     for the $199 humidor. A bare "tube" cannot decide the shelf on its own
+     -- premium cigars ship in aluminum tubos -- so demand MYO evidence:
+     the text says cigarette/filter tubes, or the row is a 100-1000ct
+     carton, which no handmade cigar is. (Audit finding N2: the Cigars
+     shelf was mostly Sago / Hot Rod / Gambler tube cartons.) */
+  if (/\btubes?\b/.test(n) && (/\b(cigarette|filter)\s+tubes?\b/.test(t) || /\b\d{3,4}\s*ct\b|\bcartons?\b/.test(t))) return 'gear'
 
   if (/\b(cigarillos?|robustos?|churchill|maduro|belicoso|torpedo)\b/.test(t)) return 'cigar'
 
@@ -545,6 +554,7 @@ const SUBCATS = {
   ],
   gear: [
     ['wraps',     /\bwraps?\b|rolling papers?|\bcones?\b|\bblunt\b/],
+    ['tubes',     /\btubes?\b/],
     ['lighter',   /\blighters?\b|\btorch\b|butane|jet flame/],
     ['cutter',    /\bcutters?\b|\bpunch\b|guillotine|v-?cut\b/],
     ['humidor',   /humidor|humidif|boveda|hygrometer|\bcedar\b/],
@@ -1630,7 +1640,14 @@ export default async function handler(req, res) {
      of them eligible for the cheapest-per-unit badge. */
   const scraped = results.flatMap(r => r.items)
   const items = scraped.filter(i => !NONPRODUCT.test(
-    [i.title, i.variant].filter(Boolean).join(' ')))
+    [i.title, i.variant].filter(Boolean).join(' '))
+    /* Shopify duplication artifacts: duplicating a product names it
+       "<handle>-copy(-N)". RELX published one priced $99.99 flat across
+       every variant next to the real $4.30 listing, so the phantom row
+       both polluted per-pouch ranking and read as a 23x price spread on
+       the same product. A live "-copy" handle is a store-side mistake by
+       construction; drop it at the same gate as the other non-products. */
+    && !/-copy(?:-\d+)?$/.test(String(i.url || '').split('?')[0]))
   const dropped = scraped.length - items.length
 
   const meta = results.map(({ key, result, count, detail }) => ({ key, result, count, detail }))

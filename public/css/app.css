@@ -301,6 +301,9 @@ header.top{position:sticky;top:0;z-index:50;
 }
 .subchip.on span{color:var(--text);opacity:.7}
 .subchip.on .scdot{opacity:1;box-shadow:0 0 7px var(--sc)}
+/* names what the row is faceting when it is not subcategories */
+.scnote{flex:none;align-self:center;font-size:10px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--dim);padding-right:2px}
 /* clearing is an action, not a facet, so it does not carry a shelf hue */
 .subchip.sc-clear{border-color:rgba(239,83,80,.45);color:var(--red);font-weight:700}
 .subchip.sc-clear:hover{border-color:var(--red);color:var(--red)}

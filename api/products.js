@@ -114,6 +114,43 @@ export const STORES = [
     ref:'idtzhxpu', ships:['EU'], only:['DK'], perPack:20, platform:'shopify',
     currency:'DKK', from:'DK', days:'1–3 days', ageCheck:'id' },
 
+  /* BLACK BUFFALO — tobacco-LEAF-free, not nicotine-free.
+     ----------------------------------------------------------
+     The distinction matters more here than anywhere else in the
+     registry and the site must never blur it. Their core line is
+     made from barn-cured leafy greens plus PHARMACEUTICAL-GRADE
+     NICOTINE — no tobacco leaf, full nicotine. Their separate ZERO
+     line has no nicotine at all. The vendor tags every product
+     `Nicotine` or `Nicotine-Free` in its own feed, so we take that
+     from their metadata rather than inferring from the title —
+     "Wintergreen ZERO Pouches" is only nicotine-free because they
+     say so, not because of the word ZERO.
+
+     perPack is 16 because BLACK BUFFALO'S OWN FAQ says
+     "approximately 16", and it says approximately because the cans
+     are filled BY WEIGHT, NOT BY COUNT — an independent count found
+     14–18. So the per-pouch figure here is an estimate and the UI
+     must label it as one. Do not quietly harden this into an exact
+     number; that is the same class of error as the £0.003 phantom.
+
+     Policy read directly 2026-08-08: "only available in select
+     regions of the United States" — US only, and not even all of it,
+     though they publish no list of which regions. An age-verified
+     ACCOUNT is required before you can buy, age is re-checked at
+     checkout, and certain products/destinations additionally require
+     an Adult Signature on Delivery (21+). Strongest posture of any
+     store in this registry.
+
+     ref is EMPTY on purpose. They run a real affiliate programme on
+     Refersion (blackbuffalo.refersion.com, 10%). A personal
+     refer-a-friend code is a different instrument and does not belong
+     on a commercial comparison site — see the note in CLAUDE.md.
+     Until Refersion is approved these links pay nothing, exactly like
+     Nicokick's empty cjPid. */
+  { key:'blackbuffalo', name:'Black Buffalo', dept:'pouch', domain:'blackbuffalo.com',
+    ref:'', ships:['US'], perPack:16, perPackApprox:1, platform:'shopify',
+    currency:'USD', from:'US', days:'~6 days (USPS Ground Advantage)', ageCheck:'id' },
+
   /* --- disposables ---
      Wave Vape: GoAffPro 10%, shop id 4QTSbUnS3TvZ. Foger 35 + Geek Bar 5.
      WooCommerce 10.9.4 with the Store API open, so no scraping needed.
@@ -442,6 +479,16 @@ function classify(st, blob, name) {
      flat — a blunt tip priced "per pouch" OR "per stick" is an invented
      number either way. */
   if (/\b(blunt tips?|filter tips?|blunt wraps?|hemp wraps?|rolling papers?|cones?)\b/.test(t)) return 'gear'
+  /* BRANDED MERCH IS GEAR. Nearly every store sells a hoodie, and a
+     hoodie inherits the store's dept unless something stops it — which
+     on a pouch store means a $45 sweatshirt priced per pouch. Black
+     Buffalo alone ships 15 of these (hats, flask, sunglasses, tumbler),
+     and they carry an EMPTY product_type, so the vendor metadata cannot
+     rescue them either. Same defect that put a $199 humidor on the cigar
+     shelf at "$199.00 per stick" and created the gear dept.
+     Title-only (`n`), because a description mentioning a free t-shirt
+     promo must not move a can of pouches onto the gear shelf. */
+  if (/\b(hoodie|sweatshirt|t[- ]?shirt|tee shirt|long[- ]sleeved?|windbreaker|jacket|snapback|hats?|beanie|bandana|koozie|tumbler|flask|sunglasses|bottle opener|coaster|lanyard|keychain|sticker pack|decal)\b/.test(n)) return 'gear'
   /* A wrap or a paper is an accessory whatever the brand calls it —
      "Royal Blunts Strawberry Wraps" names no adjacent "blunt wrap", so
      the rule above misses it and it fell through to the cigar shelf.
@@ -579,7 +626,19 @@ function subclassify(dept, name) {
    them, including 258 copies of "RELX Shipping Protection". They carry
    prices, so they compete for the cheapest-per-unit badge, and they
    inflate every count on the page. */
-const NONPRODUCT = /shipping protection|shipping insurance|route protect|\bgift ?cards?\b|\begift\b|free gift|\bautoship\b|subscription plan|expired mystery|mystery box|\bdonation\b|^\s*select \d+ for/i
+/* Black Buffalo's feed carries 36 per-state EXCISE TAX line items and a
+   rewards coupon listed at $20.00 — all priced, all therefore eligible for
+   the cheapest-per-unit badge, none of them a product. Same failure mode as
+   the 258 repeated RELX shipping-protection rows. */
+/* Some junk cannot be caught by title at all. Black Buffalo files 42 rows
+   as product_type "Fee" — 36 named "<State> Excise Tax" and 6 named only
+   "California SET", "Indiana SET - Pouches" and so on, where SET is State
+   Excise Tax. No title regex can distinguish "Indiana SET - Pouches" from
+   a product without also eating real ones, but the vendor already told us
+   what it is. Type-first, exactly like classify(). */
+const NONPRODUCT_TYPE = /^(fee|tax|shipping|insurance)$/i
+
+const NONPRODUCT = /shipping protection|shipping insurance|route protect|\bgift ?cards?\b|\begift\b|free gift|\bautoship\b|subscription plan|expired mystery|mystery box|\bdonation\b|^\s*select \d+ for|\bexcise tax\b|rewards coupon|\d+-off\b/i
 
 function cleanDesc(html) {
   if (!html) return ''
@@ -675,6 +734,16 @@ function row(st, o) {
     compareAt: o.compareAt ? String(o.compareAt) : undefined,
     oos: o.available === false ? 1 : undefined,     // in stock is the norm
     tobacco: isTobaccoSnus(blob) ? 1 : undefined,
+    /* Shopify's product_type, kept verbatim. NOT folded into `blob` — the
+       recurring defect in this file is text rules reading a field that
+       only looks like the right one, so this stays available for explicit
+       decisions and out of the fuzzy matching. */
+    ptype: o.ptype || undefined,
+    /* Nicotine-free on the VENDOR's authority, never on the title's.
+       "Wintergreen ZERO Pouches" is nicotine-free because Black Buffalo
+       tags it Nicotine-Free, not because it says ZERO — plenty of brands
+       use ZERO for zero sugar, zero tobacco or a flavour name. */
+    nic0: /nicotine[\s-]?free/i.test(o.ptype || '') ? 1 : undefined,
     image: sizeImage(o.image) || undefined,
     url: o.url || '',
     cur: cur === 'USD' ? undefined : cur,           // USD is the norm
@@ -909,6 +978,7 @@ async function shopifyProducts(st) {
       for (const v of vts) {
         out.push(row(st, {
           brand: brandFrom(st, pr.vendor, pr.title), title: pr.title, variant: v.title,
+          ptype: pr.product_type,
           tags: Array.isArray(pr.tags) ? pr.tags.join(' ') : pr.tags,
           price: v.price, compareAt: v.compare_at_price, currency,
           available: v.available !== false, image: img, url,
@@ -933,6 +1003,7 @@ async function shopifyCollection(st) {
     for (const v of (pr.variants && pr.variants.length ? pr.variants : [{}])) {
       out.push(row(st, {
         brand: brandFrom(st, pr.vendor, pr.title), title: pr.title, variant: v.title,
+        ptype: pr.product_type,
         tags: Array.isArray(pr.tags) ? pr.tags.join(' ') : pr.tags,
         price: v.price, compareAt: v.compare_at_price, currency,
         available: v.available !== false, image: img, url,
@@ -1648,7 +1719,8 @@ export default async function handler(req, res) {
      protection line repeated, all of them carrying a price and so all
      of them eligible for the cheapest-per-unit badge. */
   const scraped = results.flatMap(r => r.items)
-  const items = scraped.filter(i => !NONPRODUCT.test(
+  const items = scraped.filter(i => !NONPRODUCT_TYPE.test(i.ptype || '')
+    && !NONPRODUCT.test(
     [i.title, i.variant].filter(Boolean).join(' '))
     /* Shopify duplication artifacts: duplicating a product names it
        "<handle>-copy(-N)". RELX published one priced $99.99 flat across

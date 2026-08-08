@@ -74,6 +74,13 @@
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
+  <!-- A brand shelf rather than prose, but it is the only page on the site
+       that answers "what actually IS this brand", so it earns a listing. -->
+  <url>
+    <loc>https://nicotiamarket.com/black-buffalo</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
   <url>
     <loc>https://nicotiamarket.com/older-than-the-word</loc>
     <changefreq>monthly</changefreq>

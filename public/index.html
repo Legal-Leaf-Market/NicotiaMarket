@@ -336,6 +336,10 @@
   <div class="sisters">
     <h4>Our story</h4>
     <a href="/story">Where the name comes from<span>Nicot, Linnaeus, Nicotia, nicotine</span></a>
+    <!-- compact: one-tap share plus copy, no network buttons. The full set
+         lives on /story, where somebody has just read the thing. -->
+    <p class="fshare-note">Nicotia: A Word for the People. <b>Get the word out.</b></p>
+    <div id="shareFooter"></div>
   </div>
   <div class="sisters">
     <h4>Get the app</h4>
@@ -397,7 +401,11 @@
 <!-- before app.js: maybeOfferInstall() reads NM_INSTALL for the
      per-browser wording, and /android loads this same file -->
 <script src="/js/install.js"></script>
+<script src="/js/share.js"></script>
 <script src="/js/app.js"></script>
+<script>
+  if (window.NM_SHARE) NM_SHARE.mount('shareFooter', { compact: true });
+</script>
 
 <!-- VERCEL WEB ANALYTICS.
      Vercel's dashboard hands out `import { Analytics } from

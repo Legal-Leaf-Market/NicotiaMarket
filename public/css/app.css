@@ -979,6 +979,24 @@ footer p{margin:0 0 9px;line-height:1.6}
 .st-lead{display:block;font-family:var(--script);font-style:italic;font-weight:600;
   font-size:clamp(1.2rem,3.2vw,2rem);color:var(--ember);line-height:1;
   margin-bottom:-.08em;-webkit-text-fill-color:var(--ember)}
+/* THE TAGLINE, WITH THE ACCENT. Cormorant Garamond italic is the closest
+   thing in the stack to a French bookplate, and it is already a house
+   face so this borrows nothing new. The English line leads; the French
+   sits under it smaller and dimmer, because it is a flourish rather than
+   a translation anyone needs. */
+.st-tagline{position:relative;z-index:2;margin:20px 0 0;text-align:center}
+.st-tag-en{display:block;font-family:var(--script);font-style:italic;font-weight:600;
+  font-size:clamp(1.15rem,2.9vw,1.7rem);line-height:1.25;color:var(--gold);
+  letter-spacing:.01em;text-shadow:0 2px 20px rgba(240,185,60,.22)}
+.st-tag-fr{display:block;margin-top:7px;font-family:var(--script);font-style:italic;
+  font-size:clamp(.86rem,1.9vw,1.02rem);color:var(--ember);opacity:.78;
+  letter-spacing:.03em}
+/* a hairline rule either side, the way a frontispiece would set it */
+.st-tagline::before,.st-tagline::after{content:"";display:block;width:54px;height:1px;
+  margin:0 auto;background:linear-gradient(90deg,transparent,var(--ember),transparent)}
+.st-tagline::before{margin-bottom:16px}
+.st-tagline::after{margin-top:16px}
+
 .st-standfirst{position:relative;z-index:2;max-width:60ch;margin:22px auto 0;
   color:var(--muted);font-size:1.06rem;line-height:1.65}
 .st-standfirst em{color:var(--gold);font-style:italic;font-family:var(--script);

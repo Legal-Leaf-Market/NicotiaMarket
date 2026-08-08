@@ -772,7 +772,15 @@ function buildGroups(items){
     /* the dropdown label: the store's own option name when it has one,
        otherwise whatever distinguishes this title from its siblings */
     var flav=it.variant || flavourOf(brand,it.title) || it.title || '—';
-    if(!brand){ brand=flav; flav='—'; }
+    /* WITH NO BRAND, FALL BACK TO THE TITLE — NOT THE VARIANT.
+       This used to take `flav`, which is the variant when the store
+       supplies one, so a row with no brand was labelled "20MG",
+       "0.8ohm" or "Blue Razz Ice". Those are specs and flavours, and
+       they went on to fill the brand pills and the logo strip. The
+       product's own title is at least a truthful name for itself.
+       Grouping is unaffected: groupKeyFor() already falls back to the
+       title for a brandless row. */
+    if(!brand){ brand=it.title||flav; flav=it.variant||'—'; }
     var dept=deptOf(it);
     var gid=groupKeyFor(it);
     var g=map[gid]||(map[gid]={gid:gid, key:it.key, dept:dept, brand:brand,
@@ -1523,9 +1531,15 @@ function renderSubnav(){
     if(!g.brand) return;
     bc[g.brand]=(bc[g.brand]||0)+1;
   });
-  var brands=Object.keys(bc).map(function(b){ return {brand:b,n:bc[b]}; })
-    .sort(function(a,b){ return b.n-a.n || a.brand.localeCompare(b.brand); })
-    .slice(0,14);
+  /* A brand with one product is not a facet — it is that product wearing
+     a pill. Requiring two also keeps out the residue of brandless rows,
+     which fall back to their own title and so are unique by
+     construction. Falls back to showing singles only if nothing else
+     qualifies, so a genuinely tiny shelf still gets a row. */
+  var all=Object.keys(bc).map(function(b){ return {brand:b,n:bc[b]}; })
+    .sort(function(a,b){ return b.n-a.n || a.brand.localeCompare(b.brand); });
+  var real=all.filter(function(x){ return x.n>1; });
+  var brands=(real.length>=2?real:all).slice(0,14);
   if(brands.length<2){ off(); return; }
   paintBrandPills(nav,box,brands);
 }

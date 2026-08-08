@@ -204,8 +204,12 @@ export const STORES = [
      check at the door, ships from Las Vegas to the 50 states "where
      deliverable", military/APO excluded. Matches PACT Act expectations,
      though the excluded states are not named. */
+  /* checkoutPath verified live 2026-08-08: /checkout/?add-to-cart=
+     adds the line and renders their checkout. Their cart is at the
+     default /cart/, also verified. */
   { key:'eightvape', name:'EightVape', dept:'disposable', domain:'eightvape.com',
     ref:'', ships:['US'], guess:1, platform:'woocommerce', awin:86487,
+    checkoutPath:'/checkout/',
     from:'US', days:'3–8 days', ageCheck:'signature',
     cats:['disposable-vape','kits','vape-mods','vape-pods','vape-tanks',
           'vape-coils','vape-accessories','juice','nicotine-pouch',

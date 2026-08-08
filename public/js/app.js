@@ -174,7 +174,7 @@ var STORES = [
    ref:'nicotinebaby',ships:['US'],platform:'woocommerce',cartPath:'/cart-2/',
    checkoutPath:'/checkout/',shipFlat:5.99,shipFree:55,from:'US',days:'3–7 days',ageCheck:'id'},
   {key:'eightvape',name:'EightVape',dept:'disposable',domain:'eightvape.com',
-   ref:'',ships:['US'],guess:1,platform:'woocommerce',
+   ref:'',ships:['US'],guess:1,platform:'woocommerce',checkoutPath:'/checkout/',
    from:'US',days:'3–8 days',ageCheck:'signature'},
 
   /* --- devices --- */

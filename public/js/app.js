@@ -16,9 +16,24 @@ var SHOW_ALL = PREVIEW_MODE;
    blocked, so the layered approach covers both hosting setups. */
 var MEM={};
 function store_(k,v){
-  try{ var d=new Date(); d.setTime(d.getTime()+30*864e5);
-       document.cookie=k+'='+encodeURIComponent(v)+';expires='+d.toUTCString()+
-                       ';path=/;SameSite=Lax'; }catch(e){}
+  /* A browser cookie holds ~4KB of NAME+VALUE, and the write is
+     silently IGNORED past that — no throw, nothing. A cart of five or
+     six lines (titles + image URLs) URI-encodes past the limit, so the
+     cookie froze at the last state that fit while localStorage kept
+     the real one — and read_() below prefers the cookie, so every page
+     load REVERTED the cart to that stale snapshot. That is how "add to
+     cart" could look like it only ever kept the first few items.
+     Over the limit: expire the cookie so localStorage speaks; the
+     mirror only exists while it actually fits. */
+  var enc=encodeURIComponent(v);
+  try{
+    if(k.length+enc.length<3500){
+      var d=new Date(); d.setTime(d.getTime()+30*864e5);
+      document.cookie=k+'='+enc+';expires='+d.toUTCString()+';path=/;SameSite=Lax';
+    }else{
+      document.cookie=k+'=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+    }
+  }catch(e){}
   try{ localStorage.setItem(k,v); }catch(e){}
   MEM[k]=v;
 }

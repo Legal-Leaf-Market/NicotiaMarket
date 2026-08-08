@@ -535,7 +535,11 @@ var SEED = [];   /* run exportSeed() in Apps Script and paste here */
    ============================================================ */
 var SPOTLIGHT = {
   nicokick: {
-    eyebrow : 'US nicotine pouches',
+    /* Eyebrow names the STORE. It read "US nicotine pouches", which made
+       this look like the site's complete US pouch shelf. It is one
+       store's range, and other stores in the registry carry US pouches
+       that never appear on this page. */
+    eyebrow : 'Store spotlight · Nicokick',
     headline: 'Every pouch America’s actually buying',
     blurb   : 'ZYN, on!, VELO and Rogue are owned by Swedish Match, Altria, BAT '+
               'and Turning Point, and none of them sell to you directly. Nicokick '+

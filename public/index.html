@@ -271,6 +271,34 @@
     <span class="sb-go">Read it &rarr;</span>
   </a>
 
+  <!-- The manifesto. Deliberately the second band and not the first: the
+       story band explains who we are, this one explains why we bothered.
+       The listen link is outbound to work we neither own nor host — it is
+       nofollow and it does not autoplay, because autoplaying somebody
+       else's copyrighted track on a storefront is two bad ideas at once. -->
+  <section class="manifestoband" aria-label="Our manifesto">
+    <span class="mb-copy">
+      <span class="mb-eyebrow">The manifesto</span>
+      <span class="mb-tag">Everything is vapor. <em>Including you.</em></span>
+      <span class="mb-sub">In Biblical Hebrew, <b>breath</b>, <b>wind</b>, <b>spirit</b> and
+        <b>soul</b> are nearly the same handful of words — and <i>hevel</i>, the word
+        Ecclesiastes repeats over and over, does not mean vanity. It means <b>vapor</b>.
+        The first thing scripture ever calls holy is not a temple. It is a <b>break</b>.
+        Our name is 190 years old; the atoms are 13.8 billion.</span>
+    </span>
+    <span class="mb-acts">
+      <a class="mb-read" href="/word-for-smoke">Read the manifesto &rarr;</a>
+      <a class="mb-listen" href="https://www.last.fm/music/Gungor/_/Vapor"
+         rel="noopener nofollow" target="_blank">&#9834; Gungor — <i>Vapor</i></a>
+    </span>
+  </section>
+
+  <!-- One line from anywhere in the library, rotating, each with its source
+       and a link back to the piece. Built by share.js so the carousel and
+       the share buttons can never quote the site differently. Empty until
+       JS runs, and it removes itself if share.js fails to load. -->
+  <div id="quoteCarousel"></div>
+
   <div class="subbar">
     <span class="cnt" id="rcount">&nbsp;</span>
     <div class="meta">
@@ -336,6 +364,8 @@
   <div class="sisters">
     <h4>The library</h4>
     <a href="/story">Nicotia: A Word for the People<span>Where the name comes from</span></a>
+    <a href="/word-for-smoke">The Word for Smoke Is the Word for Soul<span>Breath, vapor and the seventh day</span></a>
+    <a href="/older-than-the-word">The Appetite Is Older Than the Word<span>What evolution says about why we reach for this</span></a>
     <a href="/nicotine-at-work">Nicotine at Work<span>The smoke break, and what replaced it</span></a>
     <a href="/poets-of-tobacco">The Poets of Tobacco<span>Four centuries of verse, and our anthem</span></a>
     <a href="/library">Everything we've written<span>The library</span></a>
@@ -407,7 +437,10 @@
 <script src="/js/share.js"></script>
 <script src="/js/app.js"></script>
 <script>
-  if (window.NM_SHARE) NM_SHARE.mount('shareFooter', { compact: true });
+  if (window.NM_SHARE) {
+    NM_SHARE.mount('shareFooter', { compact: true });
+    NM_SHARE.carousel('quoteCarousel');
+  }
 </script>
 
 <!-- VERCEL WEB ANALYTICS.

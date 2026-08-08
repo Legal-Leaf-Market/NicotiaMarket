@@ -1294,6 +1294,63 @@ footer p{margin:0 0 9px;line-height:1.6}
 .sh-quiet{background:none}
 /* the Instagram and TikTok route: an image and some words, because neither
    can be posted to from a browser */
+/* ============================================================
+   BRAND CATALOGUE — /black-buffalo
+   The split panel at the top is the whole reason this page exists:
+   tobacco-leaf-free is NOT nicotine-free, and the two lines must never
+   be able to blur into each other visually. Red for the nicotine line,
+   green for ZERO, and the same two colours repeat on every card badge
+   so a reader skimming the grid cannot lose track of which is which.
+   ============================================================ */
+.bb-split{display:grid;gap:12px;margin:0 0 30px;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.bb-half{padding:22px 22px 20px;border-radius:var(--r);border:1px solid var(--line)}
+.bb-half h2{font-family:var(--display);font-weight:900;letter-spacing:-.02em;
+  font-size:1.3rem;margin:6px 0 10px}
+.bb-half p{margin:0;color:var(--muted);font-size:.97rem;line-height:1.68}
+.bb-half b{color:var(--text);font-weight:600}
+.bb-kind{margin:0;font-family:var(--sans);font-size:9.5px;font-weight:700;
+  letter-spacing:.24em;text-transform:uppercase}
+.bb-nic{border-color:rgba(239,83,80,.34);
+  background:linear-gradient(155deg,rgba(239,83,80,.09),rgba(11,15,13,0) 68%)}
+.bb-nic .bb-kind{color:var(--red)} .bb-nic h2{color:var(--red)}
+.bb-zero{border-color:rgba(74,222,128,.34);
+  background:linear-gradient(155deg,rgba(74,222,128,.09),rgba(11,15,13,0) 68%)}
+.bb-zero .bb-kind{color:var(--sage)} .bb-zero h2{color:var(--sage)}
+
+.sh-btn.is-on{border-color:var(--gold);color:var(--gold);
+  background:rgba(240,185,60,.1)}
+
+.bb-grid{display:grid;gap:12px;
+  grid-template-columns:repeat(auto-fill,minmax(216px,1fr))}
+/* Cards are a flex column with the link pinned to the bottom, so a row of
+   them lines up regardless of how long the titles run. Same reason the
+   main grid equalises card heights. */
+.bb-card{display:flex;flex-direction:column;border:1px solid var(--line);
+  border-radius:var(--r-sm);overflow:hidden;background:rgba(255,255,255,.02);
+  transition:border-color .16s,transform .16s}
+.bb-card:hover{transform:translateY(-2px);border-color:var(--gold)}
+.bb-card.is-zero:hover{border-color:var(--sage)}
+.bb-img{width:100%;aspect-ratio:1/1;object-fit:cover;background:rgba(0,0,0,.3);
+  display:block}
+.bb-body{flex:1;display:flex;flex-direction:column;padding:13px 14px 14px;gap:7px}
+.bb-tag{align-self:flex-start;font-family:var(--sans);font-size:9.5px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;border-radius:999px;padding:3px 9px}
+.bb-tag.is-nic{color:var(--red);border:1px solid rgba(239,83,80,.4);
+  background:rgba(239,83,80,.07)}
+.bb-tag.is-zero{color:var(--sage);border:1px solid rgba(74,222,128,.4);
+  background:rgba(74,222,128,.07)}
+.bb-title{margin:0;font-family:var(--sans);font-weight:600;font-size:.95rem;
+  line-height:1.35;color:var(--text)}
+.bb-price{margin:0;font-family:var(--display);font-weight:900;font-size:1.32rem;
+  letter-spacing:-.02em;color:var(--gold)}
+.bb-unit{margin:0;font-family:var(--sans);font-size:11.5px;line-height:1.5;
+  color:var(--dim)}
+.bb-go{margin-top:auto;padding-top:9px;font-family:var(--sans);font-weight:600;
+  font-size:12px;color:var(--gold);text-decoration:none}
+.bb-go:hover{text-decoration:underline}
+.bb-card.is-zero .bb-price,.bb-card.is-zero .bb-go{color:var(--sage)}
+
 /* ---- the three sites ----
    Not a footer link farm. The claim being made is that these are three
    branches of one habit, so they get equal weight in a row rather than

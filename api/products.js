@@ -40,13 +40,56 @@ const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' +
                  signature adult signature required at the door
                  dob       self-declared date of birth
                  none      nothing published
+                 unknown   NOT ESTABLISHED — their policy has not been
+                           read. Renders "Age check unverified" in the
+                           cart, which is a different claim from `none`
+                           and must not be rounded to it.
                Surfaced in the cart. A shopper handing money to ten
                different vendors should be told which of them actually
                check, rather than being shown ten identical Buy buttons.
 
    `ships`, `only`, `from`, `days` and `ageCheck` below were read off
-   each vendor's own published policy in Aug 2026. Re-check quarterly.
+   each vendor's own published policy in Aug 2026 — EXCEPT on the two
+   Impact stores, which carry guess:1 and ageCheck:'unknown' because
+   neither policy page could be opened. Re-check quarterly.
    ============================================================ */
+
+/* ============================================================
+   IMPACT TRACKING LINKS — PASTE THEM HERE, NOTHING ELSE TO EDIT
+   ------------------------------------------------------------
+   Both Impact stores read their link out of this block, so this is
+   the one place to touch. Copy the WHOLE link out of the Impact
+   dashboard, exactly as it gives it to you:
+
+     https://<vanity>.pxf.io/c/<partner>/<ad>/<campaign>
+
+   Nothing is composed from parts and nothing is appended by hand —
+   affTemplate() adds `?subId1=nicotia&u=<destination>` itself, and a
+   `?ref=` on top would be a second, conflicting attribution.
+
+   A pasted link may carry its own query string (the dashboard's
+   deep-link generator adds one); it is stripped and rebuilt, so
+   pasting either form works. What is NOT accepted is anything that
+   is not an Impact click URL — a plain merchant link, a shortened
+   link, a half-copied one. Those are refused rather than wrapped,
+   because a redirect we did not intend sends shoppers somewhere we
+   did not choose AND pays nothing.
+
+   TO CHECK A PASTE LANDED: `GET /api/products?debug`. An unattributed
+   store shouts in capitals there and names which of the two problems
+   it has — nothing pasted, or pasted and unusable. Silence is success.
+
+   The API-DOWN path is separate and stays unattributed either way:
+   app.js's fallback registry carries no `click`, exactly as it carries
+   no CJ ids for Nicokick today. If you want that path tracked too,
+   mirror the finished template into the fallback entries — but it is a
+   copy, and copies rot, so the note there says so.
+   ============================================================ */
+const IMPACT = {
+  gotpouches: '',   /* programme 54165 — 15% */
+  vapecouk:   '',   /* programme 30370 — 4%, UK */
+}
+
 export const STORES = [
   /* --- pouches & snus --- */
   /* `currency` pins what the store actually charges in. It is fetched
@@ -202,7 +245,7 @@ export const STORES = [
      both "free delivery" and free shipping over $150; a wrong
      estimate in the cart is worse than none. */
   { key:'gotpouches', name:'GotPouches', dept:'pouch', domain:'gotpouches.com',
-    network:'impact', impact:'', ref:'',
+    network:'impact', impact:IMPACT.gotpouches, ref:'',
     ships:['US'], guess:1, perPack:15, platform:'shopify',
     currency:'USD', from:'US', days:'1–3 days', ageCheck:'unknown' },
 
@@ -366,7 +409,7 @@ export const STORES = [
      vendor does at ITS checkout. perPack 20 is the EU/UK can count
      the other pouch stores use. */
   { key:'vapecouk', name:'VAPE.CO.UK', dept:'liquid', domain:'vape.co.uk',
-    network:'impact', impact:'', ref:'',
+    network:'impact', impact:IMPACT.vapecouk, ref:'',
     ships:['UK'], guess:1, perPack:20, currency:'GBP',
     from:'GB', days:'next day', ageCheck:'unknown' },
 
@@ -827,8 +870,15 @@ function affTemplate(st) {
     /* Paste the WHOLE tracking link Impact issues — there is nothing to
        compose out of parts, and a mis-paste that still looks like a URL
        would send shoppers somewhere we did not choose AND pay nothing.
-       So it is validated against the /c/ shape and refused otherwise. */
-    const link = String(st.impact || '').trim().replace(/\/+$/, '')
+       So it is validated against the /c/ shape and refused otherwise.
+
+       Any query the dashboard tacked on is dropped first: its deep-link
+       generator hands back a link already carrying ?u=, and appending a
+       second ?u= would leave the FIRST one winning — every product on
+       the shelf silently redirecting to whatever page was in the
+       clipboard. The ids are in the path; the query is ours to set. */
+    const link = String(st.impact || '').trim()
+      .split('#')[0].split('?')[0].replace(/\/+$/, '')
     if (!IMPACT_LINK.test(link)) return ''
     return `${link}?subId1=nicotia&u={url}`
   }
@@ -855,6 +905,18 @@ function isAttributed(st, door) {
   if (st.network) return !!affTemplate(st)
   if (st.platform === 'feedcsv') return door === 'csv feed'
   return !!st.ref
+}
+
+/* WHY an Impact store is unattributed, which is the whole question at
+   the moment somebody is pasting a link in. "Nothing pasted yet" and "I
+   pasted something and it was rejected" are different problems with
+   different fixes, and one message for both would send you looking in
+   the wrong place — most likely back to the dashboard for a link that
+   is already sitting in the registry. */
+function impactFault(st) {
+  if (st.network !== 'impact') return ''
+  if (!String(st.impact || '').trim()) return 'unset'
+  return affTemplate(st) ? '' : 'malformed'
 }
 
 /* Rows are built full and serialised slim. JSON.stringify omits
@@ -1829,8 +1891,11 @@ async function scrapeStore(st) {
         if (!isAttributed(st, door)) {
           detail += st.network === 'cj'
             ? '  [NO ATTRIBUTION — set cjPid and cjAid from the CJ dashboard or these clicks pay nothing]'
-            : st.network === 'impact'
-            ? '  [NO ATTRIBUTION — paste the whole Impact tracking link into `impact` or these clicks pay nothing]'
+            : impactFault(st) === 'unset'
+            ? '  [NO ATTRIBUTION — IMPACT.' + st.key + ' is empty; paste the whole tracking link or these clicks pay nothing]'
+            : impactFault(st) === 'malformed'
+            ? '  [NO ATTRIBUTION — IMPACT.' + st.key + ' is set but is NOT an Impact click URL; it must look like ' +
+              'https://<vanity>.pxf.io/c/<partner>/<ad>/<campaign>. Re-copy it; these clicks pay nothing meanwhile]'
             : st.feedId === 0
             ? '  [NO ATTRIBUTION — feedId is still 0; set it and AWIN_API_KEY or these clicks pay nothing]'
             : '  [NO ATTRIBUTION — no ref and no feed; these clicks pay nothing]'

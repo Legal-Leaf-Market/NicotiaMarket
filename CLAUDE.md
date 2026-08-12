@@ -153,11 +153,23 @@ nobody. So two rules:
    Nicokick would have gone on emitting bare links even after its `cjPid` was filled in.
    Add a network in `affTemplate()` and the front end needs no matching edit.
 
-For Impact, paste the **whole** tracking link from the dashboard into `impact` — the
-entire `https://<vanity>.pxf.io/c/<partner>/<ad>/<campaign>`. Nothing is composed from
-parts. It is validated against that shape and refused otherwise, because a mis-paste that
-still looks like a URL would send shoppers somewhere we did not choose *and* pay nothing.
-Until it is set the links go direct and `?debug` says `[NO ATTRIBUTION]` in capitals.
+For Impact, paste the **whole** tracking link from the dashboard into the **`IMPACT`
+block** at the top of `api/products.js` — the entire
+`https://<vanity>.pxf.io/c/<partner>/<ad>/<campaign>`, keyed by store. Both stores read
+their link from there, so it is the only place to edit, and nothing is composed from
+parts.
+
+A pasted link may carry its own query — the dashboard's deep-link generator adds one —
+and it is **stripped and rebuilt**. That is load-bearing: appending our `?u=` to a link
+that already has one leaves the *first* winning, so every product on the shelf would
+redirect to whatever page was in the clipboard. Working link, wrong page, paying
+correctly.
+
+Anything that is not an Impact click URL is refused rather than wrapped, because a
+redirect we did not choose pays nothing *and* sends shoppers somewhere we did not pick.
+Until a link is set the links go direct, and `?debug` says `[NO ATTRIBUTION]` in capitals
+— naming which of the two problems it is, empty or unusable, since those send you looking
+in different places. Silence there is success.
 
 `get()` refuses to fetch any of these, by param **and** by path shape, so the scraper can
 never click our own links and manufacture phantom conversions.

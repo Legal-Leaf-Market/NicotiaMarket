@@ -150,12 +150,23 @@ var LEGAL_CLASS = {pouch:'pouch', disposable:'vape', device:'vape',
    api/products.js, then mirror them here — never only here.
 
    Falsy fields are omitted rather than written out, which is why `only`
-   appears once. `click` — the affiliate wrapper template for Impact and
-   CJ stores — is absent for the same reason: every network store's ids
-   are still unset, so publicStores() computes '' for all of them today.
-   THE MOMENT ONE IS SET UPSTREAM, MIRROR IT HERE. A stale cart checking
-   out while the API is down is a real hand-off, and it is the one that
-   would quietly go unattributed. */
+   appears once.
+
+   `click` — the affiliate wrapper template for the Impact and CJ stores
+   — is deliberately absent, and this path is therefore UNATTRIBUTED, as
+   it already is for Nicokick's CJ ids. It only bites in one narrow
+   case: the API is down AND a cart saved earlier is checked out now.
+   Copying the template here would close that, and it would also be a
+   second copy of a value whose whole design is that it lives in exactly
+   one place — api/products.js §IMPACT — so it is the kind of copy that
+   is right the day it is written and wrong three edits later. If you do
+   mirror it, mirror the FINISHED template (with the `{url}` hole), and
+   expect to keep it in step by hand.
+
+   The durable fix, if this ever matters commercially, is to stop
+   hand-writing this list: cache the last good publicStores() payload in
+   localStorage and fall back to THAT, which fixes every stale field
+   here at once rather than one field at a time. */
 var STORES = [
   /* --- pouches & snus --- */
   {key:'snusoclock',name:"Snus O'Clock",dept:'pouch',domain:'snusoclock.com',

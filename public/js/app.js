@@ -147,7 +147,15 @@ var LEGAL_CLASS = {pouch:'pouch', disposable:'vape', device:'vape',
    reads it, so it only ever "worked" while the API was down.
 
    FIELDS MUST MIRROR publicStores() EXACTLY. Add stores upstream in
-   api/products.js, then mirror them here — never only here. */
+   api/products.js, then mirror them here — never only here.
+
+   Falsy fields are omitted rather than written out, which is why `only`
+   appears once. `click` — the affiliate wrapper template for Impact and
+   CJ stores — is absent for the same reason: every network store's ids
+   are still unset, so publicStores() computes '' for all of them today.
+   THE MOMENT ONE IS SET UPSTREAM, MIRROR IT HERE. A stale cart checking
+   out while the API is down is a real hand-off, and it is the one that
+   would quietly go unattributed. */
 var STORES = [
   /* --- pouches & snus --- */
   {key:'snusoclock',name:"Snus O'Clock",dept:'pouch',domain:'snusoclock.com',
@@ -165,6 +173,11 @@ var STORES = [
   {key:'nikopouches',name:'NikoPouches.dk',dept:'pouch',domain:'nikopouches.dk',
    ref:'idtzhxpu',ships:['EU'],only:['DK'],perPack:20,platform:'shopify',
    from:'DK',days:'1–3 days',ageCheck:'id'},
+  /* Impact. `ref` empty for the wrapping-network reason; `ageCheck`
+     unverified because their policy has not been read. */
+  {key:'gotpouches',name:'GotPouches',dept:'pouch',domain:'gotpouches.com',
+   ref:'',ships:['US'],guess:1,perPack:15,platform:'shopify',
+   from:'US',days:'1–3 days',ageCheck:'unknown'},
 
   /* --- disposables ---
      Wave Vape's cart is not at /cart/ and its own buttons post to
@@ -190,6 +203,14 @@ var STORES = [
    ref:'',ships:['US','INTL'],guess:1,platform:'feedcsv',from:'CN',ageCheck:'dob'},
 
   /* --- e-liquid --- */
+  /* No `platform`: the storefront has not been opened yet, so nothing
+     establishes one and a wrong pin costs a working door. Upstream note
+     explains how to settle it. CHECKOUT_CAP has no entry for '', so the
+     drawer correctly offers to open the item rather than promise a
+     basket it cannot fill. */
+  {key:'vapecouk',name:'VAPE.CO.UK',dept:'liquid',domain:'vape.co.uk',
+   ref:'',ships:['UK'],guess:1,perPack:20,
+   from:'GB',days:'next day',ageCheck:'unknown'},
   {key:'fruitia',name:'FRUITIA',dept:'liquid',domain:'fruitia.shop',
    ref:'',ships:['US'],guess:1,platform:'feedcsv',from:'US'},
   {key:'kindjuice',name:'Kind Juice',dept:'liquid',domain:'www.kindjuice.com',
@@ -339,7 +360,16 @@ var AGE_CHECK={
   dob:      {label:'Asks date of birth', tone:'soft',
              detail:'This store asks you to state your age. It is not verified.'},
   none:     {label:'No age check',       tone:'warn',
-             detail:'This store publishes no age verification at its checkout.'}
+             detail:'This store publishes no age verification at its checkout.'},
+  /* "We have not read their policy" is not the same claim as "they
+     publish nothing", and printing the second when we mean the first
+     is the exact error §7b exists to prevent — in the direction that
+     flatters us, since `none` at least warns. A store whose policy
+     nobody has read yet says so. */
+  unknown:  {label:'Age check unverified', tone:'soft',
+             detail:'We have not been able to read this store’s own age policy yet, '+
+                    'so we cannot tell you what it checks. Assume nothing and look at '+
+                    'their checkout.'}
 };
 function ageBadge(st){
   var a=AGE_CHECK[st&&st.ageCheck]; if(!a) return '';
@@ -2357,6 +2387,37 @@ function shipEstimate(st, after){
   var free=(freeOver>0&&after>=freeOver);
   return {cost:free?0:flat, free:free, freeOver:freeOver};
 }
+/* THE AFFILIATE WRAPPER.
+   ------------------------------------------------------------
+   Not every network appends. GoAffPro and the direct programmes take
+   ?ref= on the end of the product URL, which is what the rest of this
+   file assumed — but Impact and CJ WRAP the destination instead, with
+   their ids in the path, and the click only registers when their
+   redirect runs. Nothing is appended and nothing looks wrong if you
+   skip it: the shopper lands on the right page, buys, and the sale
+   pays nobody.
+
+   THIS FILE IS WHERE THAT MATTERS. row() drops `aff` on the wire and
+   the browser rebuilds every outbound link, so a wrapper that only
+   api/products.js knows about is a wrapper no shopper ever gets — CJ
+   was set up exactly that way, and Nicokick would have gone on
+   emitting bare links even after its cjPid was filled in.
+
+   So the server ships the shape as a `{url}` template in `click` and
+   this side only substitutes. One authority for the link shape, and a
+   new network needs no edit here. */
+function affWrap(st, url){
+  if(!st||!st.click||!url) return url;
+  /* Already wrapped. hydrate() wraps product links; the cart stores
+     them and checkoutPlan() hands one straight back for stores whose
+     basket cannot be filled by URL. Wrapping a wrapper points our own
+     redirect at itself and loses the destination. */
+  if(url.indexOf(st.click.split('?')[0])===0) return url;
+  /* encodeURIComponent escapes `$`, so no `$&` can smuggle itself into
+     the replacement and rewrite the template. */
+  return st.click.replace('{url}', encodeURIComponent(url));
+}
+
 /* Shopify takes a cart permalink that fills the basket and applies a
    code in one hop — that is why variant IDs are worth capturing.
    WooCommerce takes ?add-to-cart= on any page, but NOT always at
@@ -2417,8 +2478,24 @@ var CHECKOUT_CAP={ shopify:'all', woocommerce:'one',
                    magento:'none', feedcsv:'none', bigcommerce:'none' };
 
 /* Returns {cap, url, filled, rest} so the drawer can describe the
-   hand-off truthfully instead of every store getting one caption. */
+   hand-off truthfully instead of every store getting one caption.
+
+   ATTRIBUTION IS APPLIED HERE, ONCE, TO WHATEVER THE PLAN DECIDED.
+   checkoutPlanRaw() returns from four different places and this is the
+   highest-value link on the site — the one the shopper clicks holding a
+   full basket. Wrapping at each return means the next branch anybody
+   adds is unattributed by default and looks identical when it is, so
+   the plan is built first and attributed at the door.
+
+   ?ref= is NOT applied here: the branches below already pass it
+   through addParams(), which knows not to emit an empty one, and a
+   wrapping network carries ref:'' anyway. */
 function checkoutPlan(st, items){
+  var plan=checkoutPlanRaw(st, items);
+  plan.url=affWrap(st, plan.url);
+  return plan;
+}
+function checkoutPlanRaw(st, items){
   var base='https://'+st.domain;
   if(st.platform==='shopify'){
     var parts=items.filter(function(x){return x.vid;})
@@ -2590,7 +2667,11 @@ function renderCart(){
     var rest=plan.rest.length
       ? '<div class="drest"><span>Then add at '+esc(st.name)+':</span>'+
         plan.rest.map(function(x){
-          return '<a href="'+esc(x.aff||x.url||'#')+'" rel="noopener nofollow">'+
+          /* affWrap() again, not because hydrate() missed it, but
+             because a cart is localStorage: these lines can predate
+             the day this store got its tracking link. It is a no-op on
+             anything already wrapped. */
+          return '<a href="'+esc(affWrap(st, x.aff||x.url)||'#')+'" rel="noopener nofollow">'+
                  esc(x.title)+(x.variant?', '+esc(x.variant):'')+'</a>';
         }).join('')+'</div>'
       : '';
@@ -3131,8 +3212,12 @@ function hydrate(it){
     pid: it.pid||'',        /* Woo variable parent */
     attrs: it.attrs||'',    /* attribute_flavor=White+Gummy */
     markets: it.markets||'',
-    aff: (url && st.ref) ? url+(url.indexOf('?')>-1?'&':'?')+'ref='+st.ref
-       : (url || (st.domain?'https://'+st.domain+'/':''))
+    /* ?ref= first, then the wrapper — a wrapping network carries ref:''
+       so only one of the two ever applies, and affWrap() is a no-op for
+       every store that has no `click`. */
+    aff: affWrap(st, (url && st.ref)
+       ? url+(url.indexOf('?')>-1?'&':'?')+'ref='+st.ref
+       : (url || (st.domain?'https://'+st.domain+'/':'')))
   };
 }
 

@@ -131,6 +131,37 @@ sleeping between doors on a 6-minute clock.
   depends on it.
 - `?refresh` forces a fresh scrape, `?debug` returns per-store counts and which door worked.
 
+### 7a. Four networks, four link shapes — and one authority for them
+
+| network | how the link is made | registry field |
+|---|---|---|
+| GoAffPro / direct | `?ref=<code>` appended to the product URL | `ref` |
+| AWIN feed | the feed's `aw_deep_link` already **is** the tracked link | `feedId` |
+| CJ | destination **wrapped**: `anrdoezrs.net/click-<PID>-<AID>?url=` | `cjPid`, `cjAid` |
+| Impact | wrapped too, ids in the **path**, destination in `?u=` | `impact` |
+
+Getting this wrong **fails silently** — the link works, the shopper buys, the sale pays
+nobody. So two rules:
+
+1. **A wrapping network carries `ref:''`.** Appending our own param on top of a tracked
+   redirect is a second, conflicting attribution. Same rule as the AWIN feed stores.
+2. **`affTemplate()` is the only place a link shape is written down.** It returns the
+   wrapper as a `{url}` template; `publicStores()` ships that to the browser as `click`
+   and `app.js` substitutes into it. This matters because **the browser, not the server,
+   builds the link a shopper clicks** — `row()` drops `aff` and `hydrate()` rebuilds it.
+   A shape known only to `api/products.js` reaches nobody, which is how CJ was set up:
+   Nicokick would have gone on emitting bare links even after its `cjPid` was filled in.
+   Add a network in `affTemplate()` and the front end needs no matching edit.
+
+For Impact, paste the **whole** tracking link from the dashboard into `impact` — the
+entire `https://<vanity>.pxf.io/c/<partner>/<ad>/<campaign>`. Nothing is composed from
+parts. It is validated against that shape and refused otherwise, because a mis-paste that
+still looks like a URL would send shoppers somewhere we did not choose *and* pay nothing.
+Until it is set the links go direct and `?debug` says `[NO ATTRIBUTION]` in capitals.
+
+`get()` refuses to fetch any of these, by param **and** by path shape, so the scraper can
+never click our own links and manufacture phantom conversions.
+
 ---
 
 ## 7b. Vendor shipping & age-verification audit (Aug 2026)
@@ -156,6 +187,37 @@ chip in the cart, shown immediately above each store's checkout button.
 | Europesnus | ~150 destinations, no exclusions | **None** |
 | Geekvape | Worldwide | **None** |
 | XIFEI | US + intl | **None** — accessories, no nicotine |
+| GotPouches | US *(claims more)* | **UNREAD** — see below |
+| VAPE.CO.UK | UK *(assumed)* | **UNREAD** — see below |
+
+### The two Impact stores are NOT part of this audit
+
+`gotpouches` and `vapecouk` were added with their policies **unread**: network egress
+from the build environment could not reach either domain, so `ships`, `from`, `days` and
+`ageCheck` on both are inference off the stores' own marketing, not off a policy page.
+They carry `guess: 1` and `ageCheck: 'unknown'`, which renders an **"Age check
+unverified"** chip in the cart rather than a claim in either direction — `none` would
+assert something we have not established, and it is the flattering direction to guess
+wrong in, since `none` at least warns.
+
+**Read both policies and finish these rows.** Specifically:
+
+- **GotPouches ships more than we offer.** Their copy says "across the U.S., Caribbean,
+  and beyond"; `ships` is `['US']` anyway, on the Snus O'Clock principle. Widen it only
+  from a policy page, never from marketing.
+- **GotPouches / PACT Act.** A US retailer shipping consumer nicotine has
+  adult-signature and carrier obligations. Nothing establishes whether they meet them.
+- **VAPE.CO.UK / disposables ban.** The same open question already recorded for RELX UK
+  below: the UK banned single-use disposables in June 2025 and this store still markets
+  "big puff disposable vapes". Post-ban most brands rebadged to refillable while keeping
+  the puff rating. Settle it before the store is featured.
+- **VAPE.CO.UK has no `platform`.** Deliberate — the storefront could not be opened, and
+  a wrong pin costs a working door, so `LADDERS.default` tries products.json → Woo Store
+  API → JSON-LD and first-with-rows wins. Run `?debug`, see which door answered, pin it,
+  and check whether Shopify's 250-row `products.json` ceiling is truncating a
+  claimed-8,000-product catalogue — if so it wants `cats` the way EightVape has them.
+  Pinning also restores a real basket hand-off: with no platform, `CHECKOUT_CAP` has no
+  entry and the drawer correctly offers to open one item instead.
 
 ### Two open compliance questions — not code, needs a human
 
@@ -312,3 +374,7 @@ stored-XSS bug would be the whole ballgame — do not "simplify" this to `innerH
 - Do NOT hardcode product data into pages — always source from `/api/products`.
 - Do NOT push directly to the production branch; open a PR.
 - Do NOT ship with `previewMode: true` (§8).
+- Do NOT append `?ref=` to a wrapping network's link, and do NOT write a link shape
+  anywhere but `affTemplate()` (§7a). Both fail silently and pay nothing.
+- Do NOT state a vendor's `ships`/`ageCheck` you have not read off their own policy.
+  `guess: 1` and `ageCheck: 'unknown'` exist to say "not established" out loud (§7b).

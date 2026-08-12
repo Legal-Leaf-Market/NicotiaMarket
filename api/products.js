@@ -151,6 +151,61 @@ export const STORES = [
     ref:'', ships:['US'], perPack:16, perPackApprox:1, platform:'shopify',
     currency:'USD', from:'US', days:'~6 days (USPS Ground Advantage)', ageCheck:'id' },
 
+  /* ==========================================================
+     GOTPOUCHES — the first Impact.com store.
+     ----------------------------------------------------------
+     Impact programme 54165, 15%. That is the best published rate of
+     the five NM candidates in a 10,325-row marketplace export, and
+     the export's own verdict was that it is "the one genuinely new
+     name worth an application" — the rest of that network is a
+     tobacco/nicotine policy wall, not a shelf we have not mined yet.
+
+     ATTRIBUTION: paste the whole tracking link Impact issues into
+     `impact` — the entire thing, ending in /c/<partner>/<ad>/<campaign>.
+     Nothing is composed from parts and nothing is appended; see
+     affTemplate(). Until it is set the links go direct, exactly like
+     Nicokick's empty cjPid, and the refresh report says so in capitals.
+     `ref` stays empty for the AWIN reason: a second tracking param on
+     top of a wrapped link is a conflicting attribution.
+
+     Shopify — their own URLs are /collections/, /products/, /pages/
+     and /blogs/, which is Shopify's scheme and nobody else's.
+
+     perPack 15 for Nicokick's reason: the range leads on ZYN and
+     Rogue, both 15 to a can, while VELO and on! are 20. packOf()
+     overrides from the title wherever the store states a count, so
+     this only decides the rows that say nothing.
+
+     ---- WHAT IS NOT VERIFIED, AND WHY --------------------------
+     §7b's rule is that ships/only/from/days/ageCheck come from the
+     vendor's own published policy. THESE DID NOT. Network egress from
+     the build environment is blocked for this domain, so both policy
+     pages were unreadable and the fields below are inference off the
+     store's own marketing. `guess:1` and `ageCheck:'unknown'` are the
+     record of that, and the age chip now says so to the shopper
+     rather than leaving the cart silent about a nicotine vendor.
+
+     Two specific things to settle when someone can open the site:
+
+       1. THEY CLAIM MORE THAN US. Their copy says they ship "across
+          the U.S., Caribbean, and beyond". Left at ['US'] anyway, on
+          the same principle as Snus O'Clock: a vendor's willingness
+          to ship somewhere is not evidence it is legal to receive it
+          there, and widening `ships` on marketing copy is exactly the
+          move that put a Denmark-only shop in front of every EU
+          shopper.
+       2. PACT ACT. A US pouch retailer shipping consumer nicotine has
+          adult-signature and carrier obligations. Nothing here
+          establishes whether they meet them — see the Geekvape flag.
+
+     shipFlat/shipFree are deliberately unset. Their copy mentions
+     both "free delivery" and free shipping over $150; a wrong
+     estimate in the cart is worse than none. */
+  { key:'gotpouches', name:'GotPouches', dept:'pouch', domain:'gotpouches.com',
+    network:'impact', impact:'', ref:'',
+    ships:['US'], guess:1, perPack:15, platform:'shopify',
+    currency:'USD', from:'US', days:'1–3 days', ageCheck:'unknown' },
+
   /* --- disposables ---
      Wave Vape: GoAffPro 10%, shop id 4QTSbUnS3TvZ. Foger 35 + Geek Bar 5.
      WooCommerce 10.9.4 with the Store API open, so no scraping needed.
@@ -250,6 +305,70 @@ export const STORES = [
   { key:'relxuk', name:'RELX UK', dept:'device', domain:'www.relxvape.co.uk',
     ref:'nicotinebaby', ships:['UK'], platform:'shopify', currency:'GBP',
     from:'GB', days:'2–4 days', ageCheck:'dob' },
+
+  /* --- e-liquid --- */
+  /* ==========================================================
+     VAPE.CO.UK — Impact programme 30370, 4% (UK).
+     ----------------------------------------------------------
+     4% is the lowest rate in the registry and that is placement
+     information, not a reason to skip it: this is the widest UK
+     catalogue we have access to — their own copy claims 8,000+ SKUs
+     and "over 4000 different e-liquids and nicotine salts" — against
+     a UK shelf that is currently ONE store, RELX UK, selling one
+     brand's hardware. A British visitor's Pouches, E-liquid and
+     Devices shelves are close to empty without this.
+
+     `dept` is liquid because that 4,000-bottle range is the deepest
+     honest home for the store, not because it is all they sell. Like
+     EightVape they span four shelves — pouches and snus, big-puff
+     devices, e-liquid, nic shots — and classify() routes each product
+     by its own text, so the store's dept only catches what says
+     nothing about itself.
+
+     ---- PLATFORM IS NOT PINNED, ON PURPOSE ---------------------
+     Same egress block as GotPouches: the storefront could not be
+     opened from here, so nothing establishes whether this is Shopify,
+     Woo or something else, and a WRONG pin is worse than none — it
+     picks a ladder that skips the door that would have worked. Left
+     unset, LADDERS.default tries products.json, then the Woo Store
+     API, then JSON-LD, and first-with-rows wins. That is the ladder
+     doing the job it exists for.
+
+     Once someone can open the site: `GET /api/products?debug` names
+     the door that answered. Pin `platform` to match, and check
+     whether Shopify's 250-row products.json ceiling is truncating an
+     8,000-product catalogue — if it is, this store wants `cats` the
+     way EightVape has them. Pinning it also restores a real checkout
+     hand-off: with no platform, CHECKOUT_CAP has no entry and app.js
+     correctly degrades to opening the first item rather than
+     promising a basket it cannot fill.
+
+     currency is pinned GBP for the reason at the top of the registry:
+     a blocked meta.json must never be able to relabel £4.45 as $4.45,
+     and on a UK-only store that mistake is a 25% price error on every
+     single row.
+
+     ---- COMPLIANCE FLAG: THE SAME ONE AS RELX UK ---------------
+     The UK banned the sale of single-use disposables in June 2025.
+     This store's own marketing still advertises "big puff disposable
+     vapes", and post-ban most brands rebadged to refillable while
+     keeping the puff rating on the box. Whether these listings are
+     rebadged refillables or genuinely non-compliant stock is not
+     answerable from marketing copy, and it decides whether our
+     Disposables shelf can carry them at all in the UK. Settle it
+     before this store is featured — see CLAUDE.md §7b.
+
+     ships/from/days/ageCheck are inference, same as GotPouches:
+     `days` is their own site title ("FREE NEXT DAY DELIVERY 7 DAYS A
+     WEEK"), `ships:['UK']` follows from a UK-only TPD retailer, and
+     the age gate is `unknown` because UK law requiring independent
+     age verification is not the same thing as having read what THIS
+     vendor does at ITS checkout. perPack 20 is the EU/UK can count
+     the other pouch stores use. */
+  { key:'vapecouk', name:'VAPE.CO.UK', dept:'liquid', domain:'vape.co.uk',
+    network:'impact', impact:'', ref:'',
+    ships:['UK'], guess:1, perPack:20, currency:'GBP',
+    from:'GB', days:'next day', ageCheck:'unknown' },
 
   /* --- cigars --- */
   /* The most legally careful vendor of the ten: Bluecheck electronic
@@ -397,11 +516,17 @@ export const STORES = [
   //   ref:'', ships:['US'], guess:1, platform:'shopify', awin:96141 },              // 10%, 90-day
 ]
 
-/* Only these fields ever reach a browser. */
+/* Only these fields ever reach a browser.
+
+   `click` is the affiliate wrapper as a `{url}` template (see
+   affTemplate). It is public by construction — every one of these ids
+   rides in plain sight on every outbound link — while the commission
+   notes, the AWIN feed ids and the network name stay here. */
 function publicStores() {
   return STORES.filter(s => !s.pending).map(s => ({
     key: s.key, name: s.name, dept: s.dept, domain: s.domain,
-    ref: s.ref, ships: s.ships, only: s.only || null, guess: s.guess ? 1 : 0,
+    ref: s.ref, click: affTemplate(s), ships: s.ships,
+    only: s.only || null, guess: s.guess ? 1 : 0,
     from: s.from || '', days: s.days || '', ageCheck: s.ageCheck || '',
     perPack: s.perPack || 0, platform: s.platform || '',
     cartPath: s.cartPath || '', logo: s.logo || '',
@@ -666,7 +791,7 @@ function sizeImage(src, w = 500) {
   return src + (src.includes('?') ? '&' : '?') + 'width=' + w
 }
 
-/* Three networks, three link shapes. Getting this wrong fails SILENTLY —
+/* FOUR networks, four link shapes. Getting this wrong fails SILENTLY —
    the link works, the customer buys, and the commission is zero.
 
      GoAffPro / direct   ?ref=<code> appended to the product URL
@@ -674,19 +799,52 @@ function sizeImage(src, w = 500) {
                          so nothing is appended (ref stays empty)
      CJ Affiliate        the destination is WRAPPED, not appended:
                          anrdoezrs.net/click-<PID>-<AID>?url=<encoded>
+     Impact.com          wrapped too, but the ids are in the PATH and
+                         the destination rides in ?u=:
+                         <vanity>.pxf.io/c/<partner>/<ad>/<campaign>?u=
 
-   CJ is the odd one out and the reason this is a function rather than
-   a string concat. cjPid is your publisher id, cjAid is the per-
-   advertiser link id — both from the CJ dashboard. With either missing
-   we return the bare URL, and scrapeStore() flags the store as
-   unattributed in the refresh report rather than pretending. */
+   The wrapping networks are why this is a function rather than a string
+   concat. With their ids missing we return the bare URL, and
+   scrapeStore() flags the store as unattributed in the refresh report
+   rather than pretending.
+
+   ---- ONE AUTHORITY FOR THE LINK SHAPE ---------------------------
+   The browser, not this file, builds the link a shopper actually
+   clicks: row() drops `aff` and app.js rebuilds it from `url`. So a
+   shape known only to this file is a shape that never reaches anybody
+   — which is exactly how CJ was set up, and why Nicokick would have
+   gone on emitting bare links even after its cjPid was filled in.
+
+   affTemplate() closes that by returning the wrapper as a TEMPLATE
+   with a `{url}` hole in it. publicStores() ships the template as
+   `click`, app.js substitutes the destination into it, and neither
+   side has to know what a pxf.io path looks like. Add a network here
+   and the front end picks it up with no matching edit. */
+const IMPACT_LINK = /^https:\/\/[a-z0-9.-]+\/c\/\d+\/\d+(?:\/\d+)?\/?$/i
+
+function affTemplate(st) {
+  if (st.network === 'impact') {
+    /* Paste the WHOLE tracking link Impact issues — there is nothing to
+       compose out of parts, and a mis-paste that still looks like a URL
+       would send shoppers somewhere we did not choose AND pay nothing.
+       So it is validated against the /c/ shape and refused otherwise. */
+    const link = String(st.impact || '').trim().replace(/\/+$/, '')
+    if (!IMPACT_LINK.test(link)) return ''
+    return `${link}?subId1=nicotia&u={url}`
+  }
+  if (st.network === 'cj') {
+    if (!st.cjPid || !st.cjAid) return ''
+    return `https://www.anrdoezrs.net/click-${st.cjPid}-${st.cjAid}?sid=nicotia&url={url}`
+  }
+  return ''
+}
+
 function buildAff(st, url) {
   const base = url || `https://${st.domain}/`
-  if (st.network === 'cj') {
-    if (!st.cjPid || !st.cjAid) return base
-    return `https://www.anrdoezrs.net/click-${st.cjPid}-${st.cjAid}` +
-           `?url=${encodeURIComponent(base)}&sid=nicotia`
-  }
+  const tpl = affTemplate(st)
+  /* encodeURIComponent escapes `$`, so no `$&` can smuggle itself into
+     the replacement and rewrite the template. */
+  if (tpl) return tpl.replace('{url}', encodeURIComponent(base))
   if (!st.ref) return base
   return base + (base.includes('?') ? '&' : '?') + 'ref=' + st.ref
 }
@@ -694,7 +852,7 @@ function buildAff(st, url) {
 /* Does this store actually earn on a click? Used by the refresh report
    so an unattributed store can never quietly sit in production. */
 function isAttributed(st, door) {
-  if (st.network === 'cj') return !!(st.cjPid && st.cjAid)
+  if (st.network) return !!affTemplate(st)
   if (st.platform === 'feedcsv') return door === 'csv feed'
   return !!st.ref
 }
@@ -800,8 +958,16 @@ async function pool(items, limit, fn) {
    trusted to every call site. Borrowed from Legal-Leaf. */
 const TRACKING_PARAM = /[?&](?:ref|rfsn|sca_ref|awinaffid|awinmid|irclickid|cjevent|sscid)=/i
 
+/* A param is not the only tell. Impact and CJ carry their ids in the
+   PATH — /c/<partner>/<ad>/<campaign> and /click-<pid>-<aid> — and the
+   click registers on the redirect itself, before any param exists. A
+   URL like that is unreachable from a scrape today, but the guard above
+   is deliberately enforced here rather than trusted to call sites, and
+   half a guard is worse than none: it reads as covered. */
+const TRACKING_PATH = /\/(?:c\/\d+\/\d+(?:\/\d+)?|click-\d+-\d+)(?:[/?#]|$)/i
+
 async function get(url, ms = 12000) {
-  if (TRACKING_PARAM.test(String(url))) {
+  if (TRACKING_PARAM.test(String(url)) || TRACKING_PATH.test(String(url))) {
     throw new Error('refusing to fetch a tracking URL')
   }
   const ctl = new AbortController()
@@ -1663,6 +1829,8 @@ async function scrapeStore(st) {
         if (!isAttributed(st, door)) {
           detail += st.network === 'cj'
             ? '  [NO ATTRIBUTION — set cjPid and cjAid from the CJ dashboard or these clicks pay nothing]'
+            : st.network === 'impact'
+            ? '  [NO ATTRIBUTION — paste the whole Impact tracking link into `impact` or these clicks pay nothing]'
             : st.feedId === 0
             ? '  [NO ATTRIBUTION — feedId is still 0; set it and AWIN_API_KEY or these clicks pay nothing]'
             : '  [NO ATTRIBUTION — no ref and no feed; these clicks pay nothing]'

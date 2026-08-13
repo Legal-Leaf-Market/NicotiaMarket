@@ -802,6 +802,31 @@ header.top{position:sticky;top:0;z-index:50;
   .card:hover .turn{color:var(--ember)}
 }
 
+/* ============================================================
+   THE OVERLAYS MUST HIDE THEIR OWN BACKFACE
+   ------------------------------------------------------------
+   `.face` already carries backface-visibility:hidden, and for anything
+   in normal flow inside it — the title, the price, the unit chip — that
+   is enough: they flatten into the face and turn away with it.
+
+   These do not. An absolutely-positioned child with a z-index makes its
+   own stacking context, and inside a preserve-3d ancestor WebKit
+   promotes that context into the 3D scene instead of flattening it into
+   the parent. The face rotates away and hides; the badge rotates away
+   and keeps painting — now mirrored, because we are looking at its
+   back. So a flipped card shows its BEST pill and store name reversed
+   on top of the description.
+
+   Chromium flattens them and looks correct, which is exactly why this
+   reads as "only some badges, only on some devices": the in-flow chips
+   are fine everywhere, and the positioned ones only break on Safari
+   and iOS.
+
+   ANY absolutely-positioned element added inside .front belongs here.
+   The pseudo-elements are listed too — same promotion, same result. */
+.badge,.save,.storepill,.oos,.shot::after,.bb-front.has-img::after{
+  -webkit-backface-visibility:hidden;backface-visibility:hidden}
+
 .badge{position:absolute;top:9px;left:9px;font-size:9.5px;letter-spacing:.07em;
   text-transform:uppercase;padding:4px 9px;border-radius:99px;font-weight:700;z-index:2}
 .badge.best{background:linear-gradient(90deg,#f0c74c,#e0a92a);color:#0b120d}

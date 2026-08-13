@@ -296,8 +296,14 @@ survives both.
 law so you can see every catalogue from anywhere, and shows a loud amber bar saying so.
 While `false` the toggle is not rendered at all, so it cannot be switched back on from the UI.
 
-**It is currently `true`** because the registry has no US pouch store; with it `false` a US
-visitor sees an empty Pouches shelf. Flip it once that gap is filled.
+**It is currently `false`.** It was `true` while the registry had no US pouch store — with
+it `false` a US visitor saw an empty Pouches shelf — and the condition this section set for
+flipping it has been met twice over: Nicokick closed that gap (Magento GraphQL + CJ), and
+GotPouches is a second US pouch shelf behind it.
+
+Expect shelves to look thinner than they do in preview. That is the filtering working:
+`storeShipsHere()` and `LEGAL[]` decide what a visitor is shown, not the vendor's own
+dropdown. Set a destination with the SHIP TO pill before concluding something is missing.
 
 ---
 

@@ -1,5 +1,5 @@
 /* ============================================================
-   community.js — the back door
+   community.js — Smokers' Corner
    ------------------------------------------------------------
    Talks to /api/threads. No framework, no build step, no deps.
 
@@ -206,7 +206,7 @@
         el.list.replaceChildren();
         el.newBtn.disabled = true;
         el.newBtn.textContent = 'Opening soon';
-        say(j.message || 'The Back Door is still being built. It is not open yet.', 'warn');
+        say(j.message || 'Smokers\' Corner is still being built. It is not open yet.', 'warn');
         return;
       }
       if (!j.ok) {

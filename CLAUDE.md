@@ -350,7 +350,7 @@ No test suite, so verify by hand:
 
 ---
 
-## 11. The community — `/community` ("The Back Door")
+## 11. The community — `/community` ("Smokers' Corner")
 
 Public threads. `api/threads.js` + `public/community.html` + `public/js/community.js`,
 moderated from `public/moderation.html`.

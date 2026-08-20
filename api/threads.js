@@ -162,7 +162,7 @@ export default async function handler(req, res) {
       return send(res, 503, {
         ok: false,
         reason: 'no-store',
-        message: 'The Back Door is still being built. It is not open yet, ' +
+        message: 'Smokers\' Corner is still being built. It is not open yet, ' +
                  'check back shortly.',
         hint: 'operator: set KV_REST_API_URL and KV_REST_API_TOKEN to enable'
       });

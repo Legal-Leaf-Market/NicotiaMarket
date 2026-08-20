@@ -152,9 +152,9 @@
      as weather; a handful of hand-placed copies read as decoration),
      so this container starts empty. Fixed to the viewport, not the
      page, so leaves are always falling somewhere on screen no matter
-     how far down you've scrolled; the hero gets its own denser, faster
-     pass of the same spawner for the section that should read as the
-     main visual (see #hero below). Kept out of the reduced-motion path
+     how far down you've scrolled. (The hero below used to run its own
+     denser, faster pass of the same spawner; hero and pass are both
+     gone.) Kept out of the reduced-motion path
      automatically — line 22 of app.css kills every animation sitewide.
      aria-hidden: texture, not content. -->
 <div class="bgscape" aria-hidden="true">
@@ -271,19 +271,18 @@
 
 <div id="mallview">
 
-<!-- One hero per shelf. The copy is swapped by renderHero() from the
-     HEROES map in app.js, and data-hero drives the colour — a department
-     URL rewrites to this same file, so the hero cannot be markup. -->
-<section class="hero" id="hero" data-hero="all">
-  <div class="hero-scape" aria-hidden="true"></div>
-  <div class="hero-inner shell">
-  <span class="eyebrow" id="heroEyebrow">every store, one price you can compare</span>
-  <h1><span class="h-lead" id="heroLead">what it actually</span><span id="heroHead">costs</span></h1>
-  <p class="hsub" id="heroSub">Pouches, disposables, e-liquid and cigars from every shop we carry, priced
-    per pouch, per 1,000 puffs, per ml and per stick, so a five-can roll and a single tin
-    finally compare honestly.</p>
-  <div class="hstats" id="heroStats"></div>
-</div></section>
+<!-- THE HERO IS GONE. It stood here — eyebrow, big gradient headline,
+     blurb and three stats — and cost the whole first screen before a
+     single product. The carousels above are now followed directly by
+     the grid.
+
+     What survives is the <h1>, visually hidden. Every department route
+     rewrites to this document, so this was the only h1 the mall view
+     had; deleting it outright would have left /, /pouches, /disposables
+     and the rest with no top-level heading at all, mid-SEO-audit.
+     renderHero() still swaps its two halves per shelf, so the heading a
+     crawler reads still matches the department being shown. -->
+<h1 class="sr-only"><span id="heroLead">what it actually</span> <span id="heroHead">costs</span></h1>
 
 <main class="shell">
 

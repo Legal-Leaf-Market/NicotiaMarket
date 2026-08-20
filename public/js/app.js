@@ -84,25 +84,28 @@ var DEPT_ORDER = ['pouch','disposable','device','liquid','cigar','gear'];
    as a decoration; mixing two, one of them tinted across the site's
    own autumn hues, reads as an actual pile of different leaves. */
 var LEAF_HUES=['var(--gold)','var(--ember)','var(--cigar)','#c8862a','var(--red)','var(--sage-dk)'];
-function spawnLeaves(container, count, dense){
+/* The `dense` variant went with the hero — it was the only caller, and
+   its .fleaf-hero keyframes are gone from the stylesheet with it. What
+   is left is the one sitewide pass over .bgscape. */
+function spawnLeaves(container, count){
   if(!container) return;
   var frag=document.createDocumentFragment();
   for(var i=0;i<count;i++){
     var useFall=Math.random()<0.55;
     var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
     svg.setAttribute('viewBox', useFall?'0 0 40 56':'0 0 60 72');
-    svg.setAttribute('class','fleaf'+(dense?' fleaf-hero':''));
+    svg.setAttribute('class','fleaf');
     var use=document.createElementNS('http://www.w3.org/2000/svg','use');
     use.setAttribute('href', useFall?'#leafFall':'#leafIcon');
     svg.appendChild(use);
 
-    var sz=(dense?24:16)+Math.random()*(dense?44:38);
-    var dur=(dense?8:14)+Math.random()*(dense?9:15);
+    var sz=16+Math.random()*38;
+    var dur=14+Math.random()*15;
     var delay=-Math.random()*dur;               /* negative: starts mid-fall, not all at once */
-    var drift=(Math.random()<0.5?-1:1)*(dense?60:80)*(0.6+Math.random()*0.8);
+    var drift=(Math.random()<0.5?-1:1)*80*(0.6+Math.random()*0.8);
     var spin=(Math.random()<0.5?-1:1)*(220+Math.random()*280);
     var left=(Math.random()*100).toFixed(2);
-    var op=((dense?0.18:0.09)+Math.random()*(dense?0.14:0.11)).toFixed(2);
+    var op=(0.09+Math.random()*0.11).toFixed(2);
 
     svg.style.cssText=
       '--l:'+left+'%;--sz:'+sz.toFixed(0)+'px;'+
@@ -1451,21 +1454,20 @@ function apply(reset){
   });
 
   var s=F.sort;
-  /* POUCHES LEAD THE GRID, whatever the sort. They are the flagship
-     shelf and the argument the site is built on — per-pouch pricing —
-     so they sit above the fold rather than behind whichever disposable
-     happens to win on value that minute.
+  /* NO SHELF LEADS THE GRID. Pouches used to be pinned above everything
+     else on the combined shelf, whatever the sort — the argument being
+     that per-pouch pricing is what the site is for, so the flagship
+     shelf belongs above the fold.
 
-     Only applied on the combined shelf: a department view is already
-     one department, and pinning there would do nothing. The chosen sort
-     still orders WITHIN the pouches and within everything after them,
-     so this is a grouping, not an override of the sort. */
-  var pinPouch = (F.dept==='all');
+     The rails already make that argument, and better: "Best per pouch
+     right now" is a pouch shelf by name, sitting directly above this
+     grid. Pinning here meant the grid underneath repeated it — every
+     pouch, then everything else — so the front page read as a pouch
+     catalogue with an appendix rather than as a mix worth scrolling.
+
+     The chosen sort now orders the whole combined shelf, so the best
+     value on the site leads it whichever shelf that comes from. */
   VIEW.sort(function(a,b){
-    if(pinPouch){
-      var pa=deptOf(a)==='pouch'?0:1, pb=deptOf(b)==='pouch'?0:1;
-      if(pa!==pb) return pa-pb;
-    }
     var ia=gitem(a), ib=gitem(b);
     if(s==='unit'){
       /* Ranked on the CONVERTED value. Grouping by currency was honest
@@ -1484,6 +1486,52 @@ function apply(reset){
     if(s==='price-desc')return (Number(ib.price)||-1)-(Number(ia.price)||-1);
     return String(a.title).localeCompare(String(b.title));
   });
+
+  /* THE COMBINED SHELF INTERLEAVES; A DEPARTMENT SHELF DOES NOT.
+
+     "Best value per unit" is the default sort, and across departments
+     its numbers are not comparable — a per-pouch price is pennies and a
+     per-stick price is dollars, because they measure different things.
+     Sorted globally on that figure, pouches take every slot above the
+     fold and the front page reads as a pouch catalogue however much
+     else is in stock. Removing the old explicit pouch pin did not fix
+     that; the sort was doing the same thing by arithmetic.
+
+     So on the combined shelf this ranks WITHIN each department and then
+     deals one from each in turn. Every card is still the best of its
+     shelf that has not been shown yet, and the reader gets a mix of
+     categories — and with them stores and brands — rather than one
+     shelf followed by the others.
+
+     Only for the unit sort. An explicit price sort compares a real
+     currency amount, which IS comparable across shelves, so honouring
+     it globally is the honest answer there. */
+  if(F.dept==='all' && s==='unit' && VIEW.length){
+    var lanes={}, order=[];
+    VIEW.forEach(function(g){
+      var d=deptOf(g)||'other';
+      if(!lanes[d]){ lanes[d]=[]; order.push(d); }
+      lanes[d].push(g);
+    });
+    if(order.length>1){
+      /* DEPT_ORDER first so the deal is stable and the flagship shelf
+         still leads — it simply no longer occupies the whole screen.
+         Anything not in DEPT_ORDER follows in first-seen order. */
+      order.sort(function(a,b){
+        var ia=DEPT_ORDER.indexOf(a), ib=DEPT_ORDER.indexOf(b);
+        return (ia<0?99:ia)-(ib<0?99:ib);
+      });
+      var mixed=[], any=true;
+      for(var i=0; any; i++){
+        any=false;
+        for(var j=0;j<order.length;j++){
+          var lane=lanes[order[j]];
+          if(i<lane.length){ mixed.push(lane[i]); any=true; }
+        }
+      }
+      VIEW=mixed;
+    }
+  }
 
   var mount=document.getElementById('mount');
   if(!VIEW.length && !PGROUPS.length){
@@ -1531,9 +1579,10 @@ function apply(reset){
     Object.keys(F.stores).length||Object.keys(F.brands).length;
   document.getElementById('clear').hidden=!on;
 
-  /* heroStats() used to run only from ingest(), so the three figures
-     were whatever the last load computed and never followed the shelf. */
-  renderHero(); setRouteMeta(); heroStats();
+  /* Both follow the shelf, not the load: renderHero() swaps the (now
+     hidden) h1 and setRouteMeta() the title/description/canonical, so a
+     department change updates what a crawler reads without a refetch. */
+  renderHero(); setRouteMeta();
   renderRail(); refreshFacets(); setWarn(); setNotices(); saveSelv();
 }
 
@@ -1886,6 +1935,18 @@ function repImageForDept(d){
    broken store logo falls back to one. */
 function renderPickerRow(cDept,cStore,cBrand){
   var row=document.getElementById('pickerRow');
+  /* NOT ON A SPOTLIGHT. The row lives outside #mallview (it sits above
+     both views in the markup), so hiding #mallview left it stranded on
+     /#/store/* — three lanes of Category / Store / Brand on a page that
+     is already one store, and already one card per brand. All three
+     filter the mall grid underneath, which nobody on a spotlight can
+     see, so every chip reads as dead.
+
+     The guard belongs here rather than only in route() because apply()
+     can run while a spotlight is open — that is the same path that once
+     re-rendered a hidden #mallview (see leaveSpotlight()) — and it would
+     otherwise un-hide the row again on the next keystroke. */
+  if(row && currentRoute().view==='spotlight'){ row.hidden=true; return; }
   var catBox=document.getElementById('categoryLogos'),
       storeBox=document.getElementById('storeLogos'),
       brandBox=document.getElementById('brandLogos');
@@ -1893,7 +1954,12 @@ function renderPickerRow(cDept,cStore,cBrand){
 
   var catChips=DEPT_ORDER.filter(function(d){ return cDept[d]; }).map(function(d){
     var on=F.dept===d, meta=DEPTS[d]||{}, img=repImageForDept(d);
+    /* --cat-accent rides on the BUTTON, not the image plate: the
+       selected ring, the filled label pill and the count all read it,
+       and only the plate can see --mono-a. One department hue, four
+       cues, declared once. */
     return '<button class="llogo cat'+(on?' on':'')+'" data-logocat="'+esc(d)+'" '+
+      'style="--cat-accent:'+esc(meta.accent||'var(--gold)')+'" '+
       'aria-pressed="'+on+'" title="'+esc(meta.label||d)+'">'+
       '<span class="limg'+(img?'':' mono')+'" data-letter="'+esc(String(meta.label||d).charAt(0).toUpperCase())+'" '+
         'style="--mono-a:'+esc(meta.accent||'var(--gold)')+';--mono-b:var(--chip)">'+
@@ -2044,16 +2110,20 @@ function setNotices(){
 }
 
 /* ============================================================
-   DEPARTMENT HEROES
+   DEPARTMENT HEADINGS (was: DEPARTMENT HEROES)
    ------------------------------------------------------------
    Legal-Leaf gives each page its own hero by serving a separate HTML
    file per page. We cannot do that: every department URL rewrites to
    index.html and the shelf is chosen client-side (CLAUDE.md §3), so
-   here the hero is DATA and renderHero() swaps it.
+   this is DATA and renderHero() swaps it.
 
-   Each entry argues its own shelf's unit, because that unit is the
-   reason the shelf exists. The colour comes from the department token
-   via data-hero, so a new shelf needs a HEROES entry and one CSS line.
+   The visible hero is gone; `lead` + `head` still fill the hidden h1,
+   so /pouches reads "the honest per-pouch price" to a crawler and not
+   whatever the last shelf set. `eyebrow` and `sub` are kept because
+   each argues its own shelf's unit in the site's voice — the natural
+   source if these shelves ever want a real intro paragraph — but
+   nothing renders them today. Adding a shelf still means adding an
+   entry here.
    ============================================================ */
 var HEROES={
   all:{ eyebrow:'every store, one price you can compare',
@@ -2089,11 +2159,8 @@ var HEROES={
 };
 
 function renderHero(){
-  var sec=document.getElementById('hero'); if(!sec) return;
-  var d=F.dept||'all', h=HEROES[d]||HEROES.all;
-  sec.setAttribute('data-hero',d);
-  [['heroEyebrow',h.eyebrow],['heroLead',h.lead],
-   ['heroHead',h.head],['heroSub',h.sub]].forEach(function(p){
+  var h=HEROES[F.dept||'all']||HEROES.all;
+  [['heroLead',h.lead],['heroHead',h.head]].forEach(function(p){
     var el=document.getElementById(p[0]); if(el) el.textContent=p[1];
   });
 }
@@ -2179,90 +2246,18 @@ window.addEventListener('popstate',function(){
   F.dept=deptFromPath()||'all'; F.subs=pruneSubs(F.dept); apply();
 });
 
-/* The headline number, and the one most easily made a liar.
+/* The hero's three stats went with the hero, and heroStats() with them,
+   along with SHELF_NOUN and shelfGroups() which existed only to feed it.
+   The live filtered count above the grid (#rcount) was always the more
+   honest number anyway — it moves with the filters, where the hero's
+   figure deliberately did not.
 
-   It used to walk only each group's SELECTED variant, skip the
-   `available` check that every shelf applies, compare bare numbers
-   across four currencies, and then print the winner's own symbol on the
-   result. That is how the hero could claim a cheapest pouch of £0.003
-   while the site's own "best value per unit" sort, filtered to the same
-   store, put the real floor at £0.03.
-
-   It now shares computeBestUnits()' yardstick exactly: in stock, every
-   variant, one currency.
-
-   DISPLAYED IN USD for now. Once PREVIEW_MODE goes false and shipping
-   limits are enforced, this should follow the shopper's own region —
-   the conversion already runs through usdOf(), so that becomes a
-   question of which target currency to format into, not new maths. */
-var SHELF_NOUN={all:'products tracked', pouch:'pouches tracked',
-  disposable:'disposables tracked', device:'devices tracked',
-  liquid:'e-liquids tracked', cigar:'cigars tracked', gear:'gear items tracked'};
-
-/* What the three figures are counted over.
-
-   Scope is THIS SHELF plus reachability — deliberately NOT the filter
-   bar. The hero is a standing statement about the department; #rcount
-   directly above the grid is the live filtered count. Tying both to the
-   filters made the hero twitch on every keystroke and said the same
-   thing twice. */
-function shelfGroups(){
-  var d=F.dept||'all';
-  return PGROUPS.filter(function(g){
-    if(d!=='all' && deptOf(g)!==d) return false;
-    if(!SHOW_ALL){
-      if(!storeShipsHere(SMAP[g.key])) return false;
-      if(legalFor(deptOf(g))[0]==='banned') return false;
-    }
-    return true;
-  });
-}
-
-function heroStats(){
-  var el=document.getElementById('heroStats'); if(!el) return;
-  var d=F.dept||'all';
-  var groups=shelfGroups();
-
-  /* The unit this shelf is actually priced by. 'all' stays on pouches
-     because that is the homepage's headline claim; every other shelf
-     answers in its own unit, which is why the Disposables page used to
-     advertise a "cheapest pouch". Devices and gear are priced flat, so
-     there is no honest unit and the figure becomes lowest price. */
-  var unitDept = d==='all' ? 'pouch' : d;
-  var dd = DEPTS[unitDept]||{};
-  var flat = !dd.unit || dd.unit==='flat';
-
-  var stores={}, rows=0, best=null;
-  groups.forEach(function(g){
-    stores[g.key]=1;
-    gvariants(g).forEach(function(v){
-      rows++;
-      if(!v.available) return;
-      var val;
-      if(flat){
-        val=usdOf(v.price,v.currency||'USD');
-      }else{
-        if(deptOf(g)!==unitDept) return;      /* 'all' ranks pouches only */
-        var u=unitPrice(v); if(!u) return;
-        val=usdOf(u.value,v.currency||'USD');
-      }
-      if(val==null||!val) return;
-      if(best==null||val<best) best=val;
-    });
-  });
-
-  var bits=[
-    '<div><b>'+rows.toLocaleString()+'</b><span>'+
-      esc(SHELF_NOUN[d]||SHELF_NOUN.all)+'</span></div>',
-    '<div><b>'+Object.keys(stores).length+'</b><span>stores compared</span></div>'
-  ];
-  if(best!=null){
-    var lbl = flat ? 'lowest price (USD)'
-                   : 'cheapest '+(dd.unitLabel||'per unit')+' (USD)';
-    bits.push('<div><b>'+unitFmt(best,'USD')+'</b><span>'+esc(lbl)+'</span></div>');
-  }
-  el.innerHTML=bits.join('');
-}
+   Kept for whoever goes looking: that figure was a standing per-shelf
+   claim ("cheapest per pouch", in USD), and it shared computeBestUnits()'
+   yardstick — in stock, every variant, one currency — precisely because
+   an earlier version did not, and advertised a cheapest pouch of £0.003
+   against a real floor of £0.03. If anything like it comes back, it goes
+   through that same yardstick, not a fresh walk of selected variants. */
 
 function stamp(){
   var el=document.getElementById('stamp'); if(!el) return;
@@ -2521,6 +2516,9 @@ function stepQty(st, q, item){
    drawer says that is what will happen. */
 var CHECKOUT_CAP={ shopify:'all', woocommerce:'one',
                    magento:'none', feedcsv:'none', bigcommerce:'none' };
+/* checkoutPlan() can also return cap:'some' — a Shopify basket where
+   only part of it carries variant ids. That is a property of the ROWS,
+   not of the platform, so it has no entry here. */
 
 /* Returns {cap, url, filled, rest} so the drawer can describe the
    hand-off truthfully instead of every store getting one caption.
@@ -2543,8 +2541,20 @@ function checkoutPlan(st, items){
 function checkoutPlanRaw(st, items){
   var base='https://'+st.domain;
   if(st.platform==='shopify'){
-    var parts=items.filter(function(x){return x.vid;})
-                   .map(function(x){return encodeURIComponent(x.vid)+':'+stepQty(st,x.qty,x);});
+    /* A cart permalink can only carry a line that HAS a variant id, and
+       not every door supplies one — the JSON-LD fallback in particular
+       yields rows with no vid at all. Those lines used to be filtered
+       out and then forgotten: `rest` was hardcoded to [], so a basket of
+       three where one had a vid returned cap:'all', filled:1, rest:[]
+       and the drawer said "All 3 items go into their basket". It sent
+       one and dropped two, silently, while claiming otherwise.
+
+       Split the basket instead of filtering it. Whatever the permalink
+       cannot carry comes back as `rest` and the drawer lists it. */
+    var canSend=[], cannot=[];
+    items.forEach(function(x){ (x.vid?canSend:cannot).push(x); });
+    var parts=canSend.map(function(x){
+      return encodeURIComponent(x.vid)+':'+stepQty(st,x.qty,x); });
     /* The cart permalink jumps straight to /cart, skipping any product
        page — so the affiliate cookie was never set on the way through
        and Shopify handoffs were tracking to nobody. ?ref= rides along
@@ -2553,10 +2563,20 @@ function checkoutPlanRaw(st, items){
        return_to carries the shopper past the cart page and into the
        checkout once the permalink has filled the basket, which is the
        whole point of sending a basket at all. */
-    if(parts.length) return {cap:'all', filled:parts.length, rest:[],
+    if(parts.length) return {cap: cannot.length?'some':'all',
+      filled:parts.length, rest:cannot, opens:'checkout',
       url:addParams(base+'/cart/'+parts.join(','),
         {discount:st.coupon, ref:st.ref, return_to:'/checkout'})};
-    return {cap:'none', filled:0, rest:items.slice(1),
+    /* NOT ONE LINE IS SENDABLE. The old code returned rest:items.slice(1)
+       here, which was the same bug wearing a different hat: the URL is a
+       cart or a discount link, NOT item one's page, so item one appeared
+       in neither and could not be reached from the drawer at all. Every
+       item is `rest` here, because the link carries none of them.
+
+       The discount link is still worth following when there is a code —
+       it lands on an empty cart, but with the code already applied. */
+    return {cap:'none', filled:0, rest:items,
+      opens: st.coupon?'discount':'cart',
       url: st.coupon
         ? addParams(base+'/discount/'+encodeURIComponent(st.coupon),{redirect:'/cart', ref:st.ref})
         : addParams(base+'/cart',{ref:st.ref})};
@@ -2585,7 +2605,7 @@ function checkoutPlanRaw(st, items){
     }else{
       url=addParams(base+path,{'add-to-cart':x.vid, quantity:stepQty(st,x.qty,x), ref:st.ref});
     }
-    return {cap:'one', filled:1, rest:items.slice(1), url:url};
+    return {cap:'one', filled:1, rest:items.slice(1), opens:'cart', url:url};
   }
 
   /* Nothing can fill this basket by URL. Open the first item where it
@@ -2593,6 +2613,7 @@ function checkoutPlanRaw(st, items){
      as their own links instead of stranding the shopper on one product
      page under a button that promised a checkout. */
   return {cap:'none', filled:0, rest:items.slice(1),
+    opens: items[0]?'item':'home',
     url: items[0] ? (items[0].aff||items[0].url) : addParams(base+'/',{ref:st.ref})};
 }
 function checkoutStore(key){
@@ -2687,23 +2708,51 @@ function renderCart(){
     /* The button now says what it will actually do. One caption for
        every store is how "Checkout at Nicokick →" came to mean "open a
        product page". */
-    var plan=checkoutPlan(st,items), n=items.length, code=st.coupon?' with code '+esc(st.coupon):'';
+    var plan=checkoutPlan(st,items), n=items.length;
+    /* TWO DIFFERENT CLAIMS, and they were being made with one phrase.
+       The Shopify permalink carries `discount` and really does apply the
+       code; every other hand-off only copies it to the clipboard, and
+       saying "with code X" there told the shopper a discount was applied
+       when nothing had applied it. */
+    var applied = st.coupon && plan.opens!=='item' && plan.opens!=='home'
+                && (plan.cap==='all'||plan.cap==='some'||plan.opens==='discount');
+    var code = !st.coupon ? ''
+             : (applied ? ' with code '+esc(st.coupon)+' applied'
+                        : ', and code '+esc(st.coupon)+' is copied for you');
     var label, note;
     if(plan.cap==='all'){
       label='Checkout at '+esc(st.name)+' →';
       note='All '+n+' item'+(n===1?'':'s')+' go into '+esc(st.name)+"'s basket"+code+
            ', and you land on their checkout.';
+    }else if(plan.cap==='some'){
+      /* Part of the basket is sendable. Counting from plan.filled, never
+         from items.length — that mismatch is what let the old note say
+         "all 3" while the link carried one. */
+      label='Send '+plan.filled+' of '+n+' to '+esc(st.name)+' →';
+      note=esc(st.name)+"'s basket link can only carry items we have a variant id for, so "+
+           plan.filled+' of your '+n+' go through'+code+'. The other '+plan.rest.length+
+           ' are one tap each below.';
     }else if(plan.cap==='one'){
       label=(n>1?'Add first item at ':'Checkout at ')+esc(st.name)+' →';
       note=n>1
-        ? esc(st.name)+' can only be sent one item per link, so this adds the first. '+
-          'The rest are one tap each below.'
+        ? esc(st.name)+' can only be sent one item per link, so this adds the first'+code+
+          '. The rest are one tap each below.'
         : 'Your item goes straight into '+esc(st.name)+"'s basket"+code+'.';
     }else{
-      label='Open at '+esc(st.name)+' →';
-      note=esc(st.name)+' cannot be sent a basket by link, so this opens '+
-           (n>1?'your first item':'your item')+' on their site'+
-           (st.coupon?', code '+esc(st.coupon)+' copied':'')+'.';
+      /* cap:'none' is not one situation. The generic branch opens item
+         one's own page; the Shopify no-variant-id branch opens an empty
+         cart or a discount link and carries NO item, so promising "your
+         first item" there was simply false. */
+      var opensItem = plan.opens==='item';
+      label=(opensItem?'Open at ':'Go to ')+esc(st.name)+' →';
+      note = opensItem
+        ? esc(st.name)+' cannot be sent a basket by link, so this opens '+
+          (n>1?'your first item':'your item')+' on their site'+
+          (st.coupon?', code '+esc(st.coupon)+' copied':'')+'.'
+        : esc(st.name)+' cannot be sent a basket by link, so this opens their '+
+          (plan.opens==='discount'?'cart with code '+esc(st.coupon)+' already applied'
+                                  :'site')+'. Your '+n+' item'+(n===1?'':'s')+
+          ' '+(n===1?'is':'are')+' one tap each below.';
     }
 
     /* Anything the link could not carry, as its own tap. This is the
@@ -2969,7 +3018,12 @@ function route(){
   var mall=document.getElementById('mallview');
   var spot=document.getElementById('spotview');
   if(r.view==='spotlight' && SPOTLIGHT[r.key]){
-    mall.hidden=true; spot.hidden=false; renderSpotlight(r.key);
+    mall.hidden=true; spot.hidden=false;
+    /* apply() does not run on this branch, so the picker row would keep
+       whatever the mall left behind. Hide it here; renderPickerRow()
+       holds the same rule for anything that renders it later. */
+    var pr=document.getElementById('pickerRow'); if(pr) pr.hidden=true;
+    renderSpotlight(r.key);
     window.scrollTo(0,0);
   }else{
     spot.hidden=true; mall.hidden=false;
@@ -3238,7 +3292,7 @@ function ingest(items){
      to showing its KEY — "Checkout at eightvape" rather than
      "EightVape". Re-render now that the real registry is in. */
   renderCart(); badges();
-  facets(); heroStats(); stamp(); route();
+  facets(); stamp(); route();
 }
 function facets(){ refreshFacets(); renderStoreList(); }
 
@@ -3530,8 +3584,7 @@ if('serviceWorker' in navigator){
 /* boot */
 /* Independent of the catalogue — the backdrop should be falling before
    the first product ever loads, cold-scrape or not. */
-spawnLeaves(document.querySelector('.bgscape'), 42, false);
-spawnLeaves(document.querySelector('.hero-scape'), 16, true);
+spawnLeaves(document.querySelector('.bgscape'), 42);
 loadLoc(); restoreUserLoc(); locPillUI(); setAgeCopy(); setWarn(); setNotices();
 loadSelv(); loadCart(); loadBoard(); badges(); accountUI(); setAuthMode('signup'); renderCart();
 /* The path picks the opening shelf BEFORE the first render, so /pouches

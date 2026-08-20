@@ -67,6 +67,54 @@ var DEPTS = {
 var DEPT_ORDER = ['pouch','disposable','device','liquid','cigar','gear'];
 
 /* ============================================================
+   FALLING LEAVES — the animated backdrop
+   ------------------------------------------------------------
+   Spawned here rather than hand-authored in HTML/CSS: randomised
+   size/speed/drift/colour per leaf is what makes "a lot of leaves,
+   blustery day" read as weather rather than a handful of repeating
+   copies. Each leaf is one SVG element with a plain CSS animation —
+   this only runs once, on load, never per frame, so a few dozen of
+   them cost nothing at runtime. Reduced motion is handled by the
+   sitewide `*{animation-duration:.001ms!important}` rule in app.css;
+   nothing extra needed here.
+
+   Two shapes: #leafIcon (the house mark, its own fixed palette) and
+   #leafFall (a plainer silhouette, fill="currentColor" so it can be
+   recoloured per instance) — reusing one shape for every leaf reads
+   as a decoration; mixing two, one of them tinted across the site's
+   own autumn hues, reads as an actual pile of different leaves. */
+var LEAF_HUES=['var(--gold)','var(--ember)','var(--cigar)','#c8862a','var(--red)','var(--sage-dk)'];
+function spawnLeaves(container, count, dense){
+  if(!container) return;
+  var frag=document.createDocumentFragment();
+  for(var i=0;i<count;i++){
+    var useFall=Math.random()<0.55;
+    var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('viewBox', useFall?'0 0 40 56':'0 0 60 72');
+    svg.setAttribute('class','fleaf'+(dense?' fleaf-hero':''));
+    var use=document.createElementNS('http://www.w3.org/2000/svg','use');
+    use.setAttribute('href', useFall?'#leafFall':'#leafIcon');
+    svg.appendChild(use);
+
+    var sz=(dense?24:16)+Math.random()*(dense?44:38);
+    var dur=(dense?8:14)+Math.random()*(dense?9:15);
+    var delay=-Math.random()*dur;               /* negative: starts mid-fall, not all at once */
+    var drift=(Math.random()<0.5?-1:1)*(dense?60:80)*(0.6+Math.random()*0.8);
+    var spin=(Math.random()<0.5?-1:1)*(220+Math.random()*280);
+    var left=(Math.random()*100).toFixed(2);
+    var op=((dense?0.18:0.09)+Math.random()*(dense?0.14:0.11)).toFixed(2);
+
+    svg.style.cssText=
+      '--l:'+left+'%;--sz:'+sz.toFixed(0)+'px;'+
+      '--drift:'+drift.toFixed(0)+'px;--spin:'+spin.toFixed(0)+'deg;'+
+      'opacity:'+op+';animation-duration:'+dur.toFixed(1)+'s;animation-delay:'+delay.toFixed(1)+'s'+
+      (useFall?(';color:'+LEAF_HUES[Math.floor(Math.random()*LEAF_HUES.length)]):'');
+    frag.appendChild(svg);
+  }
+  container.appendChild(frag);
+}
+
+/* ============================================================
    SUBCATEGORIES
    ------------------------------------------------------------
    The shelf below the shelf. api/products.js assigns `sub` from the
@@ -1784,7 +1832,7 @@ function railStep(dir){
    deals carousel, but a brand list has a first and a last brand and
    wrapping past Z back to A reads as a bug. */
 (function(){
-  var IDS=['storeLogos','brandLogos'];
+  var IDS=['categoryLogos','storeLogos','brandLogos'];
 
   function sync(box){
     var wrap=box.parentElement;
@@ -1846,21 +1894,10 @@ function refreshFacets(){
   var cStore=facetCount('store'), cBrand=facetCount('brand'),
       cDept=facetCount('dept');
 
-  DEPT_ORDER.forEach(function(d){
-    var el=document.getElementById('c-'+d);
-    if(el) el.textContent=cDept[d]||'';
-    var tab=document.querySelector('.dept[data-dept="'+d+'"]');
-    if(tab){
-      var empty=!cDept[d];
-      tab.style.opacity=empty?'.34':'';
-      tab.style.pointerEvents=empty?'none':'';
-    }
-  });
-
   var ns=document.getElementById('nstores');
   if(ns) ns.textContent=Object.keys(cStore).length;
 
-  renderStoreRow(cStore); renderBrandRow(cBrand);
+  renderCategoryRow(cDept); renderStoreRow(cStore); renderBrandRow(cBrand);
 }
 
 /* ============================================================
@@ -1888,6 +1925,31 @@ function monoAttrs(name,key){
   var t=monoTint(key);
   return 'data-letter="'+esc(String(name||'?').charAt(0).toUpperCase())+'" '+
          'style="--mono-a:'+t.a+';--mono-b:'+t.b+'"';
+}
+/* Category is the replacement for the old shelf pills, rendered as a
+   logo-strip chip like its two neighbours rather than a row of solid
+   buttons. `counts` is facetCount('dept') — already computed with the
+   store/brand filters applied and the dept filter itself excluded, so
+   this reads the same joint-faceted numbers the pills used to show,
+   just through the shared logo-row renderer. --mono-b is the app's own
+   chip tone rather than a second hue, so each dept's accent fades into
+   the dark plate instead of fighting the six-colour palette. */
+function renderCategoryRow(counts){
+  var row=document.getElementById('categoryRow'), box=document.getElementById('categoryLogos');
+  if(!box) return;
+  var live=DEPT_ORDER.filter(function(d){ return counts[d]; });
+  if(live.length<2){ row.hidden=true; return; }
+  row.hidden=false;
+  box.innerHTML=live.map(function(d){
+    var on=F.dept===d, meta=DEPTS[d]||{};
+    return '<button class="lchip cat'+(on?' on':'')+'" data-logocat="'+esc(d)+'" '+
+      'aria-pressed="'+on+'" title="'+esc(meta.label||d)+'">'+
+      '<span class="limg mono" data-letter="'+esc(String(meta.label||d).charAt(0).toUpperCase())+'" '+
+        'style="--mono-a:'+esc(meta.accent||'var(--gold)')+';--mono-b:var(--chip)"></span>'+
+      '<span class="lname">'+esc(meta.label||d)+'</span>'+
+      '<span class="lcount">'+counts[d]+'</span></button>';
+  }).join('');
+  document.getElementById('clearCategory').hidden = F.dept==='all';
 }
 function renderStoreRow(counts){
   var row=document.getElementById('storeRow'), box=document.getElementById('storeLogos');
@@ -2152,16 +2214,12 @@ function pushDeptPath(){
   try{ history.pushState({dept:d},'',want+location.search); }catch(e){}
 }
 
-/* the tab strip follows F.dept, whoever set it — click, path or Back */
-function syncDeptTabs(){
-  var d=F.dept||'all';
-  Array.prototype.forEach.call(document.querySelectorAll('.dept'),function(x){
-    if(x.tagName==='A') return;
-    x.setAttribute('aria-pressed', x.getAttribute('data-dept')===d?'true':'false');
-  });
-}
+/* The category logo strip follows F.dept on its own, whoever set it —
+   click, path or Back — because renderCategoryRow() re-renders from F
+   on every apply(). Nothing extra to sync here now that the shelf is
+   chosen from that strip instead of a row of tab buttons. */
 window.addEventListener('popstate',function(){
-  F.dept=deptFromPath()||'all'; F.subs=pruneSubs(F.dept); syncDeptTabs(); apply();
+  F.dept=deptFromPath()||'all'; F.subs=pruneSubs(F.dept); apply();
 });
 
 /* The headline number, and the one most easily made a liar.
@@ -2789,6 +2847,18 @@ document.addEventListener('click',function(e){
     var b=el.getAttribute('data-logobrand');
     if(F.brands[b]) delete F.brands[b]; else F.brands[b]=1;
     F.brand='all'; apply(); return; }
+  /* Category replaces the old shelf pills: same effect (F.dept, prune
+     the subcategories that no longer belong, clear the brand filter so
+     a brand picked on another shelf can't filter this one to nothing,
+     leave any open spotlight, push the /department path) as the pill
+     click handler used to, just triggered from the logo strip instead.
+     Clicking the ALREADY-selected chip goes back to "Everything" —
+     the same toggle affordance its store/brand neighbours have. */
+  if((el=hit('[data-logocat]'))){ e.preventDefault();
+    var newDept=el.getAttribute('data-logocat');
+    F.dept = F.dept===newDept ? 'all' : newDept;
+    F.subs=pruneSubs(F.dept); F.brands={};
+    leaveSpotlight(); pushDeptPath(); apply(); return; }
   if((el=hit('[data-storefilter]'))){ e.preventDefault();
     F.stores={}; F.stores[el.getAttribute('data-storefilter')]=1;
     F.store='all';
@@ -2839,14 +2909,6 @@ document.getElementById('f-sort').addEventListener('change',function(e){
 document.getElementById('f-deals').addEventListener('click',function(){
   F.deals=!F.deals; this.classList.toggle('active',F.deals);
   this.setAttribute('aria-pressed',F.deals); apply();});
-document.getElementById('depts').addEventListener('click',function(e){
-  var b=e.target.closest('.dept'); if(!b||b.tagName==='A') return;
-  this.querySelectorAll('.dept').forEach(function(x){x.setAttribute('aria-pressed','false');});
-  b.setAttribute('aria-pressed','true'); F.dept=b.getAttribute('data-dept');
-  /* keep only the subcategories that still belong to this shelf; a brand
-     picked on another shelf would filter this one to nothing */
-  F.subs=pruneSubs(F.dept); F.brands={};
-  leaveSpotlight(); pushDeptPath(); apply();});
 document.getElementById('subchips').addEventListener('click',function(e){
   var b=e.target.closest('.subchip'); if(!b) return;
   if(b.getAttribute('data-subclear')){ F.subs={}; apply(); return; }
@@ -2867,6 +2929,9 @@ document.getElementById('subchips').addEventListener('click',function(e){
   var b=document.getElementById('railShuffle');
   if(b) b.addEventListener('click',function(){ RAILP++; renderRail(); });
 })();
+document.getElementById('clearCategory').addEventListener('click',function(){
+  F.dept='all'; F.subs=pruneSubs('all');
+  leaveSpotlight(); pushDeptPath(); apply();});
 document.getElementById('clearStores').addEventListener('click',function(){F.stores={};apply();});
 document.getElementById('clearBrands').addEventListener('click',function(){F.brands={};apply();});
 document.getElementById('clear').addEventListener('click',function(){
@@ -2875,8 +2940,9 @@ document.getElementById('clear').addEventListener('click',function(){
   document.getElementById('q').value='';
   document.getElementById('f-sort').value='unit';
   document.getElementById('f-deals').classList.remove('active');
-  document.querySelectorAll('.dept').forEach(function(x){x.setAttribute('aria-pressed','false');});
-  document.querySelector('.dept[data-dept="all"]').setAttribute('aria-pressed','true');
+  /* Category/store/brand re-render their own "on" state from F on the
+     apply() below — the old code synced .dept[data-dept] buttons by
+     hand here, which is exactly the DOM those buttons no longer are. */
   leaveSpotlight(); pushDeptPath(); apply();});
 
 document.getElementById('scrim').addEventListener('click',function(){
@@ -3519,11 +3585,15 @@ if('serviceWorker' in navigator){
 }
 
 /* boot */
+/* Independent of the catalogue — the backdrop should be falling before
+   the first product ever loads, cold-scrape or not. */
+spawnLeaves(document.querySelector('.bgscape'), 42, false);
+spawnLeaves(document.querySelector('.hero-scape'), 16, true);
 loadLoc(); restoreUserLoc(); locPillUI(); setAgeCopy(); setWarn(); setNotices();
 loadSelv(); loadCart(); loadBoard(); badges(); accountUI(); setAuthMode('signup'); renderCart();
 /* The path picks the opening shelf BEFORE the first render, so /pouches
    opens on Pouches instead of dumping the visitor into Everything. */
-F.dept=deptFromPath()||'all'; syncDeptTabs(); setRouteMeta();
+F.dept=deptFromPath()||'all'; setRouteMeta();
 skeleton(); renderStoreList(); route();
 if(read_('nm_age')==='1' && hasLoc()){ closeGate(); maybeOfferInstall(); }
 else openGate(false);   /* never stack an install hint on top of the age gate */

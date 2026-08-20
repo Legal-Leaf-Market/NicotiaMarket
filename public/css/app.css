@@ -672,33 +672,53 @@ header.top{position:sticky;top:0;z-index:50;
       reads as a badly-cut logo rather than a product. Brands now use
       a rounded square, which is honestly a product shot.
    ============================================================ */
-.logorow{padding:14px 0 4px}
-.lrhead{display:flex;align-items:baseline;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.logorow{padding:12px 0 6px}
+.lrhead{display:flex;align-items:baseline;gap:12px;margin-bottom:10px;flex-wrap:wrap}
 .lrhead h2{font-family:var(--display);font-weight:900;font-size:13.5px;
   letter-spacing:.06em;text-transform:uppercase;margin:0}
 .lrhead small{font-size:11.5px;color:var(--dim)}
+/* The "condensed into one row" hint — italic and dim on purpose, a
+   caption rather than a label, but present without hovering for it. */
+.lrhint{font-style:italic;color:var(--dim);opacity:.8}
 .lrclear{margin-left:auto;background:none;border:none;color:var(--gold);cursor:pointer;
   font-size:11.5px;letter-spacing:.04em;text-decoration:underline;padding:0}
-/* ---- the logo carousels ----
+/* Group dividers inside the merged strip — Category / Store / Brand
+   chips all share one scroll container now, and these are the only
+   thing telling them apart besides the chip art itself (colour circle
+   vs. store logo vs. product photo). Not a chip: no border, no hover,
+   just a vertical rule and a label, so it reads as "start of a new
+   kind of thing" rather than one more scroll-snap stop. */
+.lrsep{flex:0 0 auto;align-self:center;white-space:nowrap;
+  padding-left:14px;margin-left:4px;border-left:1px solid var(--line);
+  font-family:var(--sans);font-weight:700;font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--dim)}
+.lrscroll>.lrsep:first-child{margin-left:0;padding-left:0;border-left:0}
+/* ---- the logo carousel ----
    The scrollbar is gone. It sat under a row of brand marks looking like a
    rendering fault, and a 4px track is a poor affordance anyway: too small
    to grab and invisible on a trackpad until you are already scrolling.
-   Arrows do the job instead, matching the Best-value rail, and the strip
-   is still swipeable and still keyboard-scrollable. */
+   Four things say "this scrolls" instead: the arrows, the edge fades
+   below, a mouse wheel redirected sideways (wheelToScroll() in app.js)
+   and click-and-drag (dragToScroll()) — touch already scrolls it
+   natively. One row holding three kinds of chip needs to be obviously
+   scrollable or it just reads as cut off. */
 .lrwrap{position:relative}
 .lrscroll{display:flex;gap:10px;overflow-x:auto;padding:2px 0 6px;
-  scrollbar-width:none;-ms-overflow-style:none;
-  scroll-behavior:smooth;scroll-snap-type:x proximity}
+  scrollbar-width:none;-ms-overflow-style:none;cursor:grab;
+  scroll-behavior:smooth;scroll-snap-type:x proximity;user-select:none}
 .lrscroll::-webkit-scrollbar{display:none;width:0;height:0}
 .lrscroll>*{scroll-snap-align:start}
+.lrscroll.dragging{cursor:grabbing;scroll-behavior:auto}
 
 /* Edge fades, so a cut-off logo reads as "more this way" rather than as a
-   clipped image. Pointer-events off or they would eat clicks on the end
-   chips. Hidden by JS when the strip is not actually scrollable. */
-.lrwrap::before,.lrwrap::after{content:"";position:absolute;top:0;bottom:6px;width:46px;
+   clipped image. Widened and darkened from the single-purpose rows this
+   replaced — one shared strip needs a louder version of the same hint.
+   Pointer-events off or they would eat clicks on the end chips. Hidden
+   by JS when the strip is not actually scrollable. */
+.lrwrap::before,.lrwrap::after{content:"";position:absolute;top:0;bottom:6px;width:64px;
   pointer-events:none;opacity:0;transition:opacity .2s;z-index:1}
-.lrwrap::before{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
-.lrwrap::after{right:0;background:linear-gradient(270deg,var(--bg),transparent)}
+.lrwrap::before{left:0;background:linear-gradient(90deg,var(--bg) 40%,transparent)}
+.lrwrap::after{right:0;background:linear-gradient(270deg,var(--bg) 40%,transparent)}
 .lrwrap.can-prev::before{opacity:1}
 .lrwrap.can-next::after{opacity:1}
 
@@ -739,6 +759,14 @@ header.top{position:sticky;top:0;z-index:50;
    should look like one. */
 .lchip.brand .limg{border-radius:12px;background:#fff}
 .lchip.brand .limg img{object-fit:cover;padding:0}
+/* categories: same rounded-square product-photo treatment as brand —
+   a representative item's photo (repImageForDept() in app.js), not a
+   plain letter circle, whenever one exists. Falls back to the same
+   .limg.mono gradient, just fed its own accent hue via --mono-a
+   instead of a store/brand's hashed tint, exactly like a broken store
+   logo falls back to one. */
+.lchip.cat .limg{border-radius:12px}
+.lchip.cat .limg img{object-fit:cover;padding:0}
 .lname{font-family:var(--sans);font-weight:600;font-size:11.5px;line-height:1.25;
   text-align:center;color:var(--muted);max-width:100%;overflow:hidden;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}

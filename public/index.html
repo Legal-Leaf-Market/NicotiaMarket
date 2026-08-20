@@ -218,67 +218,53 @@
   <button class="nbtn" id="openList"><span class="lbl-full">Cart</span>&#128722;<span class="count zero" id="nList">0</span></button>
 </div></header>
 
-<!-- THE TOP OF THE SITE, now Category / Store / Brand, all faceted
-     together — the shelf pills used to live where this sits and are
-     gone. Category (new) plays the role they played, just rendered as
-     a logo-strip chip like its two neighbours instead of a row of
-     solid buttons. All three read off facetCount(), which already
-     excludes the facet being rendered from its own filter (see
-     passes() in app.js) — picking a store already narrows brand and
-     category and vice versa, so this is genuinely joint faceting, not
-     three independent dropdowns that happen to sit near each other. -->
-<div class="toprows shell">
-  <section class="logorow" id="categoryRow" hidden>
-    <div class="lrhead"><h2>Shop by category</h2>
-      <div class="lrctl">
-        <button class="lrclear" id="clearCategory" hidden>Show all</button>
-        <button class="lrnav" type="button" data-lr="categoryLogos" data-dir="-1"
-                aria-label="Scroll categories back">&#8249;</button>
-        <button class="lrnav" type="button" data-lr="categoryLogos" data-dir="1"
-                aria-label="Scroll categories forward">&#8250;</button>
-      </div></div>
-    <div class="lrwrap"><div class="lrscroll" id="categoryLogos"></div></div>
-  </section>
-
-  <section class="logorow" id="storeRow" hidden>
-    <div class="lrhead"><h2>Shop by store</h2>
-      <div class="lrctl">
-        <button class="lrclear" id="clearStores" hidden>Show all</button>
-        <button class="lrnav" type="button" data-lr="storeLogos" data-dir="-1"
-                aria-label="Scroll stores back">&#8249;</button>
-        <button class="lrnav" type="button" data-lr="storeLogos" data-dir="1"
-                aria-label="Scroll stores forward">&#8250;</button>
-      </div></div>
-    <div class="lrwrap"><div class="lrscroll" id="storeLogos"></div></div>
-  </section>
-
-  <section class="logorow" id="brandRow" hidden>
-    <div class="lrhead"><h2>Shop by brand</h2><small id="brandNote"></small>
-      <div class="lrctl">
-        <button class="lrclear" id="clearBrands" hidden>Show all</button>
-        <button class="lrnav" type="button" data-lr="brandLogos" data-dir="-1"
-                aria-label="Scroll brands back">&#8249;</button>
-        <button class="lrnav" type="button" data-lr="brandLogos" data-dir="1"
-                aria-label="Scroll brands forward">&#8250;</button>
-      </div></div>
-    <div class="lrwrap"><div class="lrscroll" id="brandLogos"></div></div>
-  </section>
-</div>
-
-<!-- What is left of the old shelf-pill nav once the six shelf buttons
-     move up into the Category strip above: four links to pages that
-     were never shelf pills in the first place — a store spotlight and
-     three reading pages. Real <a> elements, not hash routes, for the
-     three that are separate documents and can be linked to from
-     outside. Nicokick is named for the store, not the country: "US
-     Pouches" implied this was every US pouch on the site, and it is
-     not, it is one store's range. -->
+<!-- THE VERY TOP OF THE SITE. Four links to pages that were never
+     shelf pills in the first place — a store spotlight and three
+     reading pages — come first, above the shelf picker below, because
+     they're not part of the shopping flow this page is otherwise
+     entirely about. Real <a> elements, not hash routes, for the three
+     that are separate documents and can be linked to from outside.
+     Nicokick is named for the store, not the country: "US Pouches"
+     implied this was every US pouch on the site, and it is not, it is
+     one store's range. -->
 <nav class="depts"><div class="dept-in shell" id="depts">
   <a class="dept ourstory" id="spotLink" href="#/store/nicokick" data-route hidden>Nicokick Pouches</a>
   <a class="dept ourstory" href="/black-buffalo">Black Buffalo</a>
   <a class="dept ourstory" href="/story">Our Story</a>
   <a class="dept ourstory" href="/community">The Back Door &middot; soon</a>
 </div></nav>
+
+<!-- Category / Store / Brand, condensed into ONE scrollable row —
+     these used to be three separate strips, each with its own header
+     and padding, and "too much real estate at the top" was the direct
+     result. Category (a replacement for the old shelf pills) shares
+     this row rather than getting one of its own, and all three read
+     off facetCount(), which already excludes the facet being rendered
+     from its own filter (see passes() in app.js) — picking a store
+     already narrows brand and category and vice versa, so this is
+     genuinely joint faceting, not three independent dropdowns that
+     happen to sit near each other.
+
+     Scrollable in four ways on purpose, because one row holding three
+     kinds of chip needs to read as obviously scrollable or it reads
+     as cut off: the arrow buttons, the edge fades, a mouse wheel
+     redirected sideways while hovering it, and click-and-drag — touch
+     scrolls it natively already. See the wheelToScroll()/dragToScroll()
+     wiring in app.js. -->
+<div class="toprows shell">
+  <section class="logorow" id="pickerRow" hidden>
+    <div class="lrhead"><h2>Shop by category, store &amp; brand</h2>
+      <small class="lrhint">scroll, drag or use the arrows for more</small>
+      <div class="lrctl">
+        <button class="lrclear" id="clearPicker" hidden>Show all</button>
+        <button class="lrnav" type="button" data-lr="pickerLogos" data-dir="-1"
+                aria-label="Scroll back">&#8249;</button>
+        <button class="lrnav" type="button" data-lr="pickerLogos" data-dir="1"
+                aria-label="Scroll forward">&#8250;</button>
+      </div></div>
+    <div class="lrwrap"><div class="lrscroll" id="pickerLogos"></div></div>
+  </section>
+</div>
 
 <!-- Subcategories for the chosen department. Hidden on "Everything",
      where a "Coils" chip next to a "Snus" chip would mean nothing. -->

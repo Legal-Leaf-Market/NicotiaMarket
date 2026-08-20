@@ -1832,7 +1832,7 @@ function railStep(dir){
    deals carousel, but a brand list has a first and a last brand and
    wrapping past Z back to A reads as a bug. */
 (function(){
-  var IDS=['categoryLogos','storeLogos','brandLogos'];
+  var IDS=['pickerLogos'];
 
   function sync(box){
     var wrap=box.parentElement;
@@ -1865,6 +1865,53 @@ function railStep(dir){
     if(box) step(box,parseInt(b.getAttribute('data-dir'),10));
   });
 
+  /* Category + store + brand condensed into one row means it MUST be
+     obviously scrollable — the arrows and edge fades above are one
+     answer, but a mouse user's instinct is to reach for the wheel, and
+     a vertical wheel gesture over a horizontal strip normally does
+     nothing (or scrolls the page underneath it, which reads as "this
+     doesn't scroll" even though it does). Redirecting the vertical
+     delta into scrollLeft, and preventing the page scroll that would
+     otherwise fire alongside it, makes "hover and scroll" work the way
+     it would over any normal vertical list — just sideways. Only
+     redirects when the gesture is actually vertical-dominant; a
+     trackpad's native horizontal swipe (deltaX already dominant) is
+     left alone. */
+  function wheelToScroll(box){
+    box.addEventListener('wheel',function(e){
+      if(Math.abs(e.deltaY)<=Math.abs(e.deltaX)) return;
+      e.preventDefault();
+      box.scrollLeft+=e.deltaY;
+    },{passive:false});
+  }
+  /* Click-and-drag for mouse users who don't reach for the wheel either —
+     a third way to discover this scrolls, on top of the arrows and the
+     wheel redirect. Touch already scrolls natively; this only binds
+     mouse events so it can't fight a real swipe. */
+  function dragToScroll(box){
+    var down=false, moved=false, startX=0, startLeft=0;
+    box.addEventListener('mousedown',function(e){
+      down=true; moved=false; startX=e.clientX; startLeft=box.scrollLeft;
+      box.classList.add('dragging');
+    });
+    window.addEventListener('mousemove',function(e){
+      if(!down) return;
+      var dx=e.clientX-startX;
+      if(Math.abs(dx)>3) moved=true;
+      box.scrollLeft=startLeft-dx;
+    });
+    window.addEventListener('mouseup',function(){
+      if(!down) return;
+      down=false; box.classList.remove('dragging');
+      /* Swallow the click a drag ends on, or letting go over a chip
+         would also fire its filter toggle. */
+      if(moved){
+        var swallow=function(e){ e.stopPropagation(); box.removeEventListener('click',swallow,true); };
+        box.addEventListener('click',swallow,true);
+      }
+    });
+  }
+
   IDS.forEach(function(id){
     var box=document.getElementById(id); if(!box) return;
     box.addEventListener('scroll',function(){ sync(box); },{passive:true});
@@ -1873,6 +1920,7 @@ function railStep(dir){
     /* Logos arrive as images, so the strip's width changes after the
        chips do. ResizeObserver catches that; the observers above do not. */
     if(window.ResizeObserver) new ResizeObserver(function(){ sync(box); }).observe(box);
+    wheelToScroll(box); dragToScroll(box);
     sync(box);
   });
 
@@ -1897,7 +1945,7 @@ function refreshFacets(){
   var ns=document.getElementById('nstores');
   if(ns) ns.textContent=Object.keys(cStore).length;
 
-  renderCategoryRow(cDept); renderStoreRow(cStore); renderBrandRow(cBrand);
+  renderPickerRow(cDept,cStore,cBrand);
 }
 
 /* ============================================================
@@ -1926,38 +1974,48 @@ function monoAttrs(name,key){
   return 'data-letter="'+esc(String(name||'?').charAt(0).toUpperCase())+'" '+
          'style="--mono-a:'+t.a+';--mono-b:'+t.b+'"';
 }
-/* Category is the replacement for the old shelf pills, rendered as a
-   logo-strip chip like its two neighbours rather than a row of solid
-   buttons. `counts` is facetCount('dept') — already computed with the
-   store/brand filters applied and the dept filter itself excluded, so
-   this reads the same joint-faceted numbers the pills used to show,
-   just through the shared logo-row renderer. --mono-b is the app's own
-   chip tone rather than a second hue, so each dept's accent fades into
-   the dark plate instead of fighting the six-colour palette. */
-function renderCategoryRow(counts){
-  var row=document.getElementById('categoryRow'), box=document.getElementById('categoryLogos');
+/* Picks a real product photo for a department chip the same way brand
+   chips already do it — the first PGROUPS entry in that department
+   (respecting every OTHER active filter, same as the brand image
+   lookup below) that actually has one. Falls back to the coloured
+   monogram when nothing qualifies, same fallback path a broken store
+   logo already uses. */
+function repImageForDept(d){
+  for(var i=0;i<PGROUPS.length;i++){
+    var g=PGROUPS[i];
+    if(deptOf(g)!==d||!passes(g,'dept')) continue;
+    var f=g.flav[0];
+    if(f&&f.image) return f.image;
+  }
+  return '';
+}
+/* Category, store and brand condensed into ONE scrollable strip —
+   they used to be three separate <section>s, each with its own header
+   and padding, which is exactly the "too much real estate at the top"
+   this replaces. Rendered together so there is one row, one header,
+   one set of scroll controls and one "Show all" that resets all three
+   at once. Category chips get a real product photo now, the same
+   rounded-square treatment as brand, rather than a plain monogram —
+   the monogram is still the fallback when a department has no image
+   to show, exactly like a broken store logo falls back to one. */
+function renderPickerRow(cDept,cStore,cBrand){
+  var row=document.getElementById('pickerRow'), box=document.getElementById('pickerLogos');
   if(!box) return;
-  var live=DEPT_ORDER.filter(function(d){ return counts[d]; });
-  if(live.length<2){ row.hidden=true; return; }
-  row.hidden=false;
-  box.innerHTML=live.map(function(d){
-    var on=F.dept===d, meta=DEPTS[d]||{};
+
+  var catChips=DEPT_ORDER.filter(function(d){ return cDept[d]; }).map(function(d){
+    var on=F.dept===d, meta=DEPTS[d]||{}, img=repImageForDept(d);
     return '<button class="lchip cat'+(on?' on':'')+'" data-logocat="'+esc(d)+'" '+
       'aria-pressed="'+on+'" title="'+esc(meta.label||d)+'">'+
-      '<span class="limg mono" data-letter="'+esc(String(meta.label||d).charAt(0).toUpperCase())+'" '+
-        'style="--mono-a:'+esc(meta.accent||'var(--gold)')+';--mono-b:var(--chip)"></span>'+
+      '<span class="limg'+(img?'':' mono')+'" data-letter="'+esc(String(meta.label||d).charAt(0).toUpperCase())+'" '+
+        'style="--mono-a:'+esc(meta.accent||'var(--gold)')+';--mono-b:var(--chip)">'+
+        (img?'<img src="'+esc(img)+'" alt="" loading="lazy" referrerpolicy="no-referrer" '+
+          'onerror="this.parentNode.classList.add(\'mono\');this.remove();">':'')+
+      '</span>'+
       '<span class="lname">'+esc(meta.label||d)+'</span>'+
-      '<span class="lcount">'+counts[d]+'</span></button>';
-  }).join('');
-  document.getElementById('clearCategory').hidden = F.dept==='all';
-}
-function renderStoreRow(counts){
-  var row=document.getElementById('storeRow'), box=document.getElementById('storeLogos');
-  if(!box) return;
-  var live=STORES.filter(function(s){ return counts[s.key]; });
-  if(live.length<2){ row.hidden=true; return; }
-  row.hidden=false;
-  box.innerHTML=live.map(function(s){
+      '<span class="lcount">'+cDept[d]+'</span></button>';
+  });
+
+  var storeChips=STORES.filter(function(s){ return cStore[s.key]; }).map(function(s){
     var on=!!F.stores[s.key];
     return '<button class="lchip'+(on?' on':'')+'" data-logostore="'+esc(s.key)+'" '+
       'aria-pressed="'+on+'" title="'+esc(s.name)+'">'+
@@ -1965,44 +2023,52 @@ function renderStoreRow(counts){
         '<img src="'+esc(logoFor(s))+'" alt="" loading="lazy" referrerpolicy="no-referrer" '+
         'onerror="this.parentNode.classList.add(\'mono\');this.remove();"></span>'+
       '<span class="lname">'+esc(s.name)+'</span>'+
-      '<span class="lcount">'+counts[s.key]+'</span></button>';
-  }).join('');
-  document.getElementById('clearStores').hidden=!Object.keys(F.stores).length;
-}
-function renderBrandRow(counts){
-  var row=document.getElementById('brandRow'), box=document.getElementById('brandLogos');
-  if(!box) return;
-  var img={};
+      '<span class="lcount">'+cStore[s.key]+'</span></button>';
+  });
+
+  var bImg={};
   PGROUPS.forEach(function(g){
-    if(!g.brand||img[g.brand]) return;
+    if(!g.brand||bImg[g.brand]) return;
     if(!passes(g,'brand')) return;
-    var f=g.flav[0]; if(f&&f.image) img[g.brand]=f.image;
+    var f=g.flav[0]; if(f&&f.image) bImg[g.brand]=f.image;
   });
   /* Judged against the catalogue (BRANDOK), never against these counts.
-     `counts` is the CURRENT view, so testing it here hid every brand the
-     moment a single store was selected. */
-  var list=Object.keys(counts).filter(function(b){ return BRANDOK[nk(b)]; });
-  list.sort(function(a,b){ return counts[b]-counts[a] || a.localeCompare(b); });
-  list=list.slice(0,40);
-  /* Two is a strip worth showing. Three was arbitrary and, with a store
-     selected, threw away a perfectly good pair. */
-  if(list.length<2){ row.hidden=true; return; }
-  row.hidden=false;
-  document.getElementById('brandNote').textContent=
-    list.length+' brand'+(list.length===1?'':'s')+' available here';
-  box.innerHTML=list.map(function(b){
+     `cBrand` is the CURRENT view, so testing it here hid every brand
+     the moment a single store was selected. */
+  var bList=Object.keys(cBrand).filter(function(b){ return BRANDOK[nk(b)]; });
+  bList.sort(function(a,b){ return cBrand[b]-cBrand[a] || a.localeCompare(b); });
+  bList=bList.slice(0,40);
+  var brandChips=bList.map(function(b){
     var on=!!F.brands[b];
+    /* .mono set up front when there's no image to try at all, not just
+       on load failure — the merge dropped the old row-wide "if nobody
+       here has a photo, mono the lot" fallback, which also means a
+       brand with no photo but OTHER brands that DO have one no longer
+       renders as a blank circle with no letter. */
     return '<button class="lchip brand'+(on?' on':'')+'" data-logobrand="'+esc(b)+'" '+
       'aria-pressed="'+on+'" title="'+esc(b)+'">'+
-      '<span class="limg" '+monoAttrs(b,b)+'>'+(img[b]
-        ? '<img src="'+esc(img[b])+'" alt="" loading="lazy" referrerpolicy="no-referrer" '+
+      '<span class="limg'+(bImg[b]?'':' mono')+'" '+monoAttrs(b,b)+'>'+(bImg[b]
+        ? '<img src="'+esc(bImg[b])+'" alt="" loading="lazy" referrerpolicy="no-referrer" '+
           'onerror="this.parentNode.classList.add(\'mono\');this.remove();">'
         : '')+'</span>'+
       '<span class="lname">'+esc(b)+'</span>'+
-      '<span class="lcount">'+counts[b]+'</span></button>';
-  }).join('');
-  if(!list.some(function(b){return img[b];})) box.querySelectorAll('.limg').forEach(function(el){el.classList.add('mono');});
-  document.getElementById('clearBrands').hidden=!Object.keys(F.brands).length;
+      '<span class="lcount">'+cBrand[b]+'</span></button>';
+  });
+
+  /* Two is a strip worth showing, same threshold each group always
+     used on its own — a single chip with nothing to compare it to
+     isn't a filter, it's a label. */
+  var groups=[];
+  if(catChips.length>1)   groups.push('<span class="lrsep">Category</span>'+catChips.join(''));
+  if(storeChips.length>1) groups.push('<span class="lrsep">Store</span>'+storeChips.join(''));
+  if(brandChips.length>1) groups.push('<span class="lrsep">Brand</span>'+brandChips.join(''));
+
+  if(!groups.length){ row.hidden=true; return; }
+  row.hidden=false;
+  box.innerHTML=groups.join('');
+
+  var anyActive=F.dept!=='all'||Object.keys(F.stores).length||Object.keys(F.brands).length;
+  document.getElementById('clearPicker').hidden=!anyActive;
 }
 
 function renderStoreList(){
@@ -2929,11 +2995,11 @@ document.getElementById('subchips').addEventListener('click',function(e){
   var b=document.getElementById('railShuffle');
   if(b) b.addEventListener('click',function(){ RAILP++; renderRail(); });
 })();
-document.getElementById('clearCategory').addEventListener('click',function(){
-  F.dept='all'; F.subs=pruneSubs('all');
+/* One "Show all" for the merged strip, not three — it resets category,
+   store AND brand together, matching the row they now share. */
+document.getElementById('clearPicker').addEventListener('click',function(){
+  F.dept='all'; F.subs=pruneSubs('all'); F.stores={}; F.brands={};
   leaveSpotlight(); pushDeptPath(); apply();});
-document.getElementById('clearStores').addEventListener('click',function(){F.stores={};apply();});
-document.getElementById('clearBrands').addEventListener('click',function(){F.brands={};apply();});
 document.getElementById('clear').addEventListener('click',function(){
   F={q:'',dept:'all',subs:{},store:'all',brand:'all',strength:'all',price:'all',
      sort:'unit',deals:false,stores:{},brands:{}};

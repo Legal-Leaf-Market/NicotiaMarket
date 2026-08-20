@@ -418,9 +418,17 @@ export const STORES = [
      21+ verification before an order ships, signature on delivery, no
      PO boxes, ships only to the cardholder's billing address, explicit
      FAA restriction on lighters. */
+  /* No `logo` set, and Google's favicon service resolves monterocigars.com
+     to its generic no-favicon globe rather than a real mark — worse than
+     no logo, because a placeholder that looks like it could be a logo
+     reads as "we grabbed the wrong image," not "none available." Network
+     egress here can't fetch a real one, so noFavicon skips the guess
+     entirely and the chip falls straight to its tinted-monogram fallback,
+     same as it would for a load error. Clear this the day a real logo
+     asset is on file. */
   { key:'montero', name:'Montero Cigars', dept:'cigar', domain:'monterocigars.com',
     ref:'nicotinebaby', ships:['US'], guess:1, featured:1, platform:'shopify',
-    from:'US', days:'2–5 days', ageCheck:'id' },
+    from:'US', days:'2–5 days', ageCheck:'id', noFavicon:1 },
 
   /* OFF. The bigCommerceCards() strategy stays in the ladder and does
      work on this store — verified 5/5 products off /shop-all/ — so
@@ -550,9 +558,14 @@ export const STORES = [
   { key:'humidors', name:'1st Class Humidors', dept:'gear', domain:'www.1stclasshumidors.com',
     ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:105497, feedId:0,
     from:'US' },                                                                // 90-day, fills the gear gap beside XIFEI
+  /* No `logo` set, and Google's favicon guess for this one comes back
+     too low-resolution to read cleanly once it's stretched to the
+     picker's chip size. Same fix as Montero: noFavicon skips the guess
+     and falls straight to the tinted monogram rather than a blurry
+     placeholder. Clear this the day a real logo asset is on file. */
   { key:'bnbtobacco', name:'BnB Tobacco', dept:'cigar', domain:'www.bnbtobacco.com',
     ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:87969, feedId:0,
-    from:'US' },                                                                // 100% approval, 8.5% conversion
+    from:'US', noFavicon:1 },                                                   // 100% approval, 8.5% conversion
   //
   // No AWIN feed — scrape it like any other Shopify store:
   // { key:'vapejuicedepot', name:'Vape Juice Depot', dept:'liquid', domain:'vapejuicedepot.com',
@@ -572,7 +585,7 @@ function publicStores() {
     only: s.only || null, guess: s.guess ? 1 : 0,
     from: s.from || '', days: s.days || '', ageCheck: s.ageCheck || '',
     perPack: s.perPack || 0, platform: s.platform || '',
-    cartPath: s.cartPath || '', logo: s.logo || '',
+    cartPath: s.cartPath || '', logo: s.logo || '', noFavicon: !!s.noFavicon,
     coupon: s.coupon || '', off: Number(s.off) || 0,
     shipFlat: Number(s.shipFlat) || 0, shipFree: Number(s.shipFree) || 0,
   }))
@@ -647,16 +660,9 @@ function classify(st, blob, name) {
      flat — a blunt tip priced "per pouch" OR "per stick" is an invented
      number either way. */
   if (/\b(blunt tips?|filter tips?|blunt wraps?|hemp wraps?|rolling papers?|cones?)\b/.test(t)) return 'gear'
-  /* BRANDED MERCH IS GEAR. Nearly every store sells a hoodie, and a
-     hoodie inherits the store's dept unless something stops it — which
-     on a pouch store means a $45 sweatshirt priced per pouch. Black
-     Buffalo alone ships 15 of these (hats, flask, sunglasses, tumbler),
-     and they carry an EMPTY product_type, so the vendor metadata cannot
-     rescue them either. Same defect that put a $199 humidor on the cigar
-     shelf at "$199.00 per stick" and created the gear dept.
-     Title-only (`n`), because a description mentioning a free t-shirt
-     promo must not move a can of pouches onto the gear shelf. */
-  if (/\b(hoodie|sweatshirt|t[- ]?shirt|tee shirt|long[- ]sleeved?|windbreaker|jacket|snapback|hats?|beanie|bandana|koozie|tumbler|flask|sunglasses|bottle opener|coaster|lanyard|keychain|sticker pack|decal)\b/.test(n)) return 'gear'
+  /* Apparel/merch never reaches classify() at all — isApparel(name) drops
+     it in row() before a dept is even assigned. See that comment for why
+     "gear" was the wrong shelf for it too. */
   /* A wrap or a paper is an accessory whatever the brand calls it —
      "Royal Blunts Strawberry Wraps" names no adjacent "blunt wrap", so
      the rule above misses it and it fell through to the cigar shelf.
@@ -928,6 +934,21 @@ function impactFault(st) {
      aff  = url + '?ref=' + store.ref
    Both are pure functions of data already present, and together they
    were about a third of the payload. */
+
+/* Nearly every store sells a hoodie, and this site has no honest unit
+   for one — "gear" already covers cutters and humidors at a flat price,
+   which is at least a real accessory to the product being sold. Merch
+   is not an accessory to anything; it is a different business wearing
+   the same storefront. Black Buffalo alone ships 15 of these (hats,
+   flask, sunglasses, tumbler), and they carry an EMPTY product_type, so
+   vendor metadata cannot rescue them either. Title-only, because a
+   description mentioning a free t-shirt promo must not drop a can of
+   pouches off the shelf. Dropped in row(), before a dept is even
+   assigned, so it never reaches the client at all. */
+function isApparel(name) {
+  return /\b(hoodie|sweatshirt|t[- ]?shirt|tee shirt|long[- ]sleeved?|windbreaker|jacket|snapback|hats?|beanie|bandana|koozie|tumbler|flask|sunglasses|bottle opener|coaster|lanyard|keychain|sticker pack|decal)\b/i.test(name)
+}
+
 function row(st, o) {
   const blob = [o.title, o.variant, o.tags, o.desc].filter(Boolean).join(' ')
   const strength = guessStrength(blob)
@@ -938,6 +959,7 @@ function row(st, o) {
   const cur = o.currency || 'USD'
   /* what the product calls ITSELF, with no marketing copy attached */
   const name = [o.title, variant].filter(Boolean).join(' ')
+  if (isApparel(name)) return null
   /* The store's own category knows better than a regex does. When a
      strategy supplies a dept it wins outright. */
   const dept = o.dept || classify(st, blob, name)
@@ -1220,14 +1242,15 @@ async function shopifyProducts(st) {
       const url = `https://${st.domain}/products/${pr.handle}`
       const vts = pr.variants && pr.variants.length ? pr.variants : [{}]
       for (const v of vts) {
-        out.push(row(st, {
+        const r = row(st, {
           brand: brandFrom(st, pr.vendor, pr.title), title: pr.title, variant: v.title,
           ptype: pr.product_type,
           tags: Array.isArray(pr.tags) ? pr.tags.join(' ') : pr.tags,
           price: v.price, compareAt: v.compare_at_price, currency,
           available: v.available !== false, image: imageForVariant(pr, v), url,
           desc: pr.body_html, vid: v.id,
-        }))
+        })
+        if (r) out.push(r)
       }
     }
     if (prods.length < 250) break
@@ -1244,14 +1267,15 @@ async function shopifyCollection(st) {
   for (const pr of data.products || []) {
     const url = `https://${st.domain}/products/${pr.handle}`
     for (const v of (pr.variants && pr.variants.length ? pr.variants : [{}])) {
-      out.push(row(st, {
+      const r = row(st, {
         brand: brandFrom(st, pr.vendor, pr.title), title: pr.title, variant: v.title,
         ptype: pr.product_type,
         tags: Array.isArray(pr.tags) ? pr.tags.join(' ') : pr.tags,
         price: v.price, compareAt: v.compare_at_price, currency,
         available: v.available !== false, image: imageForVariant(pr, v), url,
         desc: pr.body_html, vid: v.id,
-      }))
+      })
+      if (r) out.push(r)
     }
   }
   if (!out.length) throw new Error('collections returned nothing')
@@ -1355,7 +1379,7 @@ async function wooStoreApi(st) {
 
   for (const p of parents) {
     if (p.type === 'variable' || p.has_options) continue   // not purchasable
-    out.push(row(st, {
+    const r = row(st, {
       brand: brandOf(p), title: p.name, dept: wooDept(st, p),
       tags: (p.categories || []).map(c => c.name).join(' '),
       price: wooPrice(p.prices), compareAt: wooPrice(p.prices, 'regular_price'),
@@ -1363,7 +1387,8 @@ async function wooStoreApi(st) {
       image: p.images?.[0]?.src || '', url: p.permalink,
       currency: p.prices?.currency_code || 'USD',
       desc: p.short_description || p.description, vid: p.id,
-    }))
+    })
+    if (r) out.push(r)
   }
 
   /* WooCommerce will NOT add a variable product from the variation id
@@ -1391,7 +1416,7 @@ async function wooStoreApi(st) {
     const label = String(v.variation || '')
       .split(',').map(s => s.split(':').slice(1).join(':').trim() || s.trim())
       .filter(Boolean).join(' · ')
-    out.push(row(st, {
+    const r = row(st, {
       brand: brandOf(parent),
       title: v.name || parent?.name || '',
       variant: label,
@@ -1407,7 +1432,8 @@ async function wooStoreApi(st) {
       vid: v.id,
       pid: v.parent,                       // parent id — Woo adds against this
       attrs: attrsFrom(v.permalink),       // attribute_flavor=White+Gummy
-    }))
+    })
+    if (r) out.push(r)
   }
 
   if (!out.length) throw new Error('woo API returned no purchasable rows')
@@ -1458,10 +1484,11 @@ function wooCards(st, html, dept, seen) {
     if (img) img = img.replace(/-\d+x\d+(\.(?:jpg|jpeg|png|webp))/i, '$1')
     const oos = /class="[^"]*\boutofstock\b/i.test(back.slice(-2500))
 
-    out.push(row(st, {
+    const r = row(st, {
       brand: st.name, title, tags: title, dept,
       price, available: !oos, image: img, url, vid: pid,
-    }))
+    })
+    if (r) out.push(r)
   }
   return out
 }
@@ -1554,14 +1581,15 @@ async function bigCommerceCards(st) {
         let img = (card.match(/<img[^>]+src="(https:\/\/cdn11\.bigcommerce\.com[^"]+)"/i) || [])[1] || ''
         if (img) img = img.replace(/\/stencil\/\d+w\//, '/stencil/500x659/')
 
-        out.push(row(st, {
+        const r = row(st, {
           brand: st.name, title, tags: title,
           price: price.replace(/,/g, ''),
           compareAt: was && Number(was.replace(/,/g, '')) > Number(price.replace(/,/g, ''))
             ? was.replace(/,/g, '') : '',
           available: !/out[- ]of[- ]stock|sold[- ]out/i.test(card),
           image: img, url: link, currency: st.currency || 'USD',
-        }))
+        })
+        if (r) out.push(r)
         added++
       }
       if (!added) break
@@ -1663,7 +1691,7 @@ async function magentoGraphql(st) {
         const min = p.price_range?.minimum_price
         const price = min?.final_price?.value
         const reg = min?.regular_price?.value
-        out.push(row(st, {
+        const r = row(st, {
           brand: magentoBrand(p),
           title: p.name,
           dept,
@@ -1676,7 +1704,8 @@ async function magentoGraphql(st) {
           url: `https://${st.domain}/${p.url_key}${suffix}`,
           currency: min?.final_price?.currency || st.currency || 'USD',
           vid: p.sku,
-        }))
+        })
+        if (r) out.push(r)
       }
       if (items.length < 100) break
     }
@@ -1795,7 +1824,7 @@ async function feedCsv(st) {
     const price = pick(rec, 'search_price', 'store_price', 'price', 'display_price')
     const was = pick(rec, 'rrp_price', 'was_price', 'product_price_old')
 
-    out.push(row(st, {
+    const r = row(st, {
       brand: pick(rec, 'brand_name', 'brand', 'manufacturer') || st.name,
       title,
       tags: pick(rec, 'merchant_category', 'category_name', 'custom_1'),
@@ -1808,7 +1837,8 @@ async function feedCsv(st) {
       currency: pick(rec, 'currency') || st.currency || 'USD',
       desc: pick(rec, 'description', 'product_short_description'),
       vid: pick(rec, 'merchant_product_id', 'aw_product_id', 'product_id'),
-    }))
+    })
+    if (r) out.push(r)
   }
   if (!out.length) throw new Error('feed parsed but produced no usable rows')
   return out
@@ -1846,12 +1876,13 @@ async function jsonLd(st) {
         const offer = [].concat(pr.offers || [])[0] || {}
         let img = [].concat(pr.image || [])[0] || ''
         if (img && typeof img === 'object') img = img.url || ''
-        out.push(row(st, {
+        const r = row(st, {
           brand: pr.brand?.name, title: pr.name, price: offer.price,
           available: !/outofstock|soldout/i.test(String(offer.availability || '')),
           image: img, url: pr.url || `https://${st.domain}${p}`,
           currency: offer.priceCurrency, desc: pr.description,
-        }))
+        })
+        if (r) out.push(r)
       }
     }
     if (out.length) return out

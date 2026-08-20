@@ -1454,21 +1454,20 @@ function apply(reset){
   });
 
   var s=F.sort;
-  /* POUCHES LEAD THE GRID, whatever the sort. They are the flagship
-     shelf and the argument the site is built on — per-pouch pricing —
-     so they sit above the fold rather than behind whichever disposable
-     happens to win on value that minute.
+  /* NO SHELF LEADS THE GRID. Pouches used to be pinned above everything
+     else on the combined shelf, whatever the sort — the argument being
+     that per-pouch pricing is what the site is for, so the flagship
+     shelf belongs above the fold.
 
-     Only applied on the combined shelf: a department view is already
-     one department, and pinning there would do nothing. The chosen sort
-     still orders WITHIN the pouches and within everything after them,
-     so this is a grouping, not an override of the sort. */
-  var pinPouch = (F.dept==='all');
+     The rails already make that argument, and better: "Best per pouch
+     right now" is a pouch shelf by name, sitting directly above this
+     grid. Pinning here meant the grid underneath repeated it — every
+     pouch, then everything else — so the front page read as a pouch
+     catalogue with an appendix rather than as a mix worth scrolling.
+
+     The chosen sort now orders the whole combined shelf, so the best
+     value on the site leads it whichever shelf that comes from. */
   VIEW.sort(function(a,b){
-    if(pinPouch){
-      var pa=deptOf(a)==='pouch'?0:1, pb=deptOf(b)==='pouch'?0:1;
-      if(pa!==pb) return pa-pb;
-    }
     var ia=gitem(a), ib=gitem(b);
     if(s==='unit'){
       /* Ranked on the CONVERTED value. Grouping by currency was honest
@@ -1487,6 +1486,52 @@ function apply(reset){
     if(s==='price-desc')return (Number(ib.price)||-1)-(Number(ia.price)||-1);
     return String(a.title).localeCompare(String(b.title));
   });
+
+  /* THE COMBINED SHELF INTERLEAVES; A DEPARTMENT SHELF DOES NOT.
+
+     "Best value per unit" is the default sort, and across departments
+     its numbers are not comparable — a per-pouch price is pennies and a
+     per-stick price is dollars, because they measure different things.
+     Sorted globally on that figure, pouches take every slot above the
+     fold and the front page reads as a pouch catalogue however much
+     else is in stock. Removing the old explicit pouch pin did not fix
+     that; the sort was doing the same thing by arithmetic.
+
+     So on the combined shelf this ranks WITHIN each department and then
+     deals one from each in turn. Every card is still the best of its
+     shelf that has not been shown yet, and the reader gets a mix of
+     categories — and with them stores and brands — rather than one
+     shelf followed by the others.
+
+     Only for the unit sort. An explicit price sort compares a real
+     currency amount, which IS comparable across shelves, so honouring
+     it globally is the honest answer there. */
+  if(F.dept==='all' && s==='unit' && VIEW.length){
+    var lanes={}, order=[];
+    VIEW.forEach(function(g){
+      var d=deptOf(g)||'other';
+      if(!lanes[d]){ lanes[d]=[]; order.push(d); }
+      lanes[d].push(g);
+    });
+    if(order.length>1){
+      /* DEPT_ORDER first so the deal is stable and the flagship shelf
+         still leads — it simply no longer occupies the whole screen.
+         Anything not in DEPT_ORDER follows in first-seen order. */
+      order.sort(function(a,b){
+        var ia=DEPT_ORDER.indexOf(a), ib=DEPT_ORDER.indexOf(b);
+        return (ia<0?99:ia)-(ib<0?99:ib);
+      });
+      var mixed=[], any=true;
+      for(var i=0; any; i++){
+        any=false;
+        for(var j=0;j<order.length;j++){
+          var lane=lanes[order[j]];
+          if(i<lane.length){ mixed.push(lane[i]); any=true; }
+        }
+      }
+      VIEW=mixed;
+    }
+  }
 
   var mount=document.getElementById('mount');
   if(!VIEW.length && !PGROUPS.length){

@@ -56,7 +56,6 @@ const API = {
   "/api/products": "./api/products.js",
   "/api/subscribe": "./api/subscribe.js",
   "/api/track": "./api/track.js",
-  "/api/notify": "./api/notify.js",
 }
 // NOTE: modules are cached. Restart the server after editing anything in api/,
 // or you will test stale code. (Legal-Leaf lost an afternoon to this once.)

@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node server.mjs",
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check api/products.js && node --check api/subscribe.js && node --check api/track.js && node --check api/notify.js"
+    "check": "node --check server.mjs && node --check api/products.js && node --check api/subscribe.js && node --check api/track.js"
   },
   "engines": { "node": ">=18" }
 }

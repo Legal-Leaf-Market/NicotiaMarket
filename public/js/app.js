@@ -933,6 +933,7 @@ function refreshCard(gid){
     if(shot){
       var src=(it&&it.image)||f.image||g.image||'';
       var img=shot.querySelector('img');
+      var zoomBtn=shot.querySelector('.zoom');
       var alt=g.brand+(f.name&&f.name!=='-'?' '+f.name:'');
       if(src){
         if(img){
@@ -947,8 +948,14 @@ function refreshCard(gid){
           shot.insertAdjacentHTML('afterbegin',
             '<img src="'+esc(src)+'" alt="'+esc(alt)+'" loading="lazy" referrerpolicy="no-referrer">');
         }
+        /* keep the zoom button pointed at whatever photo is now showing —
+           switching flavour/strength swaps the image but this element
+           otherwise never gets touched */
+        if(zoomBtn){ zoomBtn.setAttribute('data-zoom',src); zoomBtn.setAttribute('data-zoomalt',alt); }
+        else shot.insertAdjacentHTML('beforeend',zoomBtnHtml(src,alt));
       }else if(img){
         img.parentNode.removeChild(img);
+        if(zoomBtn) zoomBtn.parentNode.removeChild(zoomBtn);
         shot.insertAdjacentHTML('afterbegin','<div class="shot-empty">No photo</div>');
       }
     }
@@ -1203,6 +1210,17 @@ function backInnerHtml(g){
     '</dl>';
 }
 
+/* Magnifier-plus, matching the header search icon's stroke style. Built
+   once and reused everywhere a .zoom button is rendered (the shelf grid,
+   the rail, brand spotlights via card(), and store spotlights). */
+var ZOOM_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '+
+  'stroke-linecap="round"><circle cx="10" cy="10" r="6"/><path d="M20 20l-4.5-4.5"/>'+
+  '<path d="M10 7v6M7 10h6"/></svg>';
+function zoomBtnHtml(src,alt){
+  return '<button class="zoom" type="button" data-zoom="'+esc(src)+'" data-zoomalt="'+esc(alt)+
+    '" aria-label="View full image">'+ZOOM_ICON+'</button>';
+}
+
 function card(g){
   var st=SMAP[g.key]||{name:g.key,dept:g.dept};
   var d=DEPTS[deptOf(g)]||{};
@@ -1230,7 +1248,8 @@ function card(g){
     '<div class="face front" data-turn tabindex="0" role="button" '+
         'aria-label="Show details for '+esc(g.title||g.brand)+'">'+
       '<div class="shot">'+
-        (f.image?'<img src="'+esc(f.image)+'" alt="'+esc(g.brand+' '+f.name)+'" loading="lazy" referrerpolicy="no-referrer">'
+        (f.image?'<img src="'+esc(f.image)+'" alt="'+esc(g.brand+' '+f.name)+'" loading="lazy" referrerpolicy="no-referrer">'+
+                zoomBtnHtml(f.image,g.brand+' '+f.name)
                 :'<div class="shot-empty">No photo</div>')+
         (best?'<span class="badge best">Best '+esc(d.unitLabel||'value')+'</span>'
           : off?'<span class="badge off">-'+off+'%</span>'
@@ -2734,6 +2753,12 @@ document.addEventListener('click',function(e){
   if((el=hit('[data-authmode]'))){ e.preventDefault(); setAuthMode(el.getAttribute('data-authmode')); return; }
   if(t.id==='authSubmit'){ submitAuth(); return; }
 
+  /* The one spot on a card that opens the photo instead of flipping it —
+     must run before the generic .card fallback below, same as every
+     other named control on the card. */
+  if((el=hit('[data-zoom]'))){ e.preventDefault(); e.stopPropagation();
+    openZoom(el.getAttribute('data-zoom'),el.getAttribute('data-zoomalt')||''); return; }
+
   if((el=hit('[data-save]'))){ e.preventDefault(); e.stopPropagation();
     var g=groupById(el.getAttribute('data-save'));
     if(g){ if(BOARD[g.gid]) delete BOARD[g.gid]; else BOARD[g.gid]=gitem(g);
@@ -2858,6 +2883,42 @@ document.getElementById('scrim').addEventListener('click',function(){
   drawer('board',false);drawer('list',false);});
 document.querySelectorAll('[data-close]').forEach(function(b){
   b.addEventListener('click',function(){drawer('board',false);drawer('list',false);});});
+
+/* ============================================================
+   IMAGE ZOOM
+   ------------------------------------------------------------
+   Full-screen viewer opened by a card's .zoom button (wired into the
+   click delegate above, ahead of the flip fallback). Click the photo to
+   zoom in around wherever you clicked; click again to zoom back out. */
+var imgzoom=document.getElementById('imgzoom');
+var imgzoomImg=document.getElementById('imgzoomImg');
+var imgzoomCap=document.getElementById('imgzoomCap');
+function openZoom(src,alt){
+  if(!src) return;
+  imgzoomImg.src=src; imgzoomImg.alt=alt; imgzoomImg.classList.remove('in');
+  imgzoomCap.textContent=alt;
+  imgzoom.classList.add('on');
+  document.body.style.overflow='hidden';
+}
+function closeZoom(){
+  if(!imgzoom.classList.contains('on')) return;
+  imgzoom.classList.remove('on');
+  imgzoomImg.src='';
+  document.body.style.overflow='';
+}
+imgzoomImg.addEventListener('click',function(e){
+  e.stopPropagation();
+  if(this.classList.contains('in')){ this.classList.remove('in'); return; }
+  var r=this.getBoundingClientRect();
+  this.style.transformOrigin=
+    ((e.clientX-r.left)/r.width*100).toFixed(1)+'% '+((e.clientY-r.top)/r.height*100).toFixed(1)+'%';
+  this.classList.add('in');
+});
+imgzoom.addEventListener('click',function(e){ if(e.target===imgzoom) closeZoom(); });
+document.querySelector('[data-zoomclose]').addEventListener('click',closeZoom);
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape') closeZoom();
+});
 document.getElementById('openBoard').addEventListener('click',function(){renderBoard();drawer('board',true);});
 document.getElementById('openList').addEventListener('click',function(){renderCart();drawer('list',true);});
 document.getElementById('acctBtn').addEventListener('click',function(){
@@ -3014,7 +3075,8 @@ function renderSpotlight(key){
     return '<article class="card"><div class="card-in">'+
       '<div class="face front" data-turn tabindex="0" role="button">'+
         '<div class="shot">'+(it.image
-          ? '<img src="'+esc(it.image)+'" alt="'+esc(it.title)+'" loading="lazy" referrerpolicy="no-referrer">'
+          ? '<img src="'+esc(it.image)+'" alt="'+esc(it.title)+'" loading="lazy" referrerpolicy="no-referrer">'+
+            zoomBtnHtml(it.image,it.title)
           : '<div class="shot-empty">No photo</div>')+
           (it.available?'':'<span class="oos">Out of stock</span>')+'</div>'+
         '<div class="cbody"><h3 class="ctitle">'+esc(it.title)+'</h3>'+

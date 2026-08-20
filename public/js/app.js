@@ -84,25 +84,28 @@ var DEPT_ORDER = ['pouch','disposable','device','liquid','cigar','gear'];
    as a decoration; mixing two, one of them tinted across the site's
    own autumn hues, reads as an actual pile of different leaves. */
 var LEAF_HUES=['var(--gold)','var(--ember)','var(--cigar)','#c8862a','var(--red)','var(--sage-dk)'];
-function spawnLeaves(container, count, dense){
+/* The `dense` variant went with the hero — it was the only caller, and
+   its .fleaf-hero keyframes are gone from the stylesheet with it. What
+   is left is the one sitewide pass over .bgscape. */
+function spawnLeaves(container, count){
   if(!container) return;
   var frag=document.createDocumentFragment();
   for(var i=0;i<count;i++){
     var useFall=Math.random()<0.55;
     var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
     svg.setAttribute('viewBox', useFall?'0 0 40 56':'0 0 60 72');
-    svg.setAttribute('class','fleaf'+(dense?' fleaf-hero':''));
+    svg.setAttribute('class','fleaf');
     var use=document.createElementNS('http://www.w3.org/2000/svg','use');
     use.setAttribute('href', useFall?'#leafFall':'#leafIcon');
     svg.appendChild(use);
 
-    var sz=(dense?24:16)+Math.random()*(dense?44:38);
-    var dur=(dense?8:14)+Math.random()*(dense?9:15);
+    var sz=16+Math.random()*38;
+    var dur=14+Math.random()*15;
     var delay=-Math.random()*dur;               /* negative: starts mid-fall, not all at once */
-    var drift=(Math.random()<0.5?-1:1)*(dense?60:80)*(0.6+Math.random()*0.8);
+    var drift=(Math.random()<0.5?-1:1)*80*(0.6+Math.random()*0.8);
     var spin=(Math.random()<0.5?-1:1)*(220+Math.random()*280);
     var left=(Math.random()*100).toFixed(2);
-    var op=((dense?0.18:0.09)+Math.random()*(dense?0.14:0.11)).toFixed(2);
+    var op=(0.09+Math.random()*0.11).toFixed(2);
 
     svg.style.cssText=
       '--l:'+left+'%;--sz:'+sz.toFixed(0)+'px;'+
@@ -1531,9 +1534,10 @@ function apply(reset){
     Object.keys(F.stores).length||Object.keys(F.brands).length;
   document.getElementById('clear').hidden=!on;
 
-  /* heroStats() used to run only from ingest(), so the three figures
-     were whatever the last load computed and never followed the shelf. */
-  renderHero(); setRouteMeta(); heroStats();
+  /* Both follow the shelf, not the load: renderHero() swaps the (now
+     hidden) h1 and setRouteMeta() the title/description/canonical, so a
+     department change updates what a crawler reads without a refetch. */
+  renderHero(); setRouteMeta();
   renderRail(); refreshFacets(); setWarn(); setNotices(); saveSelv();
 }
 
@@ -1893,7 +1897,12 @@ function renderPickerRow(cDept,cStore,cBrand){
 
   var catChips=DEPT_ORDER.filter(function(d){ return cDept[d]; }).map(function(d){
     var on=F.dept===d, meta=DEPTS[d]||{}, img=repImageForDept(d);
+    /* --cat-accent rides on the BUTTON, not the image plate: the
+       selected ring, the filled label pill and the count all read it,
+       and only the plate can see --mono-a. One department hue, four
+       cues, declared once. */
     return '<button class="llogo cat'+(on?' on':'')+'" data-logocat="'+esc(d)+'" '+
+      'style="--cat-accent:'+esc(meta.accent||'var(--gold)')+'" '+
       'aria-pressed="'+on+'" title="'+esc(meta.label||d)+'">'+
       '<span class="limg'+(img?'':' mono')+'" data-letter="'+esc(String(meta.label||d).charAt(0).toUpperCase())+'" '+
         'style="--mono-a:'+esc(meta.accent||'var(--gold)')+';--mono-b:var(--chip)">'+
@@ -2044,16 +2053,20 @@ function setNotices(){
 }
 
 /* ============================================================
-   DEPARTMENT HEROES
+   DEPARTMENT HEADINGS (was: DEPARTMENT HEROES)
    ------------------------------------------------------------
    Legal-Leaf gives each page its own hero by serving a separate HTML
    file per page. We cannot do that: every department URL rewrites to
    index.html and the shelf is chosen client-side (CLAUDE.md §3), so
-   here the hero is DATA and renderHero() swaps it.
+   this is DATA and renderHero() swaps it.
 
-   Each entry argues its own shelf's unit, because that unit is the
-   reason the shelf exists. The colour comes from the department token
-   via data-hero, so a new shelf needs a HEROES entry and one CSS line.
+   The visible hero is gone; `lead` + `head` still fill the hidden h1,
+   so /pouches reads "the honest per-pouch price" to a crawler and not
+   whatever the last shelf set. `eyebrow` and `sub` are kept because
+   each argues its own shelf's unit in the site's voice — the natural
+   source if these shelves ever want a real intro paragraph — but
+   nothing renders them today. Adding a shelf still means adding an
+   entry here.
    ============================================================ */
 var HEROES={
   all:{ eyebrow:'every store, one price you can compare',
@@ -2089,11 +2102,8 @@ var HEROES={
 };
 
 function renderHero(){
-  var sec=document.getElementById('hero'); if(!sec) return;
-  var d=F.dept||'all', h=HEROES[d]||HEROES.all;
-  sec.setAttribute('data-hero',d);
-  [['heroEyebrow',h.eyebrow],['heroLead',h.lead],
-   ['heroHead',h.head],['heroSub',h.sub]].forEach(function(p){
+  var h=HEROES[F.dept||'all']||HEROES.all;
+  [['heroLead',h.lead],['heroHead',h.head]].forEach(function(p){
     var el=document.getElementById(p[0]); if(el) el.textContent=p[1];
   });
 }
@@ -2179,90 +2189,18 @@ window.addEventListener('popstate',function(){
   F.dept=deptFromPath()||'all'; F.subs=pruneSubs(F.dept); apply();
 });
 
-/* The headline number, and the one most easily made a liar.
+/* The hero's three stats went with the hero, and heroStats() with them,
+   along with SHELF_NOUN and shelfGroups() which existed only to feed it.
+   The live filtered count above the grid (#rcount) was always the more
+   honest number anyway — it moves with the filters, where the hero's
+   figure deliberately did not.
 
-   It used to walk only each group's SELECTED variant, skip the
-   `available` check that every shelf applies, compare bare numbers
-   across four currencies, and then print the winner's own symbol on the
-   result. That is how the hero could claim a cheapest pouch of £0.003
-   while the site's own "best value per unit" sort, filtered to the same
-   store, put the real floor at £0.03.
-
-   It now shares computeBestUnits()' yardstick exactly: in stock, every
-   variant, one currency.
-
-   DISPLAYED IN USD for now. Once PREVIEW_MODE goes false and shipping
-   limits are enforced, this should follow the shopper's own region —
-   the conversion already runs through usdOf(), so that becomes a
-   question of which target currency to format into, not new maths. */
-var SHELF_NOUN={all:'products tracked', pouch:'pouches tracked',
-  disposable:'disposables tracked', device:'devices tracked',
-  liquid:'e-liquids tracked', cigar:'cigars tracked', gear:'gear items tracked'};
-
-/* What the three figures are counted over.
-
-   Scope is THIS SHELF plus reachability — deliberately NOT the filter
-   bar. The hero is a standing statement about the department; #rcount
-   directly above the grid is the live filtered count. Tying both to the
-   filters made the hero twitch on every keystroke and said the same
-   thing twice. */
-function shelfGroups(){
-  var d=F.dept||'all';
-  return PGROUPS.filter(function(g){
-    if(d!=='all' && deptOf(g)!==d) return false;
-    if(!SHOW_ALL){
-      if(!storeShipsHere(SMAP[g.key])) return false;
-      if(legalFor(deptOf(g))[0]==='banned') return false;
-    }
-    return true;
-  });
-}
-
-function heroStats(){
-  var el=document.getElementById('heroStats'); if(!el) return;
-  var d=F.dept||'all';
-  var groups=shelfGroups();
-
-  /* The unit this shelf is actually priced by. 'all' stays on pouches
-     because that is the homepage's headline claim; every other shelf
-     answers in its own unit, which is why the Disposables page used to
-     advertise a "cheapest pouch". Devices and gear are priced flat, so
-     there is no honest unit and the figure becomes lowest price. */
-  var unitDept = d==='all' ? 'pouch' : d;
-  var dd = DEPTS[unitDept]||{};
-  var flat = !dd.unit || dd.unit==='flat';
-
-  var stores={}, rows=0, best=null;
-  groups.forEach(function(g){
-    stores[g.key]=1;
-    gvariants(g).forEach(function(v){
-      rows++;
-      if(!v.available) return;
-      var val;
-      if(flat){
-        val=usdOf(v.price,v.currency||'USD');
-      }else{
-        if(deptOf(g)!==unitDept) return;      /* 'all' ranks pouches only */
-        var u=unitPrice(v); if(!u) return;
-        val=usdOf(u.value,v.currency||'USD');
-      }
-      if(val==null||!val) return;
-      if(best==null||val<best) best=val;
-    });
-  });
-
-  var bits=[
-    '<div><b>'+rows.toLocaleString()+'</b><span>'+
-      esc(SHELF_NOUN[d]||SHELF_NOUN.all)+'</span></div>',
-    '<div><b>'+Object.keys(stores).length+'</b><span>stores compared</span></div>'
-  ];
-  if(best!=null){
-    var lbl = flat ? 'lowest price (USD)'
-                   : 'cheapest '+(dd.unitLabel||'per unit')+' (USD)';
-    bits.push('<div><b>'+unitFmt(best,'USD')+'</b><span>'+esc(lbl)+'</span></div>');
-  }
-  el.innerHTML=bits.join('');
-}
+   Kept for whoever goes looking: that figure was a standing per-shelf
+   claim ("cheapest per pouch", in USD), and it shared computeBestUnits()'
+   yardstick — in stock, every variant, one currency — precisely because
+   an earlier version did not, and advertised a cheapest pouch of £0.003
+   against a real floor of £0.03. If anything like it comes back, it goes
+   through that same yardstick, not a fresh walk of selected variants. */
 
 function stamp(){
   var el=document.getElementById('stamp'); if(!el) return;
@@ -3238,7 +3176,7 @@ function ingest(items){
      to showing its KEY — "Checkout at eightvape" rather than
      "EightVape". Re-render now that the real registry is in. */
   renderCart(); badges();
-  facets(); heroStats(); stamp(); route();
+  facets(); stamp(); route();
 }
 function facets(){ refreshFacets(); renderStoreList(); }
 
@@ -3530,8 +3468,7 @@ if('serviceWorker' in navigator){
 /* boot */
 /* Independent of the catalogue — the backdrop should be falling before
    the first product ever loads, cold-scrape or not. */
-spawnLeaves(document.querySelector('.bgscape'), 42, false);
-spawnLeaves(document.querySelector('.hero-scape'), 16, true);
+spawnLeaves(document.querySelector('.bgscape'), 42);
 loadLoc(); restoreUserLoc(); locPillUI(); setAgeCopy(); setWarn(); setNotices();
 loadSelv(); loadCart(); loadBoard(); badges(); accountUI(); setAuthMode('signup'); renderCart();
 /* The path picks the opening shelf BEFORE the first render, so /pouches

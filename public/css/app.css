@@ -48,8 +48,8 @@ button{font-family:inherit}
    hand-authored here — randomised size/speed/drift/colour per leaf is
    what makes "oversaturated, a lot of leaves" read as weather and not
    as six repeating copies. This stylesheet only owns the shared look
-   and the fall keyframes; .bgscape gets the sitewide count, .hero
-   gets a second, denser pass sized to its own (much shorter) height.
+   and the fall keyframes. .bgscape gets the sitewide count; the hero
+   used to get a second, denser pass of its own (see below).
 
    position:fixed, not absolute, on .bgscape: it is anchored to the
    VIEWPORT, so leaves are always falling somewhere on screen no
@@ -73,18 +73,13 @@ button{font-family:inherit}
   75% {transform:translate(calc(var(--drift,80px)*.7),86vh) rotate(calc(var(--spin,300deg)*.8))}
   100%{transform:translate(var(--drift,80px),118vh) rotate(var(--spin,300deg))}
 }
-/* The hero's own denser pass falls the same way but across its own
-   (much shorter) box rather than the viewport, so a leaf that would
-   spend most of a 118vh fall clipped by .hero's overflow:hidden
-   instead stays visible for roughly its whole trip. */
-.fleaf-hero{animation-name:leafFallHero}
-@keyframes leafFallHero{
-  0%  {transform:translate(0,0) rotate(0deg)}
-  25% {transform:translate(calc(var(--drift,60px)*.35),120px) rotate(calc(var(--spin,300deg)*.28))}
-  50% {transform:translate(calc(var(--drift,60px)*-.25),240px) rotate(calc(var(--spin,300deg)*.55))}
-  75% {transform:translate(calc(var(--drift,60px)*.7),360px) rotate(calc(var(--spin,300deg)*.8))}
-  100%{transform:translate(var(--drift,60px),480px) rotate(var(--spin,300deg))}
-}
+/* The hero had a second, denser pass of leaves falling across its own
+   (much shorter) box rather than the viewport, on .fleaf-hero /
+   leafFallHero keyframes. The hero is gone and so are they, along with
+   spawnLeaves()' `dense` argument. Left as a note rather than dead
+   rules: if a short, self-contained box ever wants its own
+   weather, it needs keyframes that land inside its height, not the
+   sitewide 118vh fall, which would be clipped for most of its trip. */
 /* Soft radial blooms standing in for vapour — cheaper and steadier than
    an actual blurred photo, and it never needs an asset. */
 .bgwisp{position:absolute;border-radius:50%;filter:blur(1px);
@@ -420,62 +415,20 @@ header.top{position:sticky;top:0;z-index:50;
 @media(max-width:900px){.depts{top:auto;position:static}}
 
 /* ============================================================
-   HERO — short on purpose. Both sisters open with a statement;
-   ours has to make its promise and get out of the grid's way.
-   ============================================================ */
-/* ONE HERO PER SHELF. Legal-Leaf gives each page its own hero by
-   serving a separate HTML file; every department URL here rewrites to
-   index.html and the shelf is chosen client-side (CLAUDE.md §3), so the
-   hero is themed from a data attribute instead of duplicated as markup.
+   HERO — REMOVED
+   ------------------------------------------------------------
+   A themed, leaf-falling, gradient-headline block used to sit here
+   between the carousels and the grid. It is gone: the carousels now
+   run straight into products. What was ~340px of throat-clearing on a
+   phone (the mobile block below this one had already been written to
+   claw some of that back) is now zero.
 
-   --hero-hue is the ONLY thing each department overrides, so adding a
-   shelf means adding one line, not a new hero. The alpha moved off the
-   gradient stop and onto opacity so the hue can be a bare token. */
-.hero{--hero-hue:var(--ember);
-  position:relative;overflow:hidden;padding:24px 0 18px;text-align:center}
-.hero[data-hero="pouch"]     {--hero-hue:var(--pouch)}
-.hero[data-hero="disposable"]{--hero-hue:var(--disposable)}
-.hero[data-hero="device"]    {--hero-hue:var(--device)}
-.hero[data-hero="liquid"]    {--hero-hue:var(--liquid)}
-.hero[data-hero="cigar"]     {--hero-hue:var(--cigar)}
-.hero[data-hero="gear"]      {--hero-hue:var(--gear)}
-.hero::before{content:"";position:absolute;inset:-40% -10% auto;height:260px;pointer-events:none;
-  opacity:.16;transition:opacity .3s;
-  background:radial-gradient(60% 100% at 50% 0,var(--hero-hue),transparent 70%)}
-/* The hero's own denser leaf-fall — the "main visual" version of
-   .bgscape's sitewide backdrop above, populated by the same
-   spawnLeaves() call in app.js with a smaller, faster, denser pass.
-   z-index:1 sits it above the glow (::before, a positioned
-   z-index:auto element) and below .hero-inner (z-index:2), so the
-   copy always stays readable on top. */
-.hero-scape{position:absolute;inset:0;z-index:1;overflow:hidden;pointer-events:none}
-.hero-inner{position:relative;z-index:2}
-.hero h1{margin:10px 0 0;font-family:var(--display);font-weight:900;
-  font-size:clamp(2rem,5.2vw,3.7rem);line-height:.92;letter-spacing:-.03em;
-  background:linear-gradient(96deg,var(--text) 0%,var(--gold) 46%,var(--hero-hue) 88%);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-  color:var(--gold)}
-.hero .h-lead{display:block;font-family:var(--script);font-style:italic;font-weight:600;
-  font-size:clamp(1.1rem,2.6vw,1.6rem);color:var(--hero-hue);line-height:1;
-  margin-bottom:-.1em;-webkit-text-fill-color:var(--hero-hue)}
-.hero .hsub{color:var(--muted);font-size:.94rem;line-height:1.55;max-width:52ch;
-  margin:12px auto 0}
-.hstats{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;margin-top:16px}
-.hstats div b{display:block;font-family:var(--display);font-weight:900;font-size:1.25rem;
-  letter-spacing:-.02em;color:var(--text)}
-.hstats div span{font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
-@media(max-width:560px){.hero{padding:18px 0 14px}.hstats{gap:16px}}
-/* On a phone the hero was costing ~340px before a single product.
-   Keep the promise, drop the throat-clearing: eyebrow and the stat row
-   go, the headline shrinks, the subtitle keeps one sentence. */
-@media(max-width:480px){
-  .hero{padding:16px 0 12px}
-  .hero::before{display:none}
-  .hero .eyebrow,.hstats{display:none}
-  .hero h1{font-size:2.1rem;margin-top:0}
-  .hero .h-lead{font-size:1.15rem}
-  .hero .hsub{font-size:.92rem;margin-top:10px}
-}
+   Its <h1> survives as .sr-only markup in index.html — see the comment
+   there. Nothing else about it is worth keeping, including the
+   per-department --hero-hue: the department tokens it read still exist
+   and are still used by the category strip, so a future shelf needs no
+   entry here.
+   ============================================================ */
 /* ============================================================
    FILTERS
    ------------------------------------------------------------
@@ -680,7 +633,10 @@ header.top{position:sticky;top:0;z-index:50;
    click-and-drag (dragToScroll()) — touch already scrolls it
    natively. */
 .lrwrap{position:relative}
-.lrscroll{display:flex;gap:16px;overflow-x:auto;padding:2px 4px 6px;
+/* padding, not margin: overflow-x:auto clips, and the selected chip's
+   ring, outer glow and half-off-the-plate tick all sit OUTSIDE the
+   chip's own box. At 2px/4px the tick came out sliced. */
+.lrscroll{display:flex;gap:16px;overflow-x:auto;padding:9px 8px 6px;
   scrollbar-width:none;-ms-overflow-style:none;cursor:grab;
   scroll-behavior:smooth;scroll-snap-type:x proximity;user-select:none}
 .lrscroll::-webkit-scrollbar{display:none;width:0;height:0}
@@ -701,11 +657,37 @@ header.top{position:sticky;top:0;z-index:50;
 /* The bare logo itself. flex:0 0 auto so lanes scroll instead of
    wrapping; no border/background/padding box around it — that box IS
    what "the pills" turned out to mean. */
-.llogo{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;
+.llogo{--pick:var(--gold);position:relative;
+  flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;
   width:76px;background:none;border:none;padding:2px;cursor:pointer;
-  transition:transform .16s,opacity .16s;opacity:.86}
+  transition:transform .16s,opacity .16s,filter .16s;opacity:.86}
 .llogo:hover{transform:translateY(-2px);opacity:1}
-.llogo.on{opacity:1}
+.llogo.on{opacity:1;transform:translateY(-2px)}
+
+/* SELECTION HAS TO BE OBVIOUS, and it was not: a 2px ring and a small
+   tick on a 64px photo is easy to miss in a scrolling row, and on
+   Category — where the shelf you are standing on is the single most
+   important piece of state on the page — "which one is lit" was being
+   read off the photo border. Four cues now, not one:
+
+     1. the ring thickens and picks up the DEPARTMENT's own hue,
+     2. the label flips to a solid filled pill in that hue,
+     3. the chip lifts, and
+     4. every OTHER chip in the same lane steps back (below).
+
+   Category chips already carry their accent as --mono-a for the
+   monogram fallback, so the hue is reused rather than re-declared —
+   change a department token and this follows. Store and brand keep
+   gold: their --mono-a is a per-store tint for letter plates, not a
+   department identity, and using it here would read as noise. */
+.llogo.cat.on{--pick:var(--cat-accent,var(--gold))}
+
+/* The unpicked ones step back so the picked one steps forward. Scoped
+   per lane, so choosing a store does not grey out Category. :has() is
+   a progressive enhancement — without it the three cues above still
+   carry the state on their own. */
+.lrscroll:has(.llogo.on) .llogo:not(.on){opacity:.42;filter:saturate(.55)}
+.lrscroll:has(.llogo.on) .llogo:not(.on):hover{opacity:.9;filter:none}
 
 /* stores: circular white plate, because a brand mark is drawn for
    light backgrounds and disappears on ours. Bigger than the old boxed
@@ -713,10 +695,19 @@ header.top{position:sticky;top:0;z-index:50;
 .limg{width:64px;height:64px;border-radius:50%;background:#fff;overflow:hidden;
   display:flex;align-items:center;justify-content:center;flex:none;position:relative;
   box-shadow:0 2px 10px rgba(0,0,0,.28);transition:box-shadow .16s}
-.llogo.on .limg{box-shadow:0 0 0 2px var(--gold),0 2px 10px rgba(0,0,0,.28)}
-.llogo.on .limg::after{content:"\2713";position:absolute;top:-2px;right:-2px;
-  width:16px;height:16px;border-radius:50%;background:var(--gold);color:#160c06;
-  font-size:9.5px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.llogo.on .limg{box-shadow:0 0 0 3px var(--pick),0 0 0 6px color-mix(in srgb,var(--pick) 28%,transparent),
+  0 4px 14px rgba(0,0,0,.34)}
+/* The tick hangs on the BUTTON, not on .limg. .limg is overflow:hidden
+   (it has to be — it crops the logo to the plate), so a badge hung off
+   its corner was sliced in half; and .limg::after is already the
+   monogram letter, so the tick was erasing the letter on every chip
+   with no image. Both gone by moving it out one level. Placed off the
+   plate's top-right rather than the button's, since the plate is
+   narrower than the chip and centred in it. */
+.llogo.on::after{content:"\2713";position:absolute;top:0;right:4px;
+  width:19px;height:19px;border-radius:50%;background:var(--pick);color:#160c06;
+  box-shadow:0 0 0 2px var(--bg);
+  font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center}
 .limg img{width:100%;height:100%;object-fit:contain;padding:8px}
 /* monogram fallback: a real letter on a real plate, tinted per store
    so a logo-less lane still reads as distinct shops */
@@ -731,13 +722,20 @@ header.top{position:sticky;top:0;z-index:50;
 .lname{font-family:var(--sans);font-weight:600;font-size:11px;line-height:1.2;
   text-align:center;color:var(--muted);max-width:100%;overflow:hidden;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.llogo.on .lname{color:var(--text)}
+/* Still two lines, and allowed a little of the lane's 16px gap on each
+   side: the pill's own padding eats into a 76px chip, and clamping to
+   one line turned "Pouches & Snus" into "Pouche…" — the one label that
+   most needs reading. */
+.llogo.on .lname{color:#160c06;background:var(--pick);border-radius:10px;
+  padding:2px 7px;font-weight:800;max-width:calc(100% + 12px)}
 .lcount{font-size:9.5px;letter-spacing:.04em;color:var(--dim)}
-.llogo.on .lcount{color:var(--gold)}
+.llogo.on .lcount{color:var(--pick);font-weight:700}
 @media(max-width:560px){
   .llogo{width:64px}
   .limg{width:54px;height:54px}
   .limg.mono::after{font-size:20px}
+  /* smaller plate, so the tick moves in with it */
+  .llogo.on::after{width:17px;height:17px;font-size:10px;right:2px}
 }
 /* ============================================================
    PRODUCT CARD

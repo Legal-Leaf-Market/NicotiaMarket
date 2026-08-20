@@ -2471,6 +2471,9 @@ function stepQty(st, q, item){
    drawer says that is what will happen. */
 var CHECKOUT_CAP={ shopify:'all', woocommerce:'one',
                    magento:'none', feedcsv:'none', bigcommerce:'none' };
+/* checkoutPlan() can also return cap:'some' — a Shopify basket where
+   only part of it carries variant ids. That is a property of the ROWS,
+   not of the platform, so it has no entry here. */
 
 /* Returns {cap, url, filled, rest} so the drawer can describe the
    hand-off truthfully instead of every store getting one caption.
@@ -2493,8 +2496,20 @@ function checkoutPlan(st, items){
 function checkoutPlanRaw(st, items){
   var base='https://'+st.domain;
   if(st.platform==='shopify'){
-    var parts=items.filter(function(x){return x.vid;})
-                   .map(function(x){return encodeURIComponent(x.vid)+':'+stepQty(st,x.qty,x);});
+    /* A cart permalink can only carry a line that HAS a variant id, and
+       not every door supplies one — the JSON-LD fallback in particular
+       yields rows with no vid at all. Those lines used to be filtered
+       out and then forgotten: `rest` was hardcoded to [], so a basket of
+       three where one had a vid returned cap:'all', filled:1, rest:[]
+       and the drawer said "All 3 items go into their basket". It sent
+       one and dropped two, silently, while claiming otherwise.
+
+       Split the basket instead of filtering it. Whatever the permalink
+       cannot carry comes back as `rest` and the drawer lists it. */
+    var canSend=[], cannot=[];
+    items.forEach(function(x){ (x.vid?canSend:cannot).push(x); });
+    var parts=canSend.map(function(x){
+      return encodeURIComponent(x.vid)+':'+stepQty(st,x.qty,x); });
     /* The cart permalink jumps straight to /cart, skipping any product
        page — so the affiliate cookie was never set on the way through
        and Shopify handoffs were tracking to nobody. ?ref= rides along
@@ -2503,10 +2518,20 @@ function checkoutPlanRaw(st, items){
        return_to carries the shopper past the cart page and into the
        checkout once the permalink has filled the basket, which is the
        whole point of sending a basket at all. */
-    if(parts.length) return {cap:'all', filled:parts.length, rest:[],
+    if(parts.length) return {cap: cannot.length?'some':'all',
+      filled:parts.length, rest:cannot, opens:'checkout',
       url:addParams(base+'/cart/'+parts.join(','),
         {discount:st.coupon, ref:st.ref, return_to:'/checkout'})};
-    return {cap:'none', filled:0, rest:items.slice(1),
+    /* NOT ONE LINE IS SENDABLE. The old code returned rest:items.slice(1)
+       here, which was the same bug wearing a different hat: the URL is a
+       cart or a discount link, NOT item one's page, so item one appeared
+       in neither and could not be reached from the drawer at all. Every
+       item is `rest` here, because the link carries none of them.
+
+       The discount link is still worth following when there is a code —
+       it lands on an empty cart, but with the code already applied. */
+    return {cap:'none', filled:0, rest:items,
+      opens: st.coupon?'discount':'cart',
       url: st.coupon
         ? addParams(base+'/discount/'+encodeURIComponent(st.coupon),{redirect:'/cart', ref:st.ref})
         : addParams(base+'/cart',{ref:st.ref})};
@@ -2535,7 +2560,7 @@ function checkoutPlanRaw(st, items){
     }else{
       url=addParams(base+path,{'add-to-cart':x.vid, quantity:stepQty(st,x.qty,x), ref:st.ref});
     }
-    return {cap:'one', filled:1, rest:items.slice(1), url:url};
+    return {cap:'one', filled:1, rest:items.slice(1), opens:'cart', url:url};
   }
 
   /* Nothing can fill this basket by URL. Open the first item where it
@@ -2543,6 +2568,7 @@ function checkoutPlanRaw(st, items){
      as their own links instead of stranding the shopper on one product
      page under a button that promised a checkout. */
   return {cap:'none', filled:0, rest:items.slice(1),
+    opens: items[0]?'item':'home',
     url: items[0] ? (items[0].aff||items[0].url) : addParams(base+'/',{ref:st.ref})};
 }
 function checkoutStore(key){
@@ -2637,23 +2663,51 @@ function renderCart(){
     /* The button now says what it will actually do. One caption for
        every store is how "Checkout at Nicokick →" came to mean "open a
        product page". */
-    var plan=checkoutPlan(st,items), n=items.length, code=st.coupon?' with code '+esc(st.coupon):'';
+    var plan=checkoutPlan(st,items), n=items.length;
+    /* TWO DIFFERENT CLAIMS, and they were being made with one phrase.
+       The Shopify permalink carries `discount` and really does apply the
+       code; every other hand-off only copies it to the clipboard, and
+       saying "with code X" there told the shopper a discount was applied
+       when nothing had applied it. */
+    var applied = st.coupon && plan.opens!=='item' && plan.opens!=='home'
+                && (plan.cap==='all'||plan.cap==='some'||plan.opens==='discount');
+    var code = !st.coupon ? ''
+             : (applied ? ' with code '+esc(st.coupon)+' applied'
+                        : ', and code '+esc(st.coupon)+' is copied for you');
     var label, note;
     if(plan.cap==='all'){
       label='Checkout at '+esc(st.name)+' →';
       note='All '+n+' item'+(n===1?'':'s')+' go into '+esc(st.name)+"'s basket"+code+
            ', and you land on their checkout.';
+    }else if(plan.cap==='some'){
+      /* Part of the basket is sendable. Counting from plan.filled, never
+         from items.length — that mismatch is what let the old note say
+         "all 3" while the link carried one. */
+      label='Send '+plan.filled+' of '+n+' to '+esc(st.name)+' →';
+      note=esc(st.name)+"'s basket link can only carry items we have a variant id for, so "+
+           plan.filled+' of your '+n+' go through'+code+'. The other '+plan.rest.length+
+           ' are one tap each below.';
     }else if(plan.cap==='one'){
       label=(n>1?'Add first item at ':'Checkout at ')+esc(st.name)+' →';
       note=n>1
-        ? esc(st.name)+' can only be sent one item per link, so this adds the first. '+
-          'The rest are one tap each below.'
+        ? esc(st.name)+' can only be sent one item per link, so this adds the first'+code+
+          '. The rest are one tap each below.'
         : 'Your item goes straight into '+esc(st.name)+"'s basket"+code+'.';
     }else{
-      label='Open at '+esc(st.name)+' →';
-      note=esc(st.name)+' cannot be sent a basket by link, so this opens '+
-           (n>1?'your first item':'your item')+' on their site'+
-           (st.coupon?', code '+esc(st.coupon)+' copied':'')+'.';
+      /* cap:'none' is not one situation. The generic branch opens item
+         one's own page; the Shopify no-variant-id branch opens an empty
+         cart or a discount link and carries NO item, so promising "your
+         first item" there was simply false. */
+      var opensItem = plan.opens==='item';
+      label=(opensItem?'Open at ':'Go to ')+esc(st.name)+' →';
+      note = opensItem
+        ? esc(st.name)+' cannot be sent a basket by link, so this opens '+
+          (n>1?'your first item':'your item')+' on their site'+
+          (st.coupon?', code '+esc(st.coupon)+' copied':'')+'.'
+        : esc(st.name)+' cannot be sent a basket by link, so this opens their '+
+          (plan.opens==='discount'?'cart with code '+esc(st.coupon)+' already applied'
+                                  :'site')+'. Your '+n+' item'+(n===1?'':'s')+
+          ' '+(n===1?'is':'are')+' one tap each below.';
     }
 
     /* Anything the link could not carry, as its own tap. This is the

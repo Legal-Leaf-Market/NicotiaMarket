@@ -764,20 +764,21 @@ header.top{position:sticky;top:0;z-index:50;
    announcing that was a small underlined "Details". A wash across the
    photo says it at a glance.
 
-   The pink is deliberately NOT a token. --disposable is the pink in the
-   design system and it MEANS disposables; borrowing it here would make
-   every hovered pouch look like a vape. This one belongs to the
+   Cornflower blue is deliberately NOT a token. It reads distinctly from
+   --device (a cooler, more periwinkle blue in tokens.css) so this wash
+   never gets mistaken for a department color; it belongs to the
    interaction, not the taxonomy, so it stays local to this rule and out
    of tokens.css, which is shared with both sister sites (§4).
 
    pointer-events:none so the wash never intercepts a click — the save
-   star underneath it stays hitable. z-index 4 clears the badges (2) and
-   the star (3), so it covers them rather than sitting behind. */
+   star and zoom button underneath it stay hitable. z-index 4 clears the
+   badges (2) and the star (3) but sits below the zoom button (5), so it
+   covers the badges rather than sitting behind them. */
 .shot::after{
   content:"Click for details";
   position:absolute;inset:0;z-index:4;pointer-events:none;
   display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;
-  background:rgba(255,64,146,.44);
+  background:rgba(100,149,237,.44);
   color:#fff;font-family:var(--sans);font-weight:800;font-size:12.5px;
   letter-spacing:.1em;text-transform:uppercase;
   text-shadow:0 1px 10px rgba(0,0,0,.6);
@@ -824,7 +825,7 @@ header.top{position:sticky;top:0;z-index:50;
 
    ANY absolutely-positioned element added inside .front belongs here.
    The pseudo-elements are listed too — same promotion, same result. */
-.badge,.save,.storepill,.oos,.shot::after,.bb-front.has-img::after{
+.badge,.save,.zoom,.storepill,.oos,.shot::after,.bb-front.has-img::after{
   -webkit-backface-visibility:hidden;backface-visibility:hidden}
 
 .badge{position:absolute;top:9px;left:9px;font-size:9.5px;letter-spacing:.07em;
@@ -837,6 +838,18 @@ header.top{position:sticky;top:0;z-index:50;
   cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;
   transition:all .15s}
 .save:hover,.save.on{color:var(--gold);border-color:var(--gold)}
+/* Bottom-right of the photo, same pill as .save but never a flip target —
+   the click delegate handles [data-zoom] before the generic card-flip
+   fallback ever runs (see EVENTS below), so this is the one spot on the
+   card that opens the full photo instead of turning it over. z-index 5
+   clears the "Click for details" wash (4) so the icon stays visible
+   through it on hover. */
+.zoom{position:absolute;bottom:9px;right:9px;width:32px;height:32px;border-radius:99px;z-index:5;
+  border:1px solid var(--glass-line);background:rgba(11,15,13,.76);color:var(--muted);
+  cursor:zoom-in;display:flex;align-items:center;justify-content:center;
+  transition:all .15s}
+.zoom:hover{color:#fff;border-color:#fff}
+.zoom svg{width:15px;height:15px}
 .oos{position:absolute;inset:0;background:rgba(11,15,13,.74);display:flex;
   align-items:center;justify-content:center;font-size:11px;letter-spacing:.11em;
   text-transform:uppercase;color:var(--muted);z-index:2}
@@ -845,6 +858,34 @@ header.top{position:sticky;top:0;z-index:50;
   letter-spacing:.05em;padding:4px 10px;border-radius:99px;
   background:rgba(11,15,13,.82);border:1px solid var(--glass-line);color:var(--text);
   max-width:calc(100% - 18px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ============================================================
+   IMAGE ZOOM — full-screen product photo
+   ------------------------------------------------------------
+   Opened by the .zoom button above. Click the photo once to zoom in
+   around wherever you clicked, click again to zoom back out — this is
+   a product photo, not a map, so a simple toggle beats pinch/drag. */
+#imgzoom{position:fixed;inset:0;z-index:200;display:none;
+  background:rgba(4,6,5,.94);align-items:center;justify-content:center;
+  padding:min(6vw,48px)}
+#imgzoom.on{display:flex}
+#imgzoom img{max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in;
+  transition:transform .25s ease;transform-origin:center center}
+#imgzoom img.in{cursor:zoom-out;transform:scale(2.2)}
+/* z-index:2 is load-bearing, not decorative: the zoomed-in photo (a
+   transformed sibling) otherwise paints above this button and swallows
+   its clicks whenever the zoom lands near the top-right corner —
+   Escape still closes, but a shopper reaching for the visible × would
+   be clicking the photo underneath it. */
+#imgzoom .zclose{position:absolute;top:18px;right:18px;width:40px;height:40px;z-index:2;
+  border-radius:99px;border:1px solid var(--glass-line);background:rgba(11,15,13,.8);
+  color:var(--text);font-size:20px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .15s}
+#imgzoom .zclose:hover{color:var(--gold);border-color:var(--gold)}
+#imgzoom .zcap{position:absolute;bottom:18px;left:0;right:0;text-align:center;
+  color:var(--dim);font-family:var(--sans);font-size:12px;letter-spacing:.04em;
+  padding:0 60px}
+@media (prefers-reduced-motion:reduce){#imgzoom img{transition:none}}
 
 .cbody{padding:13px 14px 14px;display:flex;flex-direction:column;gap:7px;flex:1;min-height:0}
 /* two-line box whether the title needs it or not, so every title in a
@@ -1522,7 +1563,7 @@ footer p{margin:0 0 9px;line-height:1.6}
 .bb-front.has-img::after{content:"Click for details";position:absolute;
   top:0;left:0;right:0;aspect-ratio:1/1;z-index:4;pointer-events:none;
   display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;
-  background:rgba(255,64,146,.44);color:#fff;font-family:var(--sans);font-weight:800;
+  background:rgba(100,149,237,.44);color:#fff;font-family:var(--sans);font-weight:800;
   font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;
   text-shadow:0 1px 10px rgba(0,0,0,.6);opacity:0;transition:opacity .15s ease}
 .bb-card:hover .bb-front.has-img::after,

@@ -463,6 +463,16 @@
 
 <div id="toast"></div>
 
+<!-- Full-screen product photo, opened by a card's .zoom button. Lives
+     here rather than inside any one card because there is only ever one
+     open at a time — app.js points its src/alt at whichever card was
+     clicked. -->
+<div id="imgzoom" role="dialog" aria-modal="true" aria-label="Product photo">
+  <button class="zclose" data-zoomclose aria-label="Close">&times;</button>
+  <img id="imgzoomImg" src="" alt="">
+  <p class="zcap" id="imgzoomCap"></p>
+</div>
+
 <aside class="drawer" id="board" role="dialog" aria-modal="true" aria-label="Saved items">
   <div class="dhead"><h2>Saved</h2><button data-close aria-label="Close">&times;</button></div>
   <div class="dbody" id="boardBody"></div>

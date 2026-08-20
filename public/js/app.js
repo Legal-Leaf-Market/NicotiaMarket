@@ -82,11 +82,31 @@ var DEPT_ORDER = ['pouch','disposable','device','liquid','cigar','gear'];
    #leafFall (a plainer silhouette, fill="currentColor" so it can be
    recoloured per instance) — reusing one shape for every leaf reads
    as a decoration; mixing two, one of them tinted across the site's
-   own autumn hues, reads as an actual pile of different leaves. */
+   own autumn hues, reads as an actual pile of different leaves.
+
+   Biased toward the OUTER thirds of the viewport, not spread evenly
+   0-100%. The center column is `.shell`-width opaque content almost
+   everywhere on the page (header, the shop-by strip, the cards) — a
+   leaf spawned at left:50% is behind a card for its entire fall and
+   is never actually seen. The margins outside .shell are the one
+   strip nothing else ever paints over, so that is where "prominent"
+   actually has to live. */
 var LEAF_HUES=['var(--gold)','var(--ember)','var(--cigar)','#c8862a','var(--red)','var(--sage-dk)'];
 /* The `dense` variant went with the hero — it was the only caller, and
    its .fleaf-hero keyframes are gone from the stylesheet with it. What
-   is left is the one sitewide pass over .bgscape. */
+   is left is the one sitewide pass over .bgscape.
+
+   leafLeft() actually applies the "biased toward the outer thirds" bias
+   the comment above promises — 70% of leaves land in the outer 15% band
+   on either side, where nothing else on the page ever paints over them;
+   the rest scatter across the middle for the gaps between cards. */
+function leafLeft(){
+  if(Math.random()<0.7){
+    var band=Math.random()*15;
+    return (Math.random()<0.5?band:100-band).toFixed(2);
+  }
+  return (Math.random()*100).toFixed(2);
+}
 function spawnLeaves(container, count){
   if(!container) return;
   var frag=document.createDocumentFragment();
@@ -99,13 +119,13 @@ function spawnLeaves(container, count){
     use.setAttribute('href', useFall?'#leafFall':'#leafIcon');
     svg.appendChild(use);
 
-    var sz=16+Math.random()*38;
+    var sz=24+Math.random()*46;
     var dur=14+Math.random()*15;
     var delay=-Math.random()*dur;               /* negative: starts mid-fall, not all at once */
     var drift=(Math.random()<0.5?-1:1)*80*(0.6+Math.random()*0.8);
     var spin=(Math.random()<0.5?-1:1)*(220+Math.random()*280);
-    var left=(Math.random()*100).toFixed(2);
-    var op=(0.09+Math.random()*0.11).toFixed(2);
+    var left=leafLeft();
+    var op=(0.26+Math.random()*0.22).toFixed(2);
 
     svg.style.cssText=
       '--l:'+left+'%;--sz:'+sz.toFixed(0)+'px;'+
@@ -3584,7 +3604,7 @@ if('serviceWorker' in navigator){
 /* boot */
 /* Independent of the catalogue — the backdrop should be falling before
    the first product ever loads, cold-scrape or not. */
-spawnLeaves(document.querySelector('.bgscape'), 42);
+spawnLeaves(document.querySelector('.bgscape'), 64);
 loadLoc(); restoreUserLoc(); locPillUI(); setAgeCopy(); setWarn(); setNotices();
 loadSelv(); loadCart(); loadBoard(); badges(); accountUI(); setAuthMode('signup'); renderCart();
 /* The path picks the opening shelf BEFORE the first render, so /pouches

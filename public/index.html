@@ -234,43 +234,40 @@
   <a class="dept ourstory" href="/community">The Back Door &middot; soon</a>
 </div></nav>
 
-<!-- Category / Store / Brand, condensed into ONE scrollable row —
-     these used to be three separate strips, each with its own header
-     and padding, and "too much real estate at the top" was the direct
-     result. Category (a replacement for the old shelf pills) shares
-     this row rather than getting one of its own, and all three read
-     off facetCount(), which already excludes the facet being rendered
-     from its own filter (see passes() in app.js) — picking a store
-     already narrows brand and category and vice versa, so this is
-     genuinely joint faceting, not three independent dropdowns that
-     happen to sit near each other.
+<!-- Category / Store / Brand — THREE independent carousels sharing one
+     compact row, not one shared strip you scroll through in sequence
+     (that was tried and rejected: scrolling past Category to reach
+     Store read as one carousel with three tabs, not three carousels).
+     Each lane is its own scroll container with its own id, so they
+     move independently; wheelToScroll()/dragToScroll() in app.js bind
+     to each one. No card chrome around the logos on purpose — bare
+     image, bigger, plus a label — a bordered box around every item
+     was exactly what read as "pills" here.
 
-     Scrollable in four ways on purpose, because one row holding three
-     kinds of chip needs to read as obviously scrollable or it reads
-     as cut off: the arrow buttons, the edge fades, a mouse wheel
-     redirected sideways while hovering it, and click-and-drag — touch
-     scrolls it natively already. See the wheelToScroll()/dragToScroll()
-     wiring in app.js. -->
+     All three still read off facetCount(), which already excludes the
+     facet being rendered from its own filter (see passes() in
+     app.js) — picking a store already narrows brand and category and
+     vice versa, so this is genuinely joint faceting, not three
+     independent dropdowns that happen to sit near each other. -->
 <div class="toprows shell">
   <section class="logorow" id="pickerRow" hidden>
     <div class="lrhead"><h2>Shop by category, store &amp; brand</h2>
-      <small class="lrhint">scroll, drag or use the arrows for more</small>
-      <div class="lrctl">
-        <button class="lrclear" id="clearPicker" hidden>Show all</button>
-        <button class="lrnav" type="button" data-lr="pickerLogos" data-dir="-1"
-                aria-label="Scroll back">&#8249;</button>
-        <button class="lrnav" type="button" data-lr="pickerLogos" data-dir="1"
-                aria-label="Scroll forward">&#8250;</button>
-      </div></div>
-    <div class="lrwrap"><div class="lrscroll" id="pickerLogos"></div></div>
+      <small class="lrhint">scroll or drag any row for more</small>
+      <button class="lrclear" id="clearPicker" hidden>Show all</button>
+    </div>
+    <div class="lrlanes">
+      <div class="lrlane"><span class="lrlane-label">Category</span>
+        <div class="lrwrap"><div class="lrscroll" id="categoryLogos"></div></div>
+      </div>
+      <div class="lrlane"><span class="lrlane-label">Store</span>
+        <div class="lrwrap"><div class="lrscroll" id="storeLogos"></div></div>
+      </div>
+      <div class="lrlane"><span class="lrlane-label">Brand</span>
+        <div class="lrwrap"><div class="lrscroll" id="brandLogos"></div></div>
+      </div>
+    </div>
   </section>
 </div>
-
-<!-- Subcategories for the chosen department. Hidden on "Everything",
-     where a "Coils" chip next to a "Snus" chip would mean nothing. -->
-<nav class="subnav" id="subnav" hidden aria-label="Subcategory">
-  <div class="subnav-in shell" id="subchips"></div>
-</nav>
 
 <div id="mallview">
 

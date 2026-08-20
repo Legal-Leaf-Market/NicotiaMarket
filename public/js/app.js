@@ -1534,7 +1534,7 @@ function apply(reset){
   /* heroStats() used to run only from ingest(), so the three figures
      were whatever the last load computed and never followed the shelf. */
   renderHero(); setRouteMeta(); heroStats();
-  renderSubnav(); renderRail(); refreshFacets(); setWarn(); setNotices(); saveSelv();
+  renderRail(); refreshFacets(); setWarn(); setNotices(); saveSelv();
 }
 
 /* How deep into each shelf's ranking the strip is currently showing.
@@ -1592,116 +1592,14 @@ function railPool(){
    RAILP walks every shelf one step deeper at once, so shuffling shows
    the NEXT best prices rather than reshuffling the same ten cards. It
    wraps, so the strip can be cycled indefinitely without emptying. */
-/* The chip row under the department tabs. Counts are taken with the sub
-   filter itself lifted — passes(g,'sub') — so choosing "Coils" narrows
-   the grid without collapsing every other chip to zero and stranding
-   you there. Hidden on the combined shelf, and hidden when a department
-   only has one subcategory, where the row would say nothing. */
-function renderSubnav(){
-  var nav=document.getElementById('subnav'), box=document.getElementById('subchips');
-  if(!nav||!box) return;
-  /* clear as well as hide — otherwise the previous shelf's chips stay in
-     the DOM and reappear for an instant the next time the row is shown */
-  var off=function(){ nav.hidden=true; box.innerHTML=''; };
-
-  /* Counted with the sub facet itself lifted — passes(g,'sub') — so
-     selecting one chip does not zero every other chip and strand you
-     with no way back except Clear. */
-  var counts={};
-  PGROUPS.forEach(function(g){
-    if(!passes(g,'sub')) return;
-    var s=subOf(gitem(g)); if(!s) return;
-    var k=deptOf(g)+'/'+s;
-    counts[k]=(counts[k]||0)+1;
-  });
-
-  /* Department order first, then the order within SUBS, so the two
-     shelves the front page argues for lead here too. On a department
-     shelf only that department's chips appear. */
-  var live=[];
-  DEPT_ORDER.forEach(function(d){
-    if(F.dept!=='all' && d!==F.dept) return;
-    (SUBS[d]||[]).forEach(function(p){
-      var k=d+'/'+p[0];
-      if(counts[k]) live.push({key:k,dept:d,label:p[1],n:counts[k]});
-    });
-  });
-
-  /* THE COMBINED SHELF GETS THE BUSIEST TEN, NOT ALL OF THEM. Every
-     subcategory at once was 24 chips — an index, not a shortcut, and
-     nobody reads to the end of it. Ranked by count, then put back into
-     department order so the row still reads as shelves rather than a
-     leaderboard. */
-  var TOP=10;
-  if(F.dept==='all' && live.length>TOP){
-    live=live.slice().sort(function(a,b){ return b.n-a.n; }).slice(0,TOP)
-      .sort(function(a,b){
-        return DEPT_ORDER.indexOf(a.dept)-DEPT_ORDER.indexOf(b.dept) || b.n-a.n;
-      });
-  }
-
-  if(live.length>=2){ paintSubPills(nav,box,live); return; }
-
-  /* NOTHING TO FACET, SO FACET SOMETHING ELSE.
-     Pouches and Disposables each have exactly ONE reachable
-     subcategory from the US — the energy, lozenge and snus pouches all
-     come from EU stores that cannot ship there — so the row simply
-     vanished on the two shelves the front page is built around. A
-     single chip would have been worse than none: it filters to
-     everything already.
-     Brands are the real second axis on those shelves, so they take
-     over. F.brands is the SAME set the logo strip writes to, so the two
-     controls stay in step rather than disagreeing. */
-  var bc={};
-  PGROUPS.forEach(function(g){
-    if(!passes(g,'brand')) return;
-    if(!g.brand) return;
-    bc[g.brand]=(bc[g.brand]||0)+1;
-  });
-  /* A brand with one product is not a facet — it is that product wearing
-     a pill. Requiring two also keeps out the residue of brandless rows,
-     which fall back to their own title and so are unique by
-     construction. Falls back to showing singles only if nothing else
-     qualifies, so a genuinely tiny shelf still gets a row. */
-  var all=Object.keys(bc).map(function(b){ return {brand:b,n:bc[b]}; })
-    .sort(function(a,b){ return b.n-a.n || a.brand.localeCompare(b.brand); });
-  var real=all.filter(function(x){ return x.n>1; });
-  var brands=(real.length>=2?real:all).slice(0,14);
-  if(brands.length<2){ off(); return; }
-  paintBrandPills(nav,box,brands);
-}
-
-function paintSubPills(nav,box,live){
-  var active=Object.keys(F.subs).length;
-  nav.hidden=false;
-  box.innerHTML=
-    (active?'<button class="subchip sc-clear" data-subclear="1">&times; Clear '+
-       active+'</button>':'')+
-    live.map(function(x){
-      /* the department hue rides on each chip, which is what makes a
-         mixed row readable — "Coils" and "Snus" are obviously different
-         shelves at a glance rather than two similar words */
-      return '<button class="subchip'+(F.subs[x.key]?' on':'')+
-        '" data-sub="'+esc(x.key)+'" style="--sc:'+
-        esc((DEPTS[x.dept]||{}).accent||'var(--gold)')+'">'+
-        '<i class="scdot"></i>'+esc(x.label)+' <span>'+x.n+'</span></button>';
-    }).join('');
-}
-
-function paintBrandPills(nav,box,brands){
-  var active=Object.keys(F.brands).length;
-  var accent=(DEPTS[F.dept]||{}).accent||'var(--gold)';
-  nav.hidden=false;
-  box.innerHTML=
-    '<span class="scnote">Brand</span>'+
-    (active?'<button class="subchip sc-clear" data-brandclear="1">&times; Clear '+
-       active+'</button>':'')+
-    brands.map(function(x){
-      return '<button class="subchip'+(F.brands[x.brand]?' on':'')+
-        '" data-brandpill="'+esc(x.brand)+'" style="--sc:'+esc(accent)+'">'+
-        '<i class="scdot"></i>'+esc(x.brand)+' <span>'+x.n+'</span></button>';
-    }).join('');
-}
+/* The old sub-category/brand pill row (#subnav) is gone — it was the
+   thing three rounds of feedback kept calling "the pills" (colored
+   dots, "Nicotine pouches" / "Disposable vapes" / etc.), not the
+   shelf buttons removed earlier or the category strip added since.
+   F.subs and the passes(g,'sub') check it feeds stay in place — they
+   just never get set now that nothing writes to them, so this is a
+   no-op path rather than a removed one, which is the safer of the two
+   given how much else reads F.subs. */
 
 function renderRail(){
   var sec=document.getElementById('railsec');
@@ -1832,7 +1730,7 @@ function railStep(dir){
    deals carousel, but a brand list has a first and a last brand and
    wrapping past Z back to A reads as a bug. */
 (function(){
-  var IDS=['pickerLogos'];
+  var IDS=['categoryLogos','storeLogos','brandLogos'];
 
   function sync(box){
     var wrap=box.parentElement;
@@ -1841,42 +1739,25 @@ function railStep(dir){
     var scrollable=max>2,
         canPrev=scrollable&&box.scrollLeft>2,
         canNext=scrollable&&box.scrollLeft<max-2;
-    /* Fades double as the affordance now that the scrollbar is gone. */
+    /* The only affordance now — no arrow buttons any more, three
+       independent lanes of them was exactly the "real estate" this row
+       was asked to shed. Wheel and drag (below) plus native touch pick
+       up the slack. */
     wrap.classList.toggle('can-prev',canPrev);
     wrap.classList.toggle('can-next',canNext);
-    var btns=document.querySelectorAll('.lrnav[data-lr="'+box.id+'"]');
-    for(var i=0;i<btns.length;i++){
-      var back=btns[i].getAttribute('data-dir')==='-1';
-      btns[i].hidden=!scrollable;
-      btns[i].disabled=back?!canPrev:!canNext;
-    }
   }
 
-  function step(box,dir){
-    /* 80% of a screenful, so one column of context survives the jump and
-       the eye has something to anchor to on the other side. */
-    box.scrollBy({left:dir*Math.max(160,box.clientWidth*0.8),behavior:'smooth'});
-  }
-
-  document.addEventListener('click',function(e){
-    var t=e.target, b=(t&&t.closest)?t.closest('.lrnav'):null;
-    if(!b||b.disabled) return;
-    var box=document.getElementById(b.getAttribute('data-lr'));
-    if(box) step(box,parseInt(b.getAttribute('data-dir'),10));
-  });
-
-  /* Category + store + brand condensed into one row means it MUST be
-     obviously scrollable — the arrows and edge fades above are one
-     answer, but a mouse user's instinct is to reach for the wheel, and
-     a vertical wheel gesture over a horizontal strip normally does
-     nothing (or scrolls the page underneath it, which reads as "this
-     doesn't scroll" even though it does). Redirecting the vertical
-     delta into scrollLeft, and preventing the page scroll that would
-     otherwise fire alongside it, makes "hover and scroll" work the way
-     it would over any normal vertical list — just sideways. Only
-     redirects when the gesture is actually vertical-dominant; a
-     trackpad's native horizontal swipe (deltaX already dominant) is
-     left alone. */
+  /* Category, store and brand each need to read as OBVIOUSLY scrollable
+     with no arrow buttons to say so — a mouse user's instinct is to
+     reach for the wheel, and a vertical wheel gesture over a horizontal
+     strip normally does nothing (or scrolls the page underneath it,
+     which reads as "this doesn't scroll" even though it does).
+     Redirecting the vertical delta into scrollLeft, and preventing the
+     page scroll that would otherwise fire alongside it, makes "hover
+     and scroll" work the way it would over any normal vertical list —
+     just sideways. Only redirects when the gesture is actually
+     vertical-dominant; a trackpad's native horizontal swipe (deltaX
+     already dominant) is left alone. */
   function wheelToScroll(box){
     box.addEventListener('wheel',function(e){
       if(Math.abs(e.deltaY)<=Math.abs(e.deltaX)) return;
@@ -1885,8 +1766,8 @@ function railStep(dir){
     },{passive:false});
   }
   /* Click-and-drag for mouse users who don't reach for the wheel either —
-     a third way to discover this scrolls, on top of the arrows and the
-     wheel redirect. Touch already scrolls natively; this only binds
+     a second way to discover this scrolls, on top of the wheel redirect
+     and the edge fades. Touch already scrolls natively; this only binds
      mouse events so it can't fight a real swipe. */
   function dragToScroll(box){
     var down=false, moved=false, startX=0, startLeft=0;
@@ -1989,22 +1870,30 @@ function repImageForDept(d){
   }
   return '';
 }
-/* Category, store and brand condensed into ONE scrollable strip —
-   they used to be three separate <section>s, each with its own header
-   and padding, which is exactly the "too much real estate at the top"
-   this replaces. Rendered together so there is one row, one header,
-   one set of scroll controls and one "Show all" that resets all three
-   at once. Category chips get a real product photo now, the same
-   rounded-square treatment as brand, rather than a plain monogram —
-   the monogram is still the fallback when a department has no image
-   to show, exactly like a broken store logo falls back to one. */
+/* Category, store and brand as THREE INDEPENDENT carousels sharing one
+   compact row — not one shared strip you scroll through in sequence.
+   That was tried first and rejected: reaching Store meant scrolling
+   past every Category chip, which read as one carousel with three
+   tabs in it, not three carousels. Each lane gets its own container
+   and hides on its own when it has nothing to show; the whole row
+   only hides when all three come up empty. No card chrome on the
+   chips — bare logo (bigger) plus a label, which is what "get rid of
+   the pills" turned out to mean: not the shelf buttons (gone two
+   passes ago), the bordered box around every item in this row.
+   Category chips get a real product photo, the same treatment as
+   brand, rather than a plain monogram — the monogram is still the
+   fallback when a department has no image to show, exactly like a
+   broken store logo falls back to one. */
 function renderPickerRow(cDept,cStore,cBrand){
-  var row=document.getElementById('pickerRow'), box=document.getElementById('pickerLogos');
-  if(!box) return;
+  var row=document.getElementById('pickerRow');
+  var catBox=document.getElementById('categoryLogos'),
+      storeBox=document.getElementById('storeLogos'),
+      brandBox=document.getElementById('brandLogos');
+  if(!catBox||!storeBox||!brandBox) return;
 
   var catChips=DEPT_ORDER.filter(function(d){ return cDept[d]; }).map(function(d){
     var on=F.dept===d, meta=DEPTS[d]||{}, img=repImageForDept(d);
-    return '<button class="lchip cat'+(on?' on':'')+'" data-logocat="'+esc(d)+'" '+
+    return '<button class="llogo cat'+(on?' on':'')+'" data-logocat="'+esc(d)+'" '+
       'aria-pressed="'+on+'" title="'+esc(meta.label||d)+'">'+
       '<span class="limg'+(img?'':' mono')+'" data-letter="'+esc(String(meta.label||d).charAt(0).toUpperCase())+'" '+
         'style="--mono-a:'+esc(meta.accent||'var(--gold)')+';--mono-b:var(--chip)">'+
@@ -2017,7 +1906,7 @@ function renderPickerRow(cDept,cStore,cBrand){
 
   var storeChips=STORES.filter(function(s){ return cStore[s.key]; }).map(function(s){
     var on=!!F.stores[s.key];
-    return '<button class="lchip'+(on?' on':'')+'" data-logostore="'+esc(s.key)+'" '+
+    return '<button class="llogo'+(on?' on':'')+'" data-logostore="'+esc(s.key)+'" '+
       'aria-pressed="'+on+'" title="'+esc(s.name)+'">'+
       '<span class="limg" '+monoAttrs(s.name,s.key)+'>'+
         '<img src="'+esc(logoFor(s))+'" alt="" loading="lazy" referrerpolicy="no-referrer" '+
@@ -2041,11 +1930,9 @@ function renderPickerRow(cDept,cStore,cBrand){
   var brandChips=bList.map(function(b){
     var on=!!F.brands[b];
     /* .mono set up front when there's no image to try at all, not just
-       on load failure — the merge dropped the old row-wide "if nobody
-       here has a photo, mono the lot" fallback, which also means a
-       brand with no photo but OTHER brands that DO have one no longer
-       renders as a blank circle with no letter. */
-    return '<button class="lchip brand'+(on?' on':'')+'" data-logobrand="'+esc(b)+'" '+
+       on load failure — a brand with no photo but OTHER brands that DO
+       have one still needs a letter, not a blank circle. */
+    return '<button class="llogo brand'+(on?' on':'')+'" data-logobrand="'+esc(b)+'" '+
       'aria-pressed="'+on+'" title="'+esc(b)+'">'+
       '<span class="limg'+(bImg[b]?'':' mono')+'" '+monoAttrs(b,b)+'>'+(bImg[b]
         ? '<img src="'+esc(bImg[b])+'" alt="" loading="lazy" referrerpolicy="no-referrer" '+
@@ -2055,17 +1942,21 @@ function renderPickerRow(cDept,cStore,cBrand){
       '<span class="lcount">'+cBrand[b]+'</span></button>';
   });
 
-  /* Two is a strip worth showing, same threshold each group always
-     used on its own — a single chip with nothing to compare it to
-     isn't a filter, it's a label. */
-  var groups=[];
-  if(catChips.length>1)   groups.push('<span class="lrsep">Category</span>'+catChips.join(''));
-  if(storeChips.length>1) groups.push('<span class="lrsep">Store</span>'+storeChips.join(''));
-  if(brandChips.length>1) groups.push('<span class="lrsep">Brand</span>'+brandChips.join(''));
+  /* Two is a lane worth showing — a single chip with nothing to
+     compare it to isn't a filter, it's a label. Each lane's own
+     wrapping <div class="lrlane"> hides with it, so an empty lane
+     doesn't leave a blank label and no content sitting in the row. */
+  var catLane=catBox.closest('.lrlane'), storeLane=storeBox.closest('.lrlane'),
+      brandLane=brandBox.closest('.lrlane');
+  var showCat=catChips.length>1, showStore=storeChips.length>1, showBrand=brandChips.length>1;
+  if(catLane) catLane.hidden=!showCat;
+  if(storeLane) storeLane.hidden=!showStore;
+  if(brandLane) brandLane.hidden=!showBrand;
+  catBox.innerHTML=showCat?catChips.join(''):'';
+  storeBox.innerHTML=showStore?storeChips.join(''):'';
+  brandBox.innerHTML=showBrand?brandChips.join(''):'';
 
-  if(!groups.length){ row.hidden=true; return; }
-  row.hidden=false;
-  box.innerHTML=groups.join('');
+  row.hidden=!(showCat||showStore||showBrand);
 
   var anyActive=F.dept!=='all'||Object.keys(F.stores).length||Object.keys(F.brands).length;
   document.getElementById('clearPicker').hidden=!anyActive;
@@ -2975,20 +2866,6 @@ document.getElementById('f-sort').addEventListener('change',function(e){
 document.getElementById('f-deals').addEventListener('click',function(){
   F.deals=!F.deals; this.classList.toggle('active',F.deals);
   this.setAttribute('aria-pressed',F.deals); apply();});
-document.getElementById('subchips').addEventListener('click',function(e){
-  var b=e.target.closest('.subchip'); if(!b) return;
-  if(b.getAttribute('data-subclear')){ F.subs={}; apply(); return; }
-  if(b.getAttribute('data-brandclear')){ F.brands={}; apply(); return; }
-  /* brand pills write to the same set as the logo strip, so toggling one
-     here lights up the matching logo and vice versa */
-  var bp=b.getAttribute('data-brandpill');
-  if(bp){
-    if(F.brands[bp]) delete F.brands[bp]; else F.brands[bp]=1;
-    F.brand='all'; apply(); return;
-  }
-  var k=b.getAttribute('data-sub'); if(!k) return;
-  if(F.subs[k]) delete F.subs[k]; else F.subs[k]=1;   /* toggle, multi-select */
-  apply();});
 /* Shuffle only moves the strip — it must NOT run apply(), which would
    reset RAILP to 0 and land you back on the same twelve cards. */
 (function(){

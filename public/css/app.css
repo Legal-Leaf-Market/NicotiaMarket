@@ -343,38 +343,10 @@ header.top{position:sticky;top:0;z-index:50;
   text-underline-offset:3px;line-height:1.45}
 .drest a:hover{color:var(--gold)}
 
-.subnav{border-bottom:1px solid var(--line);background:rgba(8,12,10,.55)}
-.subnav[hidden]{display:none}
-.subnav-in{display:flex;gap:8px;overflow-x:auto;padding:10px 0;
-  scrollbar-width:none;-ms-overflow-style:none}
-.subnav-in::-webkit-scrollbar{display:none}
-.subchip{--sc:var(--gold);
-  flex:none;cursor:pointer;font-family:var(--sans);font-size:12.5px;font-weight:600;
-  letter-spacing:.01em;padding:7px 14px;border-radius:999px;white-space:nowrap;
-  border:1px solid var(--glass-line);background:var(--chip);color:var(--muted);
-  display:inline-flex;align-items:center;gap:7px;transition:color .16s,border-color .16s}
-.subchip:hover{border-color:var(--sc);color:var(--text)}
-.subchip span{font-size:10.5px;font-weight:700;color:var(--dim)}
-/* the shelf this subcategory belongs to, as a dot in that department's
-   own hue. It is what makes a flat row of 27 chips scannable on the
-   combined shelf — "Coils" and "Snus" read as different shelves before
-   you have finished reading either word. */
-.subchip .scdot{width:7px;height:7px;border-radius:50%;background:var(--sc);
-  flex:none;opacity:.85}
-.subchip.on{border-color:var(--sc);color:var(--text);
-  background:color-mix(in srgb, var(--sc) 16%, transparent)}
-/* color-mix is recent; this is the fallback tint for anything older */
-@supports not (background: color-mix(in srgb, red 10%, transparent)){
-  .subchip.on{background:rgba(255,255,255,.08)}
-}
-.subchip.on span{color:var(--text);opacity:.7}
-.subchip.on .scdot{opacity:1;box-shadow:0 0 7px var(--sc)}
-/* names what the row is faceting when it is not subcategories */
-.scnote{flex:none;align-self:center;font-size:10px;font-weight:700;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--dim);padding-right:2px}
-/* clearing is an action, not a facet, so it does not carry a shelf hue */
-.subchip.sc-clear{border-color:rgba(239,83,80,.45);color:var(--red);font-weight:700}
-.subchip.sc-clear:hover{border-color:var(--red);color:var(--red)}
+/* The old sub-category/brand pill row (.subnav/.subchip, colored dots
+   and all) is gone — three rounds of feedback called it "the pills"
+   before the actual target was clear. Removed rather than left dead:
+   nothing else in the file used these classes. */
 
 /* Our Story in the nav strip. Ruled off on the left because it is not a
    shelf — it sits with the departments without pretending to be one. */
@@ -673,110 +645,99 @@ header.top{position:sticky;top:0;z-index:50;
       a rounded square, which is honestly a product shot.
    ============================================================ */
 .logorow{padding:12px 0 6px}
-.lrhead{display:flex;align-items:baseline;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.lrhead{display:flex;align-items:baseline;gap:12px;margin-bottom:8px;flex-wrap:wrap}
 .lrhead h2{font-family:var(--display);font-weight:900;font-size:13.5px;
   letter-spacing:.06em;text-transform:uppercase;margin:0}
-.lrhead small{font-size:11.5px;color:var(--dim)}
-/* The "condensed into one row" hint — italic and dim on purpose, a
-   caption rather than a label, but present without hovering for it. */
+/* The "how do I know this scrolls" hint — italic and dim on purpose, a
+   caption rather than a label, but present without hovering for it.
+   No arrow buttons any more (see the scroll IIFE in app.js): three
+   lanes' worth of them was exactly the real estate this row shed. */
 .lrhint{font-style:italic;color:var(--dim);opacity:.8}
 .lrclear{margin-left:auto;background:none;border:none;color:var(--gold);cursor:pointer;
   font-size:11.5px;letter-spacing:.04em;text-decoration:underline;padding:0}
-/* Group dividers inside the merged strip — Category / Store / Brand
-   chips all share one scroll container now, and these are the only
-   thing telling them apart besides the chip art itself (colour circle
-   vs. store logo vs. product photo). Not a chip: no border, no hover,
-   just a vertical rule and a label, so it reads as "start of a new
-   kind of thing" rather than one more scroll-snap stop. */
-.lrsep{flex:0 0 auto;align-self:center;white-space:nowrap;
-  padding-left:14px;margin-left:4px;border-left:1px solid var(--line);
-  font-family:var(--sans);font-weight:700;font-size:10.5px;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--dim)}
-.lrscroll>.lrsep:first-child{margin-left:0;padding-left:0;border-left:0}
+
+/* THREE INDEPENDENT LANES, one row. Category, store and brand each
+   get their own scroll container — flex:1 so they share the width
+   evenly on desktop, wrapping to full-width stacked lanes once there
+   is not enough room to be worth calling three columns (matches the
+   breakpoint every other mobile rule in this file uses). Nothing
+   syncs their scroll positions; that is the whole point after the
+   merged single strip read as one carousel with three tabs in it. */
+.lrlanes{display:flex;gap:22px;flex-wrap:wrap}
+.lrlane{flex:1 1 240px;min-width:0}
+.lrlane[hidden]{display:none}
+.lrlane-label{display:block;font-family:var(--sans);font-weight:700;font-size:10px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+@media(max-width:700px){.lrlanes{gap:14px}.lrlane{flex-basis:100%}}
+
 /* ---- the logo carousel ----
-   The scrollbar is gone. It sat under a row of brand marks looking like a
-   rendering fault, and a 4px track is a poor affordance anyway: too small
-   to grab and invisible on a trackpad until you are already scrolling.
-   Four things say "this scrolls" instead: the arrows, the edge fades
-   below, a mouse wheel redirected sideways (wheelToScroll() in app.js)
-   and click-and-drag (dragToScroll()) — touch already scrolls it
-   natively. One row holding three kinds of chip needs to be obviously
-   scrollable or it just reads as cut off. */
+   No card, no border, no background — just the logo (bigger) and a
+   label underneath. The bordered box around every item was what read
+   as "the pills" once the shelf buttons and the subcategory row were
+   both already gone; a plain image with a caption doesn't. Scrolls
+   three ways with no arrow buttons to say so: the edge fades below, a
+   mouse wheel redirected sideways (wheelToScroll() in app.js) and
+   click-and-drag (dragToScroll()) — touch already scrolls it
+   natively. */
 .lrwrap{position:relative}
-.lrscroll{display:flex;gap:10px;overflow-x:auto;padding:2px 0 6px;
+.lrscroll{display:flex;gap:16px;overflow-x:auto;padding:2px 4px 6px;
   scrollbar-width:none;-ms-overflow-style:none;cursor:grab;
   scroll-behavior:smooth;scroll-snap-type:x proximity;user-select:none}
 .lrscroll::-webkit-scrollbar{display:none;width:0;height:0}
 .lrscroll>*{scroll-snap-align:start}
 .lrscroll.dragging{cursor:grabbing;scroll-behavior:auto}
+@media(prefers-reduced-motion:reduce){.lrscroll{scroll-behavior:auto}}
 
-/* Edge fades, so a cut-off logo reads as "more this way" rather than as a
-   clipped image. Widened and darkened from the single-purpose rows this
-   replaced — one shared strip needs a louder version of the same hint.
-   Pointer-events off or they would eat clicks on the end chips. Hidden
-   by JS when the strip is not actually scrollable. */
-.lrwrap::before,.lrwrap::after{content:"";position:absolute;top:0;bottom:6px;width:64px;
+/* Edge fades, so a cut-off logo reads as "more this way" rather than as
+   a clipped image. Pointer-events off or they would eat clicks on the
+   end chips. Hidden by JS when a lane is not actually scrollable. */
+.lrwrap::before,.lrwrap::after{content:"";position:absolute;top:0;bottom:6px;width:36px;
   pointer-events:none;opacity:0;transition:opacity .2s;z-index:1}
-.lrwrap::before{left:0;background:linear-gradient(90deg,var(--bg) 40%,transparent)}
-.lrwrap::after{right:0;background:linear-gradient(270deg,var(--bg) 40%,transparent)}
+.lrwrap::before{left:0;background:linear-gradient(90deg,var(--bg) 30%,transparent)}
+.lrwrap::after{right:0;background:linear-gradient(270deg,var(--bg) 30%,transparent)}
 .lrwrap.can-prev::before{opacity:1}
 .lrwrap.can-next::after{opacity:1}
 
-.lrctl{margin-left:auto;display:flex;align-items:center;gap:7px}
-.lrctl .lrclear{margin-left:0}
-.lrnav{width:27px;height:27px;flex:none;border-radius:999px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;line-height:1;
-  font-size:15px;background:none;border:1px solid var(--line);color:var(--muted);
-  transition:border-color .16s,color .16s,opacity .16s}
-.lrnav:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
-.lrnav:active:not(:disabled){transform:scale(.93)}
-.lrnav:disabled{opacity:.28;cursor:default}
-/* No arrows on touch widths: swiping is the better gesture there and the
-   buttons only take up head room. */
-@media(max-width:560px){.lrnav{display:none}}
-@media(prefers-reduced-motion:reduce){.lrscroll{scroll-behavior:auto}}
-
-.lchip{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:8px;
-  width:104px;padding:13px 8px 11px;border:1px solid var(--line);background:var(--panel);
-  border-radius:var(--r);cursor:pointer;transition:all .16s;position:relative}
-.lchip:hover{border-color:var(--glass-line);transform:translateY(-2px)}
-.lchip.on{border-color:var(--gold);background:rgba(240,185,60,.07)}
-.lchip.on::after{content:"\2713";position:absolute;top:6px;right:8px;color:var(--gold);
-  font-size:11px;font-weight:700}
+/* The bare logo itself. flex:0 0 auto so lanes scroll instead of
+   wrapping; no border/background/padding box around it — that box IS
+   what "the pills" turned out to mean. */
+.llogo{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;
+  width:76px;background:none;border:none;padding:2px;cursor:pointer;
+  transition:transform .16s,opacity .16s;opacity:.86}
+.llogo:hover{transform:translateY(-2px);opacity:1}
+.llogo.on{opacity:1}
 
 /* stores: circular white plate, because a brand mark is drawn for
-   light backgrounds and disappears on ours */
-.limg{width:54px;height:54px;border-radius:50%;background:#fff;overflow:hidden;
-  display:flex;align-items:center;justify-content:center;flex:none;
-  box-shadow:0 2px 10px rgba(0,0,0,.28)}
-.limg img{width:100%;height:100%;object-fit:contain;padding:7px}
+   light backgrounds and disappears on ours. Bigger than the old boxed
+   chip's 54px now that there is no padded card eating the width. */
+.limg{width:64px;height:64px;border-radius:50%;background:#fff;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;flex:none;position:relative;
+  box-shadow:0 2px 10px rgba(0,0,0,.28);transition:box-shadow .16s}
+.llogo.on .limg{box-shadow:0 0 0 2px var(--gold),0 2px 10px rgba(0,0,0,.28)}
+.llogo.on .limg::after{content:"\2713";position:absolute;top:-2px;right:-2px;
+  width:16px;height:16px;border-radius:50%;background:var(--gold);color:#160c06;
+  font-size:9.5px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.limg img{width:100%;height:100%;object-fit:contain;padding:8px}
 /* monogram fallback: a real letter on a real plate, tinted per store
-   so a logo-less row still reads as distinct shops */
+   so a logo-less lane still reads as distinct shops */
 .limg.mono{background:linear-gradient(150deg,var(--mono-a,#2b3630),var(--mono-b,#1a221d))}
 .limg.mono::after{content:attr(data-letter);font-family:var(--display);font-weight:900;
-  font-size:22px;color:#fff;letter-spacing:.02em}
-/* brands: rounded square, not a circle. It is a product photo and
-   should look like one. */
-.lchip.brand .limg{border-radius:12px;background:#fff}
-.lchip.brand .limg img{object-fit:cover;padding:0}
-/* categories: same rounded-square product-photo treatment as brand —
-   a representative item's photo (repImageForDept() in app.js), not a
-   plain letter circle, whenever one exists. Falls back to the same
-   .limg.mono gradient, just fed its own accent hue via --mono-a
-   instead of a store/brand's hashed tint, exactly like a broken store
-   logo falls back to one. */
-.lchip.cat .limg{border-radius:12px}
-.lchip.cat .limg img{object-fit:cover;padding:0}
-.lname{font-family:var(--sans);font-weight:600;font-size:11.5px;line-height:1.25;
+  font-size:24px;color:#fff;letter-spacing:.02em}
+/* brands and categories: rounded square, not a circle — a product
+   photo (repImageForDept() picks one for category the same way brand
+   already did) and should look like one, not a badly-cropped logo. */
+.llogo.brand .limg,.llogo.cat .limg{border-radius:14px}
+.llogo.brand .limg img,.llogo.cat .limg img{object-fit:cover;padding:0}
+.lname{font-family:var(--sans);font-weight:600;font-size:11px;line-height:1.2;
   text-align:center;color:var(--muted);max-width:100%;overflow:hidden;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.lchip.on .lname{color:var(--text)}
-.lcount{font-size:10px;letter-spacing:.04em;color:var(--dim)}
-.lchip.on .lcount{color:var(--gold)}
+.llogo.on .lname{color:var(--text)}
+.lcount{font-size:9.5px;letter-spacing:.04em;color:var(--dim)}
+.llogo.on .lcount{color:var(--gold)}
 @media(max-width:560px){
-  .lchip{width:86px;padding:11px 6px 9px}
-  .limg{width:46px;height:46px}
-  .limg.mono::after{font-size:19px}
+  .llogo{width:64px}
+  .limg{width:54px;height:54px}
+  .limg.mono::after{font-size:20px}
 }
 /* ============================================================
    PRODUCT CARD

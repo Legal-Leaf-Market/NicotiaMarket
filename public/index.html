@@ -135,6 +135,26 @@
   </symbol>
 </svg>
 
+<!-- Persistent backdrop. Both sisters have one — Herbal-Leaf's slow
+     swaying vines, Legal-Leaf's busy layered paisley — and this is
+     ours: the same tobacco-leaf mark above, drifting, plus a couple of
+     soft vapour wisps (the site's own "everything is vapor" thread).
+     Fixed to the viewport, not the page, so it never scrolls away; the
+     hero gets its own denser, bigger version of the same motif for the
+     one section that should read as the main visual (see #hero below).
+     Kept out of the reduced-motion path automatically — line 22 of
+     app.css already kills every animation sitewide for that.
+     aria-hidden: texture, not content. -->
+<div class="bgscape" aria-hidden="true">
+  <svg class="bgleaf bgleaf-1" viewBox="0 0 60 72"><use href="#leafIcon"></use></svg>
+  <svg class="bgleaf bgleaf-2" viewBox="0 0 60 72"><use href="#leafIcon"></use></svg>
+  <svg class="bgleaf bgleaf-3" viewBox="0 0 60 72"><use href="#leafIcon"></use></svg>
+  <svg class="bgleaf bgleaf-4" viewBox="0 0 60 72"><use href="#leafIcon"></use></svg>
+  <svg class="bgleaf bgleaf-5" viewBox="0 0 60 72"><use href="#leafIcon"></use></svg>
+  <span class="bgwisp bgwisp-1"></span>
+  <span class="bgwisp bgwisp-2"></span>
+</div>
+
 <div id="gate" role="dialog" aria-modal="true" aria-labelledby="gt">
   <div class="gc">
     <svg class="gmark" viewBox="0 0 60 72"><use href="#leafIcon"></use></svg>
@@ -228,7 +248,13 @@
 <!-- One hero per shelf. The copy is swapped by renderHero() from the
      HEROES map in app.js, and data-hero drives the colour — a department
      URL rewrites to this same file, so the hero cannot be markup. -->
-<section class="hero" id="hero" data-hero="all"><div class="hero-inner shell">
+<section class="hero" id="hero" data-hero="all">
+  <div class="hero-scape" aria-hidden="true">
+    <svg class="hleaf hleaf-1" viewBox="0 0 60 72"><use href="#leafIcon"></use></svg>
+    <svg class="hleaf hleaf-2" viewBox="0 0 60 72"><use href="#leafIcon"></use></svg>
+    <svg class="hleaf hleaf-3" viewBox="0 0 60 72"><use href="#leafIcon"></use></svg>
+  </div>
+  <div class="hero-inner shell">
   <span class="eyebrow" id="heroEyebrow">every store, one price you can compare</span>
   <h1><span class="h-lead" id="heroLead">what it actually</span><span id="heroHead">costs</span></h1>
   <p class="hsub" id="heroSub">Pouches, disposables, e-liquid and cigars from every shop we carry, priced
@@ -238,25 +264,6 @@
 </div></section>
 
 <main class="shell">
-
-  <!-- THE STORY, FIRST THING ON THE MONEY PAGE. It used to sit below the
-       filters and the logo strips, which buried the one line that explains
-       who we are. Above the filters it reads as the opening statement it
-       is, and the pricing is still one scroll away. -->
-  <a class="storyband" href="/story">
-    <span class="sb-mark" aria-hidden="true">
-      <svg viewBox="0 0 60 72"><use href="#leafIcon"></use></svg>
-    </span>
-    <span class="sb-copy">
-      <span class="sb-eyebrow">Our story</span>
-      <span class="sb-tag">From Jean Nicot to your front door</span>
-      <span class="sb-fr" lang="fr">&laquo;&nbsp;De Jean Nicot jusqu&rsquo;&agrave; votre porte&nbsp;&raquo;</span>
-      <span class="sb-sub">A French ambassador, a Swedish botanist, a Victorian poet and a
-        Heidelberg laboratory. How <b>Nicotia</b> became <b>nicotine</b>, and why we took
-        the name back.</span>
-    </span>
-    <span class="sb-go">Read it &rarr;</span>
-  </a>
 
   <button class="nbtn ftoggle-btn" id="filterToggle">&#9881; <span>Filters</span></button>
   <div class="fscrim" id="fscrim"></div>
@@ -303,12 +310,6 @@
     <div class="lrwrap"><div class="lrscroll" id="brandLogos"></div></div>
   </section>
 
-  <!-- One line from anywhere in the library, rotating, each with its source
-       and a link back to the piece. Built by share.js so the carousel and
-       the share buttons can never quote the site differently. Empty until
-       JS runs, and it removes itself if share.js fails to load. -->
-  <div id="quoteCarousel"></div>
-
   <div class="subbar">
     <span class="cnt" id="rcount">&nbsp;</span>
     <div class="meta">
@@ -339,31 +340,26 @@
 
   <div id="mount"></div>
 
-  <!-- Deliberately BELOW the grid. Somebody arriving here came for a price,
-       so the shelf gets the top of the page and this is what they find once
-       they have it. The listen link is outbound to work we neither own nor
-       host, so it is nofollow, and it does not autoplay because autoplaying
-       somebody else's copyrighted track on a storefront is two bad ideas at
-       once.
-
-       The visible label is "the long version", not "manifesto". The class
-       name is left as-is because it is a styling hook, not copy. -->
-  <section class="manifestoband" aria-label="The long version of why we exist">
-    <span class="mb-copy">
-      <span class="mb-eyebrow">The long version</span>
-      <span class="mb-tag">Everything is vapor. <em>Including you.</em></span>
-      <span class="mb-sub">In Biblical Hebrew, <b>breath</b>, <b>wind</b>, <b>spirit</b> and
-        <b>soul</b> are nearly the same handful of words, and <i>hevel</i>, the word
-        Ecclesiastes repeats over and over, does not mean vanity. It means <b>vapor</b>.
-        The first thing scripture ever calls holy is not a temple. It is a <b>break</b>.
-        Our name is 190 years old; the atoms are 13.8 billion.</span>
+  <!-- THE STORY, now deliberately BELOW the grid rather than above it.
+       Somebody arriving here came for a price, so the shelf gets the top
+       of the page; this is what they find once they have it. Only one
+       story banner lives on the front page — the rest of the library
+       still gets a full listing in the footer, just not a second banner
+       competing with this one. -->
+  <a class="storyband" href="/story">
+    <span class="sb-mark" aria-hidden="true">
+      <svg viewBox="0 0 60 72"><use href="#leafIcon"></use></svg>
     </span>
-    <span class="mb-acts">
-      <a class="mb-read" href="/word-for-smoke">Read the long version &rarr;</a>
-      <a class="mb-listen" href="https://www.last.fm/music/Gungor/_/Vapor"
-         rel="noopener nofollow" target="_blank">&#9834; Gungor, <i>Vapor</i></a>
+    <span class="sb-copy">
+      <span class="sb-eyebrow">Our story</span>
+      <span class="sb-tag">From Jean Nicot to your front door</span>
+      <span class="sb-fr" lang="fr">&laquo;&nbsp;De Jean Nicot jusqu&rsquo;&agrave; votre porte&nbsp;&raquo;</span>
+      <span class="sb-sub">A French ambassador, a Swedish botanist, a Victorian poet and a
+        Heidelberg laboratory. How <b>Nicotia</b> became <b>nicotine</b>, and why we took
+        the name back.</span>
     </span>
-  </section>
+    <span class="sb-go">Read it &rarr;</span>
+  </a>
 </main>
 
 <section class="stores"><div class="shell">
@@ -496,7 +492,6 @@
 <script>
   if (window.NM_SHARE) {
     NM_SHARE.mount('shareFooter', { compact: true });
-    NM_SHARE.carousel('quoteCarousel');
   }
 </script>
 

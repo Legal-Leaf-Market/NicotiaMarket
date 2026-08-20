@@ -1184,6 +1184,23 @@ async function shopifyCurrency(st) {
   return cur
 }
 
+/* Shopify links a variant to its own photo by `image_id`, pointing at
+   one entry in the product's `images[]` array — that mapping is how a
+   single product with ten flavour variants shows ten different can
+   photos instead of one. Reading only `images[0]` for every variant
+   ignores it, so every flavour got whichever photo happened to load
+   first — for Black Buffalo (one product, one variant per flavour)
+   that is a branded/hero shot, not a single flavour's can, and it
+   rendered on the shelf looking like "their logo" on every card. */
+function imageForVariant(pr, v) {
+  const images = pr.images || []
+  if (v && v.image_id) {
+    const hit = images.find(img => img.id === v.image_id)
+    if (hit) return hit.src
+  }
+  return images[0] ? images[0].src : ''
+}
+
 async function shopifyProducts(st) {
   const currency = await shopifyCurrency(st)
   const out = []
@@ -1200,7 +1217,6 @@ async function shopifyProducts(st) {
     const prods = data.products || []
     if (!prods.length) break
     for (const pr of prods) {
-      const img = pr.images && pr.images[0] ? pr.images[0].src : ''
       const url = `https://${st.domain}/products/${pr.handle}`
       const vts = pr.variants && pr.variants.length ? pr.variants : [{}]
       for (const v of vts) {
@@ -1209,7 +1225,7 @@ async function shopifyProducts(st) {
           ptype: pr.product_type,
           tags: Array.isArray(pr.tags) ? pr.tags.join(' ') : pr.tags,
           price: v.price, compareAt: v.compare_at_price, currency,
-          available: v.available !== false, image: img, url,
+          available: v.available !== false, image: imageForVariant(pr, v), url,
           desc: pr.body_html, vid: v.id,
         }))
       }
@@ -1226,7 +1242,6 @@ async function shopifyCollection(st) {
   const data = await res.json()
   const out = []
   for (const pr of data.products || []) {
-    const img = pr.images && pr.images[0] ? pr.images[0].src : ''
     const url = `https://${st.domain}/products/${pr.handle}`
     for (const v of (pr.variants && pr.variants.length ? pr.variants : [{}])) {
       out.push(row(st, {
@@ -1234,7 +1249,7 @@ async function shopifyCollection(st) {
         ptype: pr.product_type,
         tags: Array.isArray(pr.tags) ? pr.tags.join(' ') : pr.tags,
         price: v.price, compareAt: v.compare_at_price, currency,
-        available: v.available !== false, image: img, url,
+        available: v.available !== false, image: imageForVariant(pr, v), url,
         desc: pr.body_html, vid: v.id,
       }))
     }

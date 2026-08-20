@@ -32,39 +32,58 @@ button{font-family:inherit}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 /* ============================================================
-   BACKDROP — slow-drifting leaves + vapour, sitewide
+   BACKDROP — falling leaves + vapour, sitewide
    ------------------------------------------------------------
    Both sisters carry a moving backdrop — Herbal-Leaf's slightly
    swaying vines, Legal-Leaf's busier layered paisley — and this is
-   ours: the tobacco-leaf mark itself (§ the SVG symbol at the top of
-   index.html), drifting, plus a couple of soft vapour wisps for the
-   site's own "everything is vapor" thread. Leans toward Herbal-Leaf's
-   subtlety, not Legal-Leaf's business — this is the one thing behind
-   every card and panel on the site, so busy would fight the shelf
-   rather than sit behind it.
+   ours, pushed deliberately toward Legal-Leaf's end after seeing the
+   first, gentler pass: a genuinely blustery autumn day, not a sway.
+   The leaves are the tobacco-leaf mark itself (the SVG symbol at the
+   top of index.html) plus a second, plainer #leafFall silhouette for
+   variety, both tumbling and drifting sideways as they fall — not
+   just the mark, colour-varied across the site's own gold/ember/red
+   palette so it reads as a fall day and not a stray decoration.
 
-   position:fixed, not absolute: it is anchored to the VIEWPORT, so it
-   never scrolls away as you move down the page — the persistence is
-   free from the positioning, not from tracking scroll in JS.
+   The elements themselves are spawned by spawnLeaves() in app.js, not
+   hand-authored here — randomised size/speed/drift/colour per leaf is
+   what makes "oversaturated, a lot of leaves" read as weather and not
+   as six repeating copies. This stylesheet only owns the shared look
+   and the fall keyframes; .bgscape gets the sitewide count, .hero
+   gets a second, denser pass sized to its own (much shorter) height.
 
-   z-index:-1 is load-bearing: body's flat colour and the two radial
-   washes above are body's own background layer, painted before ANY
-   child stacking context regardless of that child's z-index, so this
-   still shows on top of them. What -1 does is put it behind every
-   ordinary page element instead — header, nav, cards, footer — none
-   of which set a z-index of their own, so without it this backdrop
-   would paint over the whole site rather than behind it. */
+   position:fixed, not absolute, on .bgscape: it is anchored to the
+   VIEWPORT, so leaves are always falling somewhere on screen no
+   matter how far down the page you are — persistence without tracking
+   scroll in JS. z-index:-1 is load-bearing: body's flat colour and
+   the two radial washes above are body's OWN background layer,
+   painted before any child stacking context regardless of z-index, so
+   this still shows on top of them; what -1 does is put it behind every
+   ordinary page element instead (header, nav, cards, footer), none of
+   which set a z-index of their own, so without it this backdrop would
+   paint over the whole site rather than behind it. */
 .bgscape{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
-.bgleaf{position:absolute;opacity:.055;transform:rotate(var(--rot,0deg));
-  animation:leafSway var(--dur,50s) ease-in-out infinite;animation-delay:var(--delay,0s)}
-.bgleaf-1{width:150px;height:180px;top:-4%;left:6%;--rot:-8deg;--dur:52s}
-.bgleaf-2{width:110px;height:132px;top:20%;right:6%;--rot:22deg;--dur:60s;--delay:-9s}
-.bgleaf-3{width:190px;height:228px;top:46%;left:-4%;--rot:-14deg;--dur:70s;--delay:-22s}
-.bgleaf-4{width:160px;height:192px;top:70%;right:-3%;--rot:10deg;--dur:58s;--delay:-33s}
-.bgleaf-5{width:130px;height:156px;top:92%;left:16%;--rot:-5deg;--dur:64s;--delay:-15s}
-@keyframes leafSway{
-  0%,100%{transform:rotate(var(--rot,0deg)) translate(0,0)}
-  50%{transform:rotate(calc(var(--rot,0deg) + 4deg)) translate(9px,-13px)}
+.fleaf{position:absolute;top:-12%;left:var(--l,50%);width:var(--sz,40px);
+  height:calc(var(--sz,40px)*1.25);color:var(--hue,var(--gold));
+  animation:leafFall linear infinite;animation-duration:var(--dur,20s);
+  animation-delay:var(--delay,0s)}
+@keyframes leafFall{
+  0%  {transform:translate(0,0) rotate(0deg)}
+  25% {transform:translate(calc(var(--drift,80px)*.35),29vh) rotate(calc(var(--spin,300deg)*.28))}
+  50% {transform:translate(calc(var(--drift,80px)*-.25),58vh) rotate(calc(var(--spin,300deg)*.55))}
+  75% {transform:translate(calc(var(--drift,80px)*.7),86vh) rotate(calc(var(--spin,300deg)*.8))}
+  100%{transform:translate(var(--drift,80px),118vh) rotate(var(--spin,300deg))}
+}
+/* The hero's own denser pass falls the same way but across its own
+   (much shorter) box rather than the viewport, so a leaf that would
+   spend most of a 118vh fall clipped by .hero's overflow:hidden
+   instead stays visible for roughly its whole trip. */
+.fleaf-hero{animation-name:leafFallHero}
+@keyframes leafFallHero{
+  0%  {transform:translate(0,0) rotate(0deg)}
+  25% {transform:translate(calc(var(--drift,60px)*.35),120px) rotate(calc(var(--spin,300deg)*.28))}
+  50% {transform:translate(calc(var(--drift,60px)*-.25),240px) rotate(calc(var(--spin,300deg)*.55))}
+  75% {transform:translate(calc(var(--drift,60px)*.7),360px) rotate(calc(var(--spin,300deg)*.8))}
+  100%{transform:translate(var(--drift,60px),480px) rotate(var(--spin,300deg))}
 }
 /* Soft radial blooms standing in for vapour — cheaper and steadier than
    an actual blurred photo, and it never needs an asset. */
@@ -77,8 +96,8 @@ button{font-family:inherit}
   0%,100%{transform:translate(0,0);opacity:.55}
   50%{transform:translate(-36px,26px);opacity:1}
 }
-@media(max-width:640px){.bgleaf-3,.bgleaf-4,.bgwisp-2{display:none}}
-@media(prefers-reduced-motion:reduce){.bgleaf,.bgwisp,.hleaf{animation:none}}
+@media(max-width:640px){.bgwisp-2{display:none}}
+@media(prefers-reduced-motion:reduce){.fleaf,.bgwisp{animation:none}}
 
 /* the family's glass panel, lifted verbatim from Legal-Leaf */
 .panel{background:var(--glass);border:1px solid var(--glass-line);border-radius:var(--r-lg);
@@ -372,6 +391,14 @@ header.top{position:sticky;top:0;z-index:50;
   margin-left:0;padding-left:13px;border-left:0}
 .dept.ourstory:hover{color:var(--text)}
 .dept.ourstory[aria-current="page"]{border-bottom-color:var(--gold)}
+/* No shelf pills precede this row any more (they moved into the
+   Category logo strip above the header's own nav), so the divider
+   that used to separate "Our Story" etc. from the shelf tabs would
+   now just be an orphaned rule at the very start of the bar.
+   :first-child, not the :not([hidden]) sibling trick above — that
+   trick is for finding the first VISIBLE item among several; this is
+   just "is this the very first slot in the row", hidden or not. */
+#depts .dept.ourstory:first-child{margin-left:0;padding-left:0;border-left:0}
 
 /* ---- the story band on the shelf page ----
    A link that behaves like an ad for the one page here that is prose.
@@ -433,44 +460,39 @@ header.top{position:sticky;top:0;z-index:50;
    shelf means adding one line, not a new hero. The alpha moved off the
    gradient stop and onto opacity so the hue can be a bare token. */
 .hero{--hero-hue:var(--ember);
-  position:relative;overflow:hidden;padding:42px 0 30px;text-align:center}
+  position:relative;overflow:hidden;padding:24px 0 18px;text-align:center}
 .hero[data-hero="pouch"]     {--hero-hue:var(--pouch)}
 .hero[data-hero="disposable"]{--hero-hue:var(--disposable)}
 .hero[data-hero="device"]    {--hero-hue:var(--device)}
 .hero[data-hero="liquid"]    {--hero-hue:var(--liquid)}
 .hero[data-hero="cigar"]     {--hero-hue:var(--cigar)}
 .hero[data-hero="gear"]      {--hero-hue:var(--gear)}
-.hero::before{content:"";position:absolute;inset:-40% -10% auto;height:340px;pointer-events:none;
+.hero::before{content:"";position:absolute;inset:-40% -10% auto;height:260px;pointer-events:none;
   opacity:.16;transition:opacity .3s;
   background:radial-gradient(60% 100% at 50% 0,var(--hero-hue),transparent 70%)}
-/* The hero's own denser, bigger leaves — the "main visual" version of
-   .bgscape's sitewide backdrop above. z-index:1 sits it above the glow
-   (::before, a positioned z-index:auto element) and below .hero-inner
-   (z-index:2), so the copy always stays readable on top. */
+/* The hero's own denser leaf-fall — the "main visual" version of
+   .bgscape's sitewide backdrop above, populated by the same
+   spawnLeaves() call in app.js with a smaller, faster, denser pass.
+   z-index:1 sits it above the glow (::before, a positioned
+   z-index:auto element) and below .hero-inner (z-index:2), so the
+   copy always stays readable on top. */
 .hero-scape{position:absolute;inset:0;z-index:1;overflow:hidden;pointer-events:none}
-.hleaf{position:absolute;opacity:.16;filter:drop-shadow(0 14px 26px rgba(0,0,0,.3));
-  transform:rotate(var(--rot,0deg));animation:leafSway var(--dur,46s) ease-in-out infinite;
-  animation-delay:var(--delay,0s)}
-.hleaf-1{width:220px;height:264px;top:-20%;left:-4%;--rot:-14deg;--dur:46s}
-.hleaf-2{width:170px;height:204px;top:6%;right:1%;--rot:22deg;--dur:52s;--delay:-12s}
-.hleaf-3{width:130px;height:156px;bottom:-22%;left:40%;--rot:6deg;--dur:58s;--delay:-24s}
-@media(max-width:640px){.hleaf-3{display:none}}
 .hero-inner{position:relative;z-index:2}
-.hero h1{margin:12px 0 0;font-family:var(--display);font-weight:900;
-  font-size:clamp(2.6rem,7vw,5.2rem);line-height:.9;letter-spacing:-.03em;
+.hero h1{margin:10px 0 0;font-family:var(--display);font-weight:900;
+  font-size:clamp(2rem,5.2vw,3.7rem);line-height:.92;letter-spacing:-.03em;
   background:linear-gradient(96deg,var(--text) 0%,var(--gold) 46%,var(--hero-hue) 88%);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
   color:var(--gold)}
 .hero .h-lead{display:block;font-family:var(--script);font-style:italic;font-weight:600;
-  font-size:clamp(1.3rem,3.4vw,2.1rem);color:var(--hero-hue);line-height:1;
+  font-size:clamp(1.1rem,2.6vw,1.6rem);color:var(--hero-hue);line-height:1;
   margin-bottom:-.1em;-webkit-text-fill-color:var(--hero-hue)}
-.hero .hsub{color:var(--muted);font-size:1.02rem;line-height:1.6;max-width:56ch;
-  margin:18px auto 0}
-.hstats{display:flex;gap:30px;flex-wrap:wrap;justify-content:center;margin-top:24px}
-.hstats div b{display:block;font-family:var(--display);font-weight:900;font-size:1.5rem;
+.hero .hsub{color:var(--muted);font-size:.94rem;line-height:1.55;max-width:52ch;
+  margin:12px auto 0}
+.hstats{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;margin-top:16px}
+.hstats div b{display:block;font-family:var(--display);font-weight:900;font-size:1.25rem;
   letter-spacing:-.02em;color:var(--text)}
-.hstats div span{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
-@media(max-width:560px){.hero{padding:26px 0 20px}.hstats{gap:20px}}
+.hstats div span{font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+@media(max-width:560px){.hero{padding:18px 0 14px}.hstats{gap:16px}}
 /* On a phone the hero was costing ~340px before a single product.
    Keep the promise, drop the throat-clearing: eyebrow and the stat row
    go, the headline shrinks, the subtitle keeps one sentence. */

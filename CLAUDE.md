@@ -317,6 +317,7 @@ dropdown. Set a destination with the SHIP TO pill before concluding something is
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | **Required for `/community`, and strongly wanted by `/api/products`.** Upstash Redis over REST. `UPSTASH_REDIS_REST_URL` / `_TOKEN` are accepted as aliases. Without them the board returns `ok:false, reason:'no-store'`, and the scraper falls back to making the first visitor wait ~42s for a live scrape (see §7c). |
 | `NM_ADMIN_TOKEN` | **Required for `/moderation`.** Without it every `action=mod:*` route 403s, so the queue is unreachable rather than open. |
 | `NM_BLOCKLIST` | Optional, comma-separated. Extra terms that send a post to the hold queue. Deliberately not hardcoded so it can be tuned without a deploy. |
+| `RESEND_API_KEY` / `NM_NOTIFY_TOKEN` | **Both required for `/api/notify`.** Sends the "a batch is ready for approval" email (see `SEO_AUDIT_LOG.md`) via Resend to Jacob's inbox, a fixed constant in `api/notify.js`, not an env var — this endpoint has exactly one purpose. `NM_NOTIFY_TOKEN` gates the route the same way `NM_ADMIN_TOKEN` gates `/moderation`: without it, or on a mismatched `x-notify-token`/`?token=`, the route 403s rather than sending mail to anyone who finds the URL. Sends from Resend's shared `onboarding@resend.dev` until a verified sending domain replaces it in `api/notify.js`. |
 
 Never commit secrets. `.env*` is gitignored; see `.env.example`.
 

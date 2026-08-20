@@ -991,6 +991,7 @@ function refreshCard(gid){
   var u=unitPrice(it), best=isBestUnit(g,u);
   var off=it.compareAt&&Number(it.compareAt)>Number(it.price)
     ? Math.round((1-Number(it.price)/Number(it.compareAt))*100) : 0;
+  var hasFlav=!g.split&&(g.flav.length>1||(g.flav[0]&&g.flav[0].name!=='-'));
 
   Array.prototype.forEach.call(cards,function(card){
     /* The photo follows the SELECTED VARIANT, not just the flavour.
@@ -1030,8 +1031,11 @@ function refreshCard(gid){
         shot.insertAdjacentHTML('afterbegin','<div class="shot-empty">No photo</div>');
       }
     }
-    var ssel=card.querySelector('.vsel.str');
-    if(ssel) ssel.innerHTML=strengthOptions(f,s.v);
+    /* Whole element, not just a select's options — the chosen flavour
+       decides whether this is a strength SELECT or a static one-variant
+       line, and switching flavours can flip between the two shapes. */
+    var c2=card.querySelector('.cselect2');
+    if(c2) c2.innerHTML=secondSelectHtml(g,f,s,it,esc(g.gid),hasFlav);
     var pr=card.querySelector('.cprice');
     if(pr) pr.innerHTML=priceHtml(it,cur,off,u,best);
     var buy=card.querySelector('.buy');
@@ -1292,6 +1296,23 @@ function zoomBtnHtml(src,alt){
     '" aria-label="View full image">'+ZOOM_ICON+'</button>';
 }
 
+/* The second control under Flavour: a strength/size SELECT when the
+   chosen flavour has more than one variant, otherwise a static line
+   naming the one it has. Which shape applies depends on the SELECTED
+   flavour, not the group, so switching flavours can flip between them —
+   a flavour with 5 strengths next to one sold in only one. Shared by
+   card() and refreshCard() so a flavour change updates this correctly —
+   wrapped in one element in the markup so a static line can be swapped
+   for a live select and back, not just have its own text refreshed. */
+function secondSelectHtml(g,f,s,it,gid,hasFlav){
+  var nStr=f.variants.length;
+  return (nStr>1||!hasFlav)
+    ? '<label class="sellabel'+(hasFlav?'':' first')+'">'+esc(optionNoun(deptOf(g)))+'</label>'+
+      '<select class="vsel str" aria-label="Choose '+esc(optionNoun(deptOf(g)).toLowerCase())+
+      '" data-str="'+gid+'">'+strengthOptions(f,s.v)+'</select>'
+    : '<div class="cvar">'+esc(optionLabel(it))+'</div>';
+}
+
 function card(g){
   var st=SMAP[g.key]||{name:g.key,dept:g.dept};
   var d=DEPTS[deptOf(g)]||{};
@@ -1336,14 +1357,10 @@ function card(g){
         '<h3 class="ctitle">'+esc(g.title||g.brand)+'</h3>'+
         '<div class="cselects">'+
           (hasFlav
-            ? '<label class="sellabel">Flavour</label>'+
+            ? '<label class="sellabel first">Flavour</label>'+
               '<select class="vsel flav" aria-label="Choose flavour" data-flav="'+gid+'">'+flavOpts+'</select>'
             : '')+
-          (nStr>1||!hasFlav
-            ? '<label class="sellabel">'+esc(optionNoun(deptOf(g)))+'</label>'+
-              '<select class="vsel str" aria-label="Choose '+esc(optionNoun(deptOf(g)).toLowerCase())+
-              '" data-str="'+gid+'">'+strengthOptions(f,s.v)+'</select>'
-            : '<div class="cvar">'+esc(optionLabel(it))+'</div>')+
+          '<span class="cselect2">'+secondSelectHtml(g,f,s,it,gid,hasFlav)+'</span>'+
         '</div>'+
         '<div class="cprice">'+priceHtml(it,cur,off,u,best)+'</div>'+
         '<div class="cfoot">'+
@@ -1992,11 +2009,18 @@ function renderPickerRow(cDept,cStore,cBrand){
 
   var storeChips=STORES.filter(function(s){ return cStore[s.key]; }).map(function(s){
     var on=!!F.stores[s.key];
+    /* noFavicon means the guess itself is known-wrong (Google's favicon
+       service returning a generic globe, not this store's actual mark) —
+       skip straight to the monogram instead of loading a placeholder that
+       reads as a real logo. Everyone else still gets the favicon guess,
+       with onerror as the fallback for an actual load failure. */
+    var img=s.noFavicon?'':logoFor(s);
     return '<button class="llogo'+(on?' on':'')+'" data-logostore="'+esc(s.key)+'" '+
       'aria-pressed="'+on+'" title="'+esc(s.name)+'">'+
-      '<span class="limg" '+monoAttrs(s.name,s.key)+'>'+
-        '<img src="'+esc(logoFor(s))+'" alt="" loading="lazy" referrerpolicy="no-referrer" '+
-        'onerror="this.parentNode.classList.add(\'mono\');this.remove();"></span>'+
+      '<span class="limg'+(img?'':' mono')+'" '+monoAttrs(s.name,s.key)+'>'+
+        (img?'<img src="'+esc(img)+'" alt="" loading="lazy" referrerpolicy="no-referrer" '+
+          'onerror="this.parentNode.classList.add(\'mono\');this.remove();">':'')+
+      '</span>'+
       '<span class="lname">'+esc(s.name)+'</span>'+
       '<span class="lcount">'+cStore[s.key]+'</span></button>';
   });

@@ -1890,6 +1890,18 @@ function repImageForDept(d){
    broken store logo falls back to one. */
 function renderPickerRow(cDept,cStore,cBrand){
   var row=document.getElementById('pickerRow');
+  /* NOT ON A SPOTLIGHT. The row lives outside #mallview (it sits above
+     both views in the markup), so hiding #mallview left it stranded on
+     /#/store/* — three lanes of Category / Store / Brand on a page that
+     is already one store, and already one card per brand. All three
+     filter the mall grid underneath, which nobody on a spotlight can
+     see, so every chip reads as dead.
+
+     The guard belongs here rather than only in route() because apply()
+     can run while a spotlight is open — that is the same path that once
+     re-rendered a hidden #mallview (see leaveSpotlight()) — and it would
+     otherwise un-hide the row again on the next keystroke. */
+  if(row && currentRoute().view==='spotlight'){ row.hidden=true; return; }
   var catBox=document.getElementById('categoryLogos'),
       storeBox=document.getElementById('storeLogos'),
       brandBox=document.getElementById('brandLogos');
@@ -2907,7 +2919,12 @@ function route(){
   var mall=document.getElementById('mallview');
   var spot=document.getElementById('spotview');
   if(r.view==='spotlight' && SPOTLIGHT[r.key]){
-    mall.hidden=true; spot.hidden=false; renderSpotlight(r.key);
+    mall.hidden=true; spot.hidden=false;
+    /* apply() does not run on this branch, so the picker row would keep
+       whatever the mall left behind. Hide it here; renderPickerRow()
+       holds the same rule for anything that renders it later. */
+    var pr=document.getElementById('pickerRow'); if(pr) pr.hidden=true;
+    renderSpotlight(r.key);
     window.scrollTo(0,0);
   }else{
     spot.hidden=true; mall.hidden=false;

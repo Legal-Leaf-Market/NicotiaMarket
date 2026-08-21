@@ -1181,9 +1181,23 @@ var BESTUNIT={};   /* dept -> cheapest unit value ON THE SITE, in USD */
 /* `subs` is a SET, keyed "dept/sub", not a single value. Multi-select
    because that is what a facet is, and department-qualified because the
    keys collide otherwise: `pipe` is both pipe tobacco and pipe
-   accessories, `accessory` is both a device part and a cigar tool. */
-var F={q:'',dept:'all',subs:{},store:'all',brand:'all',strength:'all',price:'all',
+   accessories, `accessory` is both a device part and a cigar tool.
+
+   `depts` is a SET too, same shape as `stores`/`brands` — empty means
+   unrestricted (every department), same as those two. Department used
+   to be F.dept, a single string with 'all' standing for unrestricted;
+   the boot default is now a curated two-department mix rather than one
+   shelf or everything, which a single value can't express. soleDept()
+   below is what everything that only makes sense for ONE department
+   (a hero image, an SEO title, a legal ban, the /department path)
+   reads instead — it answers '' unless exactly one is selected, and
+   those callers already had an 'all'-shaped fallback for that case. */
+var F={q:'',depts:{},subs:{},store:'all',brand:'all',strength:'all',price:'all',
        sort:'unit',deals:false,stores:{},brands:{}};
+function soleDept(){
+  var ks=Object.keys(F.depts);
+  return ks.length===1 ? ks[0] : '';
+}
 
 /* A subcategory chosen on one shelf is meaningless on another, so
    switching department keeps only the keys that still belong. */
@@ -1423,7 +1437,7 @@ function passes(g,skip){
     if(!storeShipsHere(st)) return null;
     if(legalFor(deptOf(g))[0]==='banned') return null;
   }
-  if(skip!=='dept' && F.dept!=='all' && deptOf(g)!==F.dept) return null;
+  if(skip!=='dept' && Object.keys(F.depts).length && !F.depts[deptOf(g)]) return null;
   /* Sitewide now: the chips work on the combined shelf as well as inside
      a department, so you can hold "Coils" and "Nic salts" at once
      without first choosing a shelf. Empty set means no constraint. */
@@ -1543,7 +1557,7 @@ function apply(reset){
      Only for the unit sort. An explicit price sort compares a real
      currency amount, which IS comparable across shelves, so honouring
      it globally is the honest answer there. */
-  if(F.dept==='all' && s==='unit' && VIEW.length){
+  if(!soleDept() && s==='unit' && VIEW.length){
     var lanes={}, order=[];
     VIEW.forEach(function(g){
       var d=deptOf(g)||'other';
@@ -1585,9 +1599,10 @@ function apply(reset){
         esc((st2.ships||[]).join(' / ').replace('INTL','Worldwide'))+
         '. Change your destination at the top, or pick another store.</div>';
     }else{
-      var ban = F.dept!=='all' && !SHOW_ALL ? legalFor(F.dept) : ['ok'];
+      var soleD=soleDept();
+      var ban = soleD && !SHOW_ALL ? legalFor(soleD) : ['ok'];
       mount.innerHTML= ban[0]==='banned'
-        ? '<div class="state"><b>'+esc(DEPTS[F.dept].label)+
+        ? '<div class="state"><b>'+esc(DEPTS[soleD].label)+
           ' can’t be sold where you are</b>'+esc(ban[1])+'</div>'
         : '<div class="state"><b>Nothing matches that</b>'+
           'Try another department, a wider destination, or clear the filters.</div>';
@@ -1609,7 +1624,7 @@ function apply(reset){
     ' <em>'+nProd.toLocaleString()+' buyable options · '+
     Object.keys(live).length+' store'+(Object.keys(live).length===1?'':'s')+'</em>';
 
-  var on=F.q||F.dept!=='all'||F.store!=='all'||F.deals||
+  var on=F.q||Object.keys(F.depts).length||F.store!=='all'||F.deals||
     (F.strength&&F.strength!=='all')||(F.price&&F.price!=='all')||
     (F.brand&&F.brand!=='all')||
     Object.keys(F.subs).length||
@@ -1725,7 +1740,7 @@ function renderRail(){
     if(!moved) break;   /* every shelf exhausted */
   }
 
-  var d=F.dept!=='all'?DEPTS[F.dept]:null;
+  var d=soleDept()?DEPTS[soleDept()]:null;
   document.getElementById('railTitle').textContent=
     d?('Best '+(d.unitLabel||'value')+' right now'):'Best value right now';
   document.getElementById('railSub').textContent=
@@ -1972,7 +1987,7 @@ function renderPickerRow(cDept,cStore,cBrand){
   if(!catBox||!storeBox||!brandBox) return;
 
   var catChips=DEPT_ORDER.filter(function(d){ return cDept[d]; }).map(function(d){
-    var on=F.dept===d, meta=DEPTS[d]||{}, img=repImageForDept(d);
+    var on=!!F.depts[d], meta=DEPTS[d]||{}, img=repImageForDept(d);
     /* --cat-accent rides on the BUTTON, not the image plate: the
        selected ring, the filled label pill and the count all read it,
        and only the plate can see --mono-a. One department hue, four
@@ -2057,7 +2072,7 @@ function renderPickerRow(cDept,cStore,cBrand){
 
   row.hidden=!(showCat||showStore||showBrand);
 
-  var anyActive=F.dept!=='all'||Object.keys(F.stores).length||Object.keys(F.brands).length;
+  var anyActive=Object.keys(F.depts).length||Object.keys(F.stores).length||Object.keys(F.brands).length;
   document.getElementById('clearPicker').hidden=!anyActive;
 }
 
@@ -2079,8 +2094,9 @@ function renderStoreList(){
 function setWarn(){
   var eu = zoneOf()==='EU' || zoneOf()==='UK';
   var el = document.getElementById('warnbar');
-  if(F.dept==='all'){ el.innerHTML = eu ? EUALL : ALLWARN; return; }
-  el.innerHTML = eu ? (EUWARN[F.dept]||EUALL) : (DEPTS[F.dept]||{}).warn||ALLWARN;
+  var d=soleDept();
+  if(!d){ el.innerHTML = eu ? EUALL : ALLWARN; return; }
+  el.innerHTML = eu ? (EUWARN[d]||EUALL) : (DEPTS[d]||{}).warn||ALLWARN;
 }
 /* HOW MUCH OF THE MARKET CAN ACTUALLY REACH YOU.
 
@@ -2135,7 +2151,7 @@ function setNotices(){
   }
   html+=reachNotice();
   if(!SHOW_ALL){
-    var cav = F.dept!=='all' ? regionCaveat(F.dept)
+    var cav = soleDept() ? regionCaveat(soleDept())
       : (regionCaveat('disposable')||regionCaveat('liquid'));
     if(cav) html+='<div class="caveat"><b>Heads up.</b> '+esc(cav)+'</div>';
   }
@@ -2192,7 +2208,7 @@ var HEROES={
 };
 
 function renderHero(){
-  var h=HEROES[F.dept||'all']||HEROES.all;
+  var h=HEROES[soleDept()||'all']||HEROES.all;
   [['heroLead',h.lead],['heroHead',h.head]].forEach(function(p){
     var el=document.getElementById(p[0]); if(el) el.textContent=p[1];
   });
@@ -2248,7 +2264,7 @@ function deptFromPath(){
    department's OWN url — pointing all six at "/" told Google they were
    the homepage wearing a hat, which is why none of them could rank. */
 function setRouteMeta(){
-  var d=F.dept||'all', s=DEPT_SEO[d]||DEPT_SEO.all;
+  var d=soleDept()||'all', s=DEPT_SEO[d]||DEPT_SEO.all;
   var path=d==='all'?'/':('/'+DEPT_PATH[d]);
   document.title=s.t;
   var set=function(sel,attr,val){
@@ -2266,17 +2282,29 @@ function setRouteMeta(){
    the hash, so this only ever rewrites the path. */
 function pushDeptPath(){
   if(currentRoute().view==='spotlight') return;
-  var d=F.dept||'all', want=d==='all'?'/':('/'+DEPT_PATH[d]);
+  var d=soleDept()||'all', want=d==='all'?'/':('/'+DEPT_PATH[d]);
   if(!want||location.pathname===want) return;
-  try{ history.pushState({dept:d},'',want+location.search); }catch(e){}
+  try{ history.pushState({depts:F.depts},'',want+location.search); }catch(e){}
 }
 
-/* The category logo strip follows F.dept on its own, whoever set it —
+/* A real department path (/pouches, /disposables, ...) is always a
+   single-department selection — there is no URL for "pouch AND
+   disposable" to restore from, so a bare "/" resolves to the curated
+   boot mix rather than to a bare "show everything". That is a
+   deliberate choice, not a limitation: "/" reads the same whether it
+   is the very first load or the Back button landed on it. */
+function bootDepts(){
+  var pd=deptFromPath();
+  if(pd){ var o={}; o[pd]=1; return o; }
+  return {pouch:1,disposable:1};
+}
+
+/* The category logo strip follows F.depts on its own, whoever set it —
    click, path or Back — because renderCategoryRow() re-renders from F
    on every apply(). Nothing extra to sync here now that the shelf is
    chosen from that strip instead of a row of tab buttons. */
 window.addEventListener('popstate',function(){
-  F.dept=deptFromPath()||'all'; F.subs=pruneSubs(F.dept); apply();
+  F.depts=bootDepts(); F.subs=pruneSubs(soleDept()||'all'); apply();
 });
 
 /* The hero's three stats went with the hero, and heroStats() with them,
@@ -2890,17 +2918,17 @@ document.addEventListener('click',function(e){
     var b=el.getAttribute('data-logobrand');
     if(F.brands[b]) delete F.brands[b]; else F.brands[b]=1;
     F.brand='all'; apply(); return; }
-  /* Category replaces the old shelf pills: same effect (F.dept, prune
-     the subcategories that no longer belong, clear the brand filter so
-     a brand picked on another shelf can't filter this one to nothing,
-     leave any open spotlight, push the /department path) as the pill
-     click handler used to, just triggered from the logo strip instead.
-     Clicking the ALREADY-selected chip goes back to "Everything" —
-     the same toggle affordance its store/brand neighbours have. */
+  /* Category, same toggle-into-a-set affordance store/brand already
+     have — pouch AND disposable can both be lit at once, which is the
+     point of the boot default being a mix rather than a single shelf.
+     Still prunes the subcategories that no longer belong, clears the
+     brand filter so a brand picked on another shelf can't filter this
+     one to nothing, leaves any open spotlight, and pushes a /department
+     path when the toggle leaves exactly one department selected. */
   if((el=hit('[data-logocat]'))){ e.preventDefault();
     var newDept=el.getAttribute('data-logocat');
-    F.dept = F.dept===newDept ? 'all' : newDept;
-    F.subs=pruneSubs(F.dept); F.brands={};
+    if(F.depts[newDept]) delete F.depts[newDept]; else F.depts[newDept]=1;
+    F.subs=pruneSubs(soleDept()||'all'); F.brands={};
     leaveSpotlight(); pushDeptPath(); apply(); return; }
   if((el=hit('[data-storefilter]'))){ e.preventDefault();
     F.stores={}; F.stores[el.getAttribute('data-storefilter')]=1;
@@ -2961,10 +2989,10 @@ document.getElementById('f-deals').addEventListener('click',function(){
 /* One "Show all" for the merged strip, not three — it resets category,
    store AND brand together, matching the row they now share. */
 document.getElementById('clearPicker').addEventListener('click',function(){
-  F.dept='all'; F.subs=pruneSubs('all'); F.stores={}; F.brands={};
+  F.depts={}; F.subs=pruneSubs('all'); F.stores={}; F.brands={};
   leaveSpotlight(); pushDeptPath(); apply();});
 document.getElementById('clear').addEventListener('click',function(){
-  F={q:'',dept:'all',subs:{},store:'all',brand:'all',strength:'all',price:'all',
+  F={q:'',depts:{},subs:{},store:'all',brand:'all',strength:'all',price:'all',
      sort:'unit',deals:false,stores:{},brands:{}};
   document.getElementById('q').value='';
   document.getElementById('f-sort').value='unit';
@@ -3658,8 +3686,10 @@ spawnLeaves(document.querySelector('.bgscape'), 64);
 loadLoc(); restoreUserLoc(); locPillUI(); setAgeCopy(); setWarn(); setNotices();
 loadSelv(); loadCart(); loadBoard(); badges(); accountUI(); setAuthMode('signup'); renderCart();
 /* The path picks the opening shelf BEFORE the first render, so /pouches
-   opens on Pouches instead of dumping the visitor into Everything. */
-F.dept=deptFromPath()||'all'; setRouteMeta();
+   opens on Pouches instead of dumping the visitor into Everything —
+   and the homepage opens on the curated pouch+disposable mix instead
+   of either a single shelf or the full six-department "everything". */
+F.depts=bootDepts(); setRouteMeta();
 skeleton(); renderStoreList(); route();
 if(read_('nm_age')==='1' && hasLoc()){ closeGate(); maybeOfferInstall(); }
 else openGate(false);   /* never stack an install hint on top of the age gate */

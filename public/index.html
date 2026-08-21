@@ -255,17 +255,42 @@
       <button class="lrclear" id="clearPicker" hidden>Show all</button>
     </div>
     <div class="lrlanes">
-      <div class="lrlane"><span class="lrlane-label">Category</span>
+      <div class="lrlane" data-lane="cat">
+        <div class="lrlane-head">
+          <span class="lrlane-label">Category</span>
+          <button class="lrexpand" data-expand="cat" type="button" title="Show all categories" aria-label="Show all categories">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+          </button>
+          <button class="lrcollapse" data-collapse type="button" title="Close" aria-label="Close">&times;</button>
+        </div>
         <div class="lrwrap"><div class="lrscroll" id="categoryLogos"></div></div>
       </div>
-      <div class="lrlane"><span class="lrlane-label">Store</span>
+      <div class="lrlane" data-lane="store">
+        <div class="lrlane-head">
+          <span class="lrlane-label">Store</span>
+          <button class="lrexpand" data-expand="store" type="button" title="Show all stores" aria-label="Show all stores">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+          </button>
+          <button class="lrcollapse" data-collapse type="button" title="Close" aria-label="Close">&times;</button>
+        </div>
         <div class="lrwrap"><div class="lrscroll" id="storeLogos"></div></div>
       </div>
-      <div class="lrlane"><span class="lrlane-label">Brand</span>
+      <div class="lrlane" data-lane="brand">
+        <div class="lrlane-head">
+          <span class="lrlane-label">Brand</span>
+          <button class="lrexpand" data-expand="brand" type="button" title="Show all brands" aria-label="Show all brands">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+          </button>
+          <button class="lrcollapse" data-collapse type="button" title="Close" aria-label="Close">&times;</button>
+        </div>
         <div class="lrwrap"><div class="lrscroll" id="brandLogos"></div></div>
       </div>
     </div>
   </section>
+  <div class="lrbackdrop" id="lrBackdrop" hidden></div>
 </div>
 
 <div id="mallview">

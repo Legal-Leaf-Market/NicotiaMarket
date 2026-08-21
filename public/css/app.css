@@ -621,9 +621,40 @@ header.top{position:sticky;top:0;z-index:50;
 .lrlanes{display:flex;gap:22px;flex-wrap:wrap}
 .lrlane{flex:1 1 240px;min-width:0}
 .lrlane[hidden]{display:none}
+.lrlane-head{display:flex;align-items:center;gap:6px;margin-bottom:6px}
 .lrlane-label{display:block;font-family:var(--sans);font-weight:700;font-size:10px;
-  letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+  letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
 @media(max-width:700px){.lrlanes{gap:14px}.lrlane{flex-basis:100%}}
+
+/* "Expand all" — a lane this size is still a scroller, not a way to
+   see everything at once. Swaps ONE lane's own scroll container into a
+   fixed full-viewport grid in place, rather than cloning its chips into
+   a separate overlay: the exact same nodes stay live, so a click still
+   runs through the one delegated handler in app.js and renderPickerRow's
+   normal re-render keeps working without knowing expansion exists. */
+.lrexpand{background:none;border:none;color:var(--dim);cursor:pointer;padding:2px;
+  display:flex;align-items:center;transition:color .16s}
+.lrexpand svg{width:14px;height:14px}
+.lrexpand:hover{color:var(--gold)}
+.lrcollapse{display:none;background:none;border:none;color:var(--dim);cursor:pointer;
+  font-size:22px;line-height:1;padding:0 2px;margin-left:auto;transition:color .16s}
+.lrcollapse:hover{color:var(--gold)}
+.lrlane.expanded .lrexpand{display:none}
+.lrlane.expanded .lrcollapse{display:block}
+
+.lrlane.expanded{position:fixed;top:5vh;left:5vw;right:5vw;bottom:5vh;z-index:200;
+  background:var(--panel2);border:1px solid var(--glass-line);border-radius:var(--r-lg,16px);
+  padding:16px 18px;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.lrlane.expanded .lrlane-label{font-size:13px}
+.lrlane.expanded .lrwrap{flex:1;overflow-y:auto}
+.lrlane.expanded .lrwrap::before,.lrlane.expanded .lrwrap::after{display:none}
+.lrlane.expanded .lrscroll{flex-wrap:wrap;overflow:visible;cursor:default;
+  height:auto;justify-content:flex-start}
+.lrbackdrop{position:fixed;inset:0;z-index:199;background:rgba(4,8,6,.72)}
+.lrbackdrop[hidden]{display:none}
+@media(max-width:700px){
+  .lrlane.expanded{top:3vh;left:3vw;right:3vw;bottom:3vh;padding:14px}
+}
 
 /* ---- the logo carousel ----
    No card, no border, no background — just the logo (bigger) and a

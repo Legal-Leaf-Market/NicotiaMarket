@@ -2059,9 +2059,16 @@ function renderPickerRow(cDept,cStore,cBrand){
   var catLane=catBox.closest('.lrlane'), storeLane=storeBox.closest('.lrlane'),
       brandLane=brandBox.closest('.lrlane');
   var showCat=catChips.length>1, showStore=storeChips.length>1, showBrand=brandChips.length>1;
-  if(catLane) catLane.hidden=!showCat;
-  if(storeLane) storeLane.hidden=!showStore;
-  if(brandLane) brandLane.hidden=!showBrand;
+  /* A lane can be expanded full-screen when a pick (its own, or one in
+     another lane through joint faceting) narrows it to nothing worth
+     showing. hidden is display:none regardless of the expanded state,
+     which would leave the backdrop stuck open behind an invisible lane
+     — so collapse before hiding, never leave that half-open. */
+  [[catLane,showCat],[storeLane,showStore],[brandLane,showBrand]].forEach(function(pair){
+    var lane=pair[0], show=pair[1];
+    if(lane && !show && lane.classList.contains('expanded')) collapseLane();
+    if(lane) lane.hidden=!show;
+  });
   catBox.innerHTML=showCat?catChips.join(''):'';
   storeBox.innerHTML=showStore?storeChips.join(''):'';
   brandBox.innerHTML=showBrand?brandChips.join(''):'';
@@ -2889,6 +2896,10 @@ document.addEventListener('click',function(e){
     if(m){ var mine=ALL.filter(function(x){return x.key===m[1];});
       var pick=mine[Number(el.getAttribute('data-sadd'))]; if(pick) addToCart(pick); }
     return; }
+  if((el=hit('[data-expand]'))){ e.preventDefault();
+    expandLane(el.getAttribute('data-expand')); return; }
+  if(hit('[data-collapse]')){ e.preventDefault(); collapseLane(); return; }
+
   if((el=hit('[data-logostore]'))){ e.preventDefault();
     var k=el.getAttribute('data-logostore');
     if(F.stores[k]) delete F.stores[k]; else F.stores[k]=1;
@@ -3018,8 +3029,41 @@ imgzoomImg.addEventListener('click',function(e){
 });
 imgzoom.addEventListener('click',function(e){ if(e.target===imgzoom) closeZoom(); });
 document.querySelector('[data-zoomclose]').addEventListener('click',closeZoom);
+
+/* ============================================================
+   PICKER LANE "EXPAND ALL"
+   ------------------------------------------------------------
+   A lane at its normal width is still a scroller — this turns ONE
+   lane's own scroll container into a full-viewport wrapping grid IN
+   PLACE, rather than cloning its chips into a separate overlay. Same
+   DOM nodes, same ids, so a click on a chip still runs through the one
+   delegated handler above and renderPickerRow()'s normal re-render (on
+   state, counts, joint faceting) keeps working without knowing
+   expansion exists at all.
+
+   Left open after a pick, unlike the image zoom — store and brand are
+   multi-select, and closing on the first tap would defeat the point of
+   opening this to choose several. Backdrop click, the ×, or Escape
+   close it. */
+var lrBackdrop=document.getElementById('lrBackdrop');
+function expandLane(which){
+  var lane=document.querySelector('.lrlane[data-lane="'+which+'"]');
+  if(!lane||lane.hidden) return;
+  lane.classList.add('expanded');
+  lrBackdrop.hidden=false;
+  document.body.style.overflow='hidden';
+}
+function collapseLane(){
+  var open=document.querySelector('.lrlane.expanded');
+  if(!open) return;
+  open.classList.remove('expanded');
+  lrBackdrop.hidden=true;
+  document.body.style.overflow='';
+}
+lrBackdrop.addEventListener('click',collapseLane);
+
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape') closeZoom();
+  if(e.key==='Escape'){ closeZoom(); collapseLane(); }
 });
 document.getElementById('openBoard').addEventListener('click',function(){renderBoard();drawer('board',true);});
 document.getElementById('openList').addEventListener('click',function(){renderCart();drawer('list',true);});

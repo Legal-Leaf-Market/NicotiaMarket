@@ -544,31 +544,38 @@ header.top{position:sticky;top:0;z-index:50;
 .railhead h2{font-family:var(--display);font-weight:900;font-size:19px;
   letter-spacing:-.02em;margin:0}
 .railhead small{font-size:12px;color:var(--dim)}
-/* the control cluster sits at the far end of the head row */
+/* the control cluster sits at the far end of the head row. Used to hold
+   prev/next arrows too — removed once the rail got the same wheel/drag
+   scrolling the picker lanes already had, which made a button to tab
+   through it redundant rather than a second way to move it. */
 .railctl{margin-left:auto;display:flex;align-items:center;gap:8px}
-.railnav{width:32px;height:32px;flex:none;border-radius:999px;cursor:pointer;
-  border:1px solid var(--glass-line);background:var(--chip);color:var(--muted);
-  font-size:19px;line-height:1;display:inline-flex;align-items:center;justify-content:center;
-  transition:color .16s,border-color .16s,transform .1s}
-.railnav:hover{border-color:var(--gold);color:var(--gold)}
-.railnav:active{transform:scale(.93)}
-/* a finger already has a better control than an arrow */
-@media(max-width:560px){.railnav{display:none}}
 
-/* hidden when the strip already holds everything there is to show */
-.railshuf{font-family:var(--sans);font-size:12px;font-weight:600;
-  letter-spacing:.02em;color:var(--dim);background:var(--chip);cursor:pointer;
-  border:1px solid var(--glass-line);border-radius:999px;padding:7px 14px;
-  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
-  transition:color .16s,border-color .16s,transform .1s}
-.railshuf:hover{border-color:var(--gold);color:var(--gold)}
-.railshuf:active{transform:scale(.97)}
+/* Hidden when the strip already holds everything there is to show.
+   Otherwise deliberately loud — gold-filled, sized like a real call to
+   action rather than a quiet utility chip, and pulsing on its own so it
+   reads as "there's more" without anyone having to notice the label
+   first. prefers-reduced-motion crushes the animation duration sitewide
+   (top of this file), so this degrades to just a solid gold button. */
+.railshuf{font-family:var(--sans);font-size:14px;font-weight:800;
+  letter-spacing:.02em;color:#20140a;background:var(--gold);cursor:pointer;
+  border:1px solid var(--gold);border-radius:999px;padding:11px 20px;
+  display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+  box-shadow:0 0 0 0 rgba(240,185,60,.55);
+  animation:shufflePulse 2.2s ease-in-out infinite;
+  transition:transform .1s}
+.railshuf:hover{transform:translateY(-1px)}
+.railshuf:active{transform:scale(.96)}
 .railshuf[hidden]{display:none}
-@media(max-width:480px){.railshuf span{display:none}}
+@keyframes shufflePulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(240,185,60,.55)}
+  50%{box-shadow:0 0 0 9px rgba(240,185,60,0)}
+}
+@media(prefers-reduced-motion:reduce){.railshuf{animation:none}}
 
-/* Scrollbar gone, same as the logo strips. The arrows and the fades are
-   the controls now. This rail LOOPS (renderRail duplicates the set and
-   railStep wraps at the halfway mark), so both fades stay lit whenever it
+/* Scrollbar gone, same as the logo strips. Wheel, drag and native touch
+   are the controls now (wheelToScroll()/dragToScroll() in app.js). This
+   rail LOOPS (renderRail duplicates the set and the scroll listener
+   wraps at the halfway mark), so both fades stay lit whenever it
    overflows: there is always more content in either direction, and
    dimming one would tell the reader they had reached an end that does
    not exist. */

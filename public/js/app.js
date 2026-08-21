@@ -1731,7 +1731,7 @@ function renderRail(){
   document.getElementById('railSub').textContent=
     d ? ('cheapest '+(d.unitLabel||'')+' we can find')
       : (order.length>1
-          ? 'best value on each of '+order.length+' shelves, converted so they compare'
+          ? 'best value, searching all Nicotia Market stores'
           : 'cheapest per pouch, per 1k puffs, per ml and per stick');
 
   /* nothing to shuffle to when the strip already holds everything */
@@ -1755,22 +1755,41 @@ function renderRail(){
   }
 }
 
-/* One card-width-ish step, wrapping at both ends. Arrows exist because a
-   mouse has no horizontal scroll — without them a desktop visitor can
-   see the strip overflowing and have no way to move it. */
-function railStep(dir){
-  var rail=document.getElementById('rail'); if(!rail) return;
-  var first=rail.querySelector('.card'); if(!first) return;
-  var step=(first.getBoundingClientRect().width+14)*2;
-  var half=rail.scrollWidth/2;
-  /* going back from the very start jumps to the end of the first copy,
-     which is the same frame as the end of the strip */
-  if(dir<0 && rail.scrollLeft<=1){
-    rail.scrollLeft=half;
-    rail.scrollTo({left:half-step,behavior:'smooth'});
-    return;
-  }
-  rail.scrollTo({left:rail.scrollLeft+dir*step,behavior:'smooth'});
+/* Redirects a vertical wheel gesture into horizontal scroll, and plain
+   click-and-drag for mouse users who don't reach for the wheel either.
+   Shared by this rail and the three picker lanes below — a mouse has no
+   horizontal scroll of its own, and arrow buttons were the previous fix
+   for that; wheel + drag + native touch cover it without a button to
+   tab through instead of actually scrolling. */
+function wheelToScroll(box){
+  box.addEventListener('wheel',function(e){
+    if(Math.abs(e.deltaY)<=Math.abs(e.deltaX)) return;
+    e.preventDefault();
+    box.scrollLeft+=e.deltaY;
+  },{passive:false});
+}
+function dragToScroll(box){
+  var down=false, moved=false, startX=0, startLeft=0;
+  box.addEventListener('mousedown',function(e){
+    down=true; moved=false; startX=e.clientX; startLeft=box.scrollLeft;
+    box.classList.add('dragging');
+  });
+  window.addEventListener('mousemove',function(e){
+    if(!down) return;
+    var dx=e.clientX-startX;
+    if(Math.abs(dx)>3) moved=true;
+    box.scrollLeft=startLeft-dx;
+  });
+  window.addEventListener('mouseup',function(){
+    if(!down) return;
+    down=false; box.classList.remove('dragging');
+    /* Swallow the click a drag ends on, or letting go over a card/chip
+       would also fire its flip or filter toggle. */
+    if(moved){
+      var swallow=function(e){ e.stopPropagation(); box.removeEventListener('click',swallow,true); };
+      box.addEventListener('click',swallow,true);
+    }
+  });
 }
 
 /* Attached once — #rail survives every re-render, so binding inside
@@ -1781,9 +1800,7 @@ function railStep(dir){
     var half=rail.scrollWidth/2;
     if(half>0 && rail.scrollLeft>=half) rail.scrollLeft-=half;
   },{passive:true});
-  var p=document.getElementById('railPrev'), n=document.getElementById('railNext');
-  if(p) p.addEventListener('click',function(){ railStep(-1); });
-  if(n) n.addEventListener('click',function(){ railStep(1); });
+  wheelToScroll(rail); dragToScroll(rail);
 
   /* Edge fades, now that the scrollbar is hidden. Both sides light up
      together because this rail loops: there is no first or last card, so
@@ -1838,47 +1855,12 @@ function railStep(dir){
      reach for the wheel, and a vertical wheel gesture over a horizontal
      strip normally does nothing (or scrolls the page underneath it,
      which reads as "this doesn't scroll" even though it does).
-     Redirecting the vertical delta into scrollLeft, and preventing the
-     page scroll that would otherwise fire alongside it, makes "hover
-     and scroll" work the way it would over any normal vertical list —
-     just sideways. Only redirects when the gesture is actually
-     vertical-dominant; a trackpad's native horizontal swipe (deltaX
-     already dominant) is left alone. */
-  function wheelToScroll(box){
-    box.addEventListener('wheel',function(e){
-      if(Math.abs(e.deltaY)<=Math.abs(e.deltaX)) return;
-      e.preventDefault();
-      box.scrollLeft+=e.deltaY;
-    },{passive:false});
-  }
-  /* Click-and-drag for mouse users who don't reach for the wheel either —
-     a second way to discover this scrolls, on top of the wheel redirect
-     and the edge fades. Touch already scrolls natively; this only binds
-     mouse events so it can't fight a real swipe. */
-  function dragToScroll(box){
-    var down=false, moved=false, startX=0, startLeft=0;
-    box.addEventListener('mousedown',function(e){
-      down=true; moved=false; startX=e.clientX; startLeft=box.scrollLeft;
-      box.classList.add('dragging');
-    });
-    window.addEventListener('mousemove',function(e){
-      if(!down) return;
-      var dx=e.clientX-startX;
-      if(Math.abs(dx)>3) moved=true;
-      box.scrollLeft=startLeft-dx;
-    });
-    window.addEventListener('mouseup',function(){
-      if(!down) return;
-      down=false; box.classList.remove('dragging');
-      /* Swallow the click a drag ends on, or letting go over a chip
-         would also fire its filter toggle. */
-      if(moved){
-        var swallow=function(e){ e.stopPropagation(); box.removeEventListener('click',swallow,true); };
-        box.addEventListener('click',swallow,true);
-      }
-    });
-  }
-
+     wheelToScroll()/dragToScroll() (shared with #rail, defined above)
+     fix that the same way there: redirect the vertical wheel delta into
+     scrollLeft, and a plain click-and-drag for the mouse users who don't
+     reach for the wheel either. Only redirects when the gesture is
+     actually vertical-dominant; a trackpad's native horizontal swipe
+     (deltaX already dominant) is left alone. */
   IDS.forEach(function(id){
     var box=document.getElementById(id); if(!box) return;
     box.addEventListener('scroll',function(){ sync(box); },{passive:true});

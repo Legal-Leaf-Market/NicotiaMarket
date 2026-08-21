@@ -418,17 +418,10 @@ export const STORES = [
      21+ verification before an order ships, signature on delivery, no
      PO boxes, ships only to the cardholder's billing address, explicit
      FAA restriction on lighters. */
-  /* No `logo` set, and Google's favicon service resolves monterocigars.com
-     to its generic no-favicon globe rather than a real mark — worse than
-     no logo, because a placeholder that looks like it could be a logo
-     reads as "we grabbed the wrong image," not "none available." Network
-     egress here can't fetch a real one, so noFavicon skips the guess
-     entirely and the chip falls straight to its tinted-monogram fallback,
-     same as it would for a load error. Clear this the day a real logo
-     asset is on file. */
   { key:'montero', name:'Montero Cigars', dept:'cigar', domain:'monterocigars.com',
     ref:'nicotinebaby', ships:['US'], guess:1, featured:1, platform:'shopify',
-    from:'US', days:'2–5 days', ageCheck:'id', noFavicon:1 },
+    from:'US', days:'2–5 days', ageCheck:'id',
+    logo:'https://monterocigars.com/cdn/shop/files/circulo_Montero_1.png?v=1614313555&width=500' },
 
   /* OFF. The bigCommerceCards() strategy stays in the ladder and does
      work on this store — verified 5/5 products off /shop-all/ — so
@@ -558,14 +551,10 @@ export const STORES = [
   { key:'humidors', name:'1st Class Humidors', dept:'gear', domain:'www.1stclasshumidors.com',
     ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:105497, feedId:0,
     from:'US' },                                                                // 90-day, fills the gear gap beside XIFEI
-  /* No `logo` set, and Google's favicon guess for this one comes back
-     too low-resolution to read cleanly once it's stretched to the
-     picker's chip size. Same fix as Montero: noFavicon skips the guess
-     and falls straight to the tinted monogram rather than a blurry
-     placeholder. Clear this the day a real logo asset is on file. */
   { key:'bnbtobacco', name:'BnB Tobacco', dept:'cigar', domain:'www.bnbtobacco.com',
     ref:'', ships:['US'], guess:1, platform:'feedcsv', awin:87969, feedId:0,
-    from:'US', noFavicon:1 },                                                   // 100% approval, 8.5% conversion
+    from:'US',                                                                  // 100% approval, 8.5% conversion
+    logo:'https://www.bnbtobacco.com/cdn/shop/files/logo.webp?v=1759349475&width=200' },
   //
   // No AWIN feed — scrape it like any other Shopify store:
   // { key:'vapejuicedepot', name:'Vape Juice Depot', dept:'liquid', domain:'vapejuicedepot.com',
@@ -696,16 +685,26 @@ function classify(st, blob, name) {
   if (/\b(nicotine|nic|tobacco[- ]free|all[- ]white)[ -]pouch(es)?\b/.test(t)) return 'pouch'
   if (/\bpouch(es)?\b/.test(t) && /\b\d{1,2}\s*mg\b/.test(t)) return 'pouch'
 
-  /* HARDWARE NAMED IN THE TITLE, before anything reads an ml figure.
-     `n` is title + variant only — never the description. */
-  if (/\b(rta|rda|rdta|atomi[sz]ers?|replacement pods?|empty pods?|pod cartridges?|replacement coils?|coils?|tanks?|box mod|mods?|drip tips?|chargers?)\b/.test(n)) return 'device'
-
-  /* A disposable states its life in puffs. A bare "4K" is not enough on
-     its own: "Good Times 4K's Cigarillos" is a cigar line, and that
-     pattern was pulling cigarillos and wraps onto the vape shelf. */
+  /* A DISPOSABLE STATES ITS LIFE IN PUFFS, AND THAT EVIDENCE OUTRANKS
+     THE HARDWARE-WORD RULE BELOW. A bare "4K" is not enough on its own —
+     "Good Times 4K's Cigarillos" is a cigar line, and that pattern was
+     pulling cigarillos and wraps onto the vape shelf — but "disposable"
+     or an explicit puff count is unambiguous, and disposables routinely
+     advertise "mesh coil", "adjustable airflow tank" or "mod-style grip"
+     as selling points. Checked BEFORE the hardware rule for exactly that
+     reason: a title carrying both "Disposable" and "Mesh Coil" needs the
+     disposable evidence to win, not the bare word "coil" a few tokens
+     later. (Audit finding: disposables were showing up filed as Devices
+     & Pods for precisely this reason — the hardware rule ran first and
+     never got a chance to lose.) No hardware product genuinely puff-
+     rates itself, so this ordering costs nothing on the device side. */
   if (/\bdisposable\b/.test(n)) return 'disposable'
   if (/\d{3,6}\s*\+?\s*puffs?\b/.test(n)) return 'disposable'
   if (/\b\d{1,3}k\b/.test(n) && /\b(puffs?|vape|disposable|pod)\b/.test(t)) return 'disposable'
+
+  /* HARDWARE NAMED IN THE TITLE, before anything reads an ml figure.
+     `n` is title + variant only — never the description. */
+  if (/\b(rta|rda|rdta|atomi[sz]ers?|replacement pods?|empty pods?|pod cartridges?|replacement coils?|coils?|tanks?|box mod|mods?|drip tips?|chargers?)\b/.test(n)) return 'device'
 
   /* E-LIQUID. The old rule tested `\d+\s*ml` against the whole blob,
      DESCRIPTION INCLUDED — and every pod and tank spec sheet states its

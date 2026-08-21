@@ -1775,10 +1775,23 @@ function renderRail(){
    Shared by this rail and the three picker lanes below — a mouse has no
    horizontal scroll of its own, and arrow buttons were the previous fix
    for that; wheel + drag + native touch cover it without a button to
-   tab through instead of actually scrolling. */
+   tab through instead of actually scrolling.
+
+   preventDefault() only fires when the box actually has somewhere left
+   to go. Without that check, hovering a lane with nothing to scroll
+   (or one already run to its end) swallowed every vertical wheel tick
+   into a no-op — the page simply would not scroll while the cursor sat
+   over it, which read as the whole site's scrolling being "stuck" and
+   needing the scrollbar dragged by hand to escape. A normal vertical
+   list gives the gesture back to its parent at its own start or end
+   the same way; this restores that for a horizontal one. */
 function wheelToScroll(box){
   box.addEventListener('wheel',function(e){
     if(Math.abs(e.deltaY)<=Math.abs(e.deltaX)) return;
+    var max=box.scrollWidth-box.clientWidth;
+    if(max<=0) return;
+    if(e.deltaY<0 && box.scrollLeft<=0) return;
+    if(e.deltaY>0 && box.scrollLeft>=max) return;
     e.preventDefault();
     box.scrollLeft+=e.deltaY;
   },{passive:false});
@@ -3059,6 +3072,10 @@ var lrBackdrop=document.getElementById('lrBackdrop');
 function expandLane(which){
   var lane=document.querySelector('.lrlane[data-lane="'+which+'"]');
   if(!lane||lane.hidden) return;
+  /* collapseLane() only ever finds and closes ONE .expanded lane — two
+     open at once would leave the second stuck full-screen (with body
+     scroll still locked) after the first is dismissed. */
+  collapseLane();
   lane.classList.add('expanded');
   lrBackdrop.hidden=false;
   document.body.style.overflow='hidden';

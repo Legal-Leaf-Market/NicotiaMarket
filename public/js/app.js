@@ -1770,32 +1770,35 @@ function renderRail(){
   }
 }
 
-/* Redirects a vertical wheel gesture into horizontal scroll, and plain
-   click-and-drag for mouse users who don't reach for the wheel either.
-   Shared by this rail and the three picker lanes below — a mouse has no
-   horizontal scroll of its own, and arrow buttons were the previous fix
-   for that; wheel + drag + native touch cover it without a button to
-   tab through instead of actually scrolling.
+/* WHEEL IS THE PAGE'S, NOT THE LANE'S.
 
-   preventDefault() only fires when the box actually has somewhere left
-   to go. Without that check, hovering a lane with nothing to scroll
-   (or one already run to its end) swallowed every vertical wheel tick
-   into a no-op — the page simply would not scroll while the cursor sat
-   over it, which read as the whole site's scrolling being "stuck" and
-   needing the scrollbar dragged by hand to escape. A normal vertical
-   list gives the gesture back to its parent at its own start or end
-   the same way; this restores that for a horizontal one. */
-function wheelToScroll(box){
-  box.addEventListener('wheel',function(e){
-    if(Math.abs(e.deltaY)<=Math.abs(e.deltaX)) return;
-    var max=box.scrollWidth-box.clientWidth;
-    if(max<=0) return;
-    if(e.deltaY<0 && box.scrollLeft<=0) return;
-    if(e.deltaY>0 && box.scrollLeft>=max) return;
-    e.preventDefault();
-    box.scrollLeft+=e.deltaY;
-  },{passive:false});
-}
+   There used to be a wheelToScroll() here that turned a vertical wheel
+   gesture over the rail or a picker lane into horizontal scroll. It is
+   gone, and this is the second time it has had to be walked back — the
+   first (#25) narrowed it to only intercept while the box had somewhere
+   left to go, which fixed the empty and run-to-the-end cases and still
+   left the page feeling stuck.
+
+   It could not be patched into working, because the rail LOOPS. Its
+   scroll handler subtracts half the width every time it passes the
+   halfway mark, so scrollLeft never reaches scrollWidth - clientWidth
+   and the "you have hit the end, take your gesture back" escape was
+   unreachable by construction. The whole "Best value right now" band —
+   a tall row of cards across the middle of the page — swallowed every
+   tick forever. A long Store lane behaved the same way for as long as
+   it took to exhaust it.
+
+   The premise was that a mouse has no horizontal scroll. It does not
+   need one here: dragToScroll() below gives click-and-drag, touch
+   scrolls natively, a trackpad's horizontal gesture was always passed
+   through untouched, shift+wheel is native browser behaviour on any
+   horizontally scrollable box, and the expand-all control added later
+   opens a lane as a full-screen wrapping grid with no horizontal
+   scrolling at all. Five ways to move a lane sideways, none of which
+   costs the reader the one gesture they use to read the page.
+
+   If a horizontal wheel affordance is ever wanted again, it must not
+   preventDefault() on a looping container. */
 function dragToScroll(box){
   var down=false, moved=false, startX=0, startLeft=0;
   box.addEventListener('mousedown',function(e){
@@ -1828,7 +1831,7 @@ function dragToScroll(box){
     var half=rail.scrollWidth/2;
     if(half>0 && rail.scrollLeft>=half) rail.scrollLeft-=half;
   },{passive:true});
-  wheelToScroll(rail); dragToScroll(rail);
+  dragToScroll(rail);
 
   /* Edge fades, now that the scrollbar is hidden. Both sides light up
      together because this rail loops: there is no first or last card, so
@@ -1883,7 +1886,7 @@ function dragToScroll(box){
      reach for the wheel, and a vertical wheel gesture over a horizontal
      strip normally does nothing (or scrolls the page underneath it,
      which reads as "this doesn't scroll" even though it does).
-     wheelToScroll()/dragToScroll() (shared with #rail, defined above)
+     dragToScroll() (shared with #rail, defined above)
      fix that the same way there: redirect the vertical wheel delta into
      scrollLeft, and a plain click-and-drag for the mouse users who don't
      reach for the wheel either. Only redirects when the gesture is
@@ -1897,7 +1900,7 @@ function dragToScroll(box){
     /* Logos arrive as images, so the strip's width changes after the
        chips do. ResizeObserver catches that; the observers above do not. */
     if(window.ResizeObserver) new ResizeObserver(function(){ sync(box); }).observe(box);
-    wheelToScroll(box); dragToScroll(box);
+    dragToScroll(box);
     sync(box);
   });
 

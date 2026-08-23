@@ -573,7 +573,8 @@ header.top{position:sticky;top:0;z-index:50;
 @media(prefers-reduced-motion:reduce){.railshuf{animation:none}}
 
 /* Scrollbar gone, same as the logo strips. Wheel, drag and native touch
-   are the controls now (wheelToScroll()/dragToScroll() in app.js). This
+   are the controls now (dragToScroll() in app.js, plus drag, touch and
+   shift+wheel). This
    rail LOOPS (renderRail duplicates the set and the scroll listener
    wraps at the halfway mark), so both fades stay lit whenever it
    overflows: there is always more content in either direction, and
@@ -669,9 +670,10 @@ header.top{position:sticky;top:0;z-index:50;
    as "the pills" once the shelf buttons and the subcategory row were
    both already gone; a plain image with a caption doesn't. Scrolls
    three ways with no arrow buttons to say so: the edge fades below, a
-   mouse wheel redirected sideways (wheelToScroll() in app.js) and
-   click-and-drag (dragToScroll()) — touch already scrolls it
-   natively. */
+   click-and-drag (dragToScroll() in app.js), touch, and shift+wheel,
+   which the browser gives any horizontally scrollable box for free. A
+   plain vertical wheel belongs to the page and is left alone — taking
+   it is what made the site feel stuck. */
 .lrwrap{position:relative}
 /* padding, not margin: overflow-x:auto clips, and the selected chip's
    ring, outer glow and half-off-the-plate tick all sit OUTSIDE the

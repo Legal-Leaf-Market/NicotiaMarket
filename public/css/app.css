@@ -768,14 +768,18 @@ header.top{position:sticky;top:0;z-index:50;
 }
 
 /* THE LANE ARROWS. Same #boneArrow as the value rail, so both carousels
-   are driven by one mark rather than two that can drift. Shown at every
-   width now — desktop where they are the only mover, and phone where
-   they sit alongside the swipe.
+   are driven by one mark rather than two that can drift — and now the
+   same COLOUR treatment as the rail too: solid gold at rest, brightening
+   to the rail's own #ffd166 on hover, rather than a dim chip-toned
+   button that read as "black" sitting over a dark chip. Shown at every
+   width — desktop where they are the only mover, and phone where they
+   sit alongside the swipe.
 
-   50% opacity at rest, deliberately: these sit over the chips
-   themselves, and three lanes of full-strength buttons would shout
-   louder than the logos they are there to help you reach. Full opacity
-   on hover and on keyboard focus.
+   30% opacity at rest, deliberately: these sit over the chips
+   themselves, and three lanes of full-strength gold circles would be
+   the loudest thing in the row rather than a quiet aid to it. Full
+   saturation and full opacity on hover, tap and keyboard focus — the
+   moment a reader is actually pointed at one, it should be unmissable.
 
    Hidden — not just faded — at a lane's own end, because unlike the
    value rail these lanes do not loop and there is genuinely nothing
@@ -786,23 +790,27 @@ header.top{position:sticky;top:0;z-index:50;
 .lanearrow{display:grid;position:absolute;top:calc(50% - 3px);
   transform:translateY(-50%);z-index:3;
   width:36px;height:36px;border-radius:50%;cursor:pointer;place-items:center;
-  background:var(--chip);border:1px solid var(--glass-line);color:var(--gold);
-  opacity:.5;transition:opacity .16s,transform .12s,background .16s}
+  background:var(--gold);border:1px solid var(--gold-dk);color:#5c3708;
+  opacity:.3;transition:opacity .16s,transform .12s,background .16s}
 .lanearrow.prev{left:-4px}
 .lanearrow.next{right:-4px}
 .lanearrow svg{width:24px;height:11px;pointer-events:none}
 .lanearrow.prev svg{transform:scaleX(-1)}
 /* Guarded to real hover capability: without this, a touch on iOS Safari
-   leaves :hover "stuck" on the tapped button — gold, scaled up — until
-   the reader touches somewhere else, which reads as a second button
-   glued to the first. Devices with an actual pointer keep the hover. */
+   leaves :hover "stuck" on the tapped button — brightened, scaled up —
+   until the reader touches somewhere else, which reads as a second
+   button glued to the first. Devices with an actual pointer keep it. */
 @media(hover:hover){
-  .lanearrow:hover{opacity:1;background:var(--gold);color:#160c06;
-    transform:translateY(-50%) scale(1.08)}
+  .lanearrow:hover{opacity:1;background:#ffd166;transform:translateY(-50%) scale(1.08)}
 }
-.lanearrow:active{opacity:1;background:var(--gold);color:#160c06;
-  transform:translateY(-50%) scale(.94)}
-.lanearrow:focus-visible{opacity:1;outline:2px solid var(--gold);outline-offset:2px}
+/* :active covers touch too — the hover:hover guard above means a tap
+   never fires :hover, so this is the only brightening a phone gets, and
+   it needs to fire on its own rather than leaning on hover's rule. */
+.lanearrow:active{opacity:1;background:#ffd166;transform:translateY(-50%) scale(.94)}
+/* var(--text), not var(--gold): an outline the same colour as the fill
+   it rings is not a visible outline. Matches the rail's own focus ring
+   for the same reason. */
+.lanearrow:focus-visible{opacity:1;outline:2px solid var(--text);outline-offset:2px}
 .lrwrap:not(.can-prev) .lanearrow.prev,
 .lrwrap:not(.can-next) .lanearrow.next{display:none}
 /* the expanded lane is a wrapping grid — nothing to step through */

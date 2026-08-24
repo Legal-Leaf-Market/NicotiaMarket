@@ -13,6 +13,24 @@
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
+  <!-- Buying guide, vendor checks and the FAQ. Static pages with their
+       own schema (Article / Article / FAQPage), served by cleanUrls from
+       public/*.html, so they need no vercel.json rewrite. -->
+  <url>
+    <loc>https://nicotiamarket.com/best-nicotine-pouches</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://nicotiamarket.com/trust</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://nicotiamarket.com/faq</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
   <!-- Store spotlights. These were hash routes (#/store/nicokick) until
        they were given real paths, which is what makes them listable
        here at all: a hash never reaches the server, so a crawler could

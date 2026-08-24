@@ -16,36 +16,7 @@ comparison sites).
 
 ## Open items
 
-### 1. "Best of" buying-guide content
-- **Problem:** every competitor sampled (Nicokick's Northerner hub, Vaping360,
-  VapeCityUSA, SnusDaddy) runs refreshed, dated "Best of 2026" ranked-list content
-  targeting commercial-intent queries. The library is etymology/culture only —
-  no page targets a single buying-decision query.
-- **Proposed fix:** 1–2 pieces to start (e.g. "Best Nicotine Pouches of 2026"),
-  same static-HTML + Article JSON-LD pipeline as `/story` etc.
-- **Priority:** Medium
-- **Status:** Proposed
-- **Approved by:** —
-
-### 2. On-site vendor trust/review aggregation page
-- **Problem:** no on-site trust signal beyond the footer's "how we make money"
-  note. Nicokick republishes its own Trustpilot reviews at `/us/customer-stories`.
-- **Proposed fix:** a page honestly citing each vendor's own public reputation
-  (Trustpilot/BBB scores, sourced and linked, never fabricated), in the site's
-  existing "honest broker" voice.
-- **Priority:** Medium
-- **Status:** Proposed
-- **Approved by:** —
-
-### 3. FAQ content block + FAQPage schema on department shelves
-- **Problem:** Nicokick has a dedicated indexed `/us/faq`; department shelves here
-  are pure product grids with no Q&A content, so there's nothing for FAQPage
-  schema to attach to.
-- **Proposed fix:** an accordion under each shelf (or a standalone `/faq`) with
-  real Q&A content, then matching FAQPage JSON-LD.
-- **Priority:** Medium
-- **Status:** Proposed
-- **Approved by:** —
+*(none — all five audit items are shipped. New findings go here.)*
 
 ---
 
@@ -68,6 +39,52 @@ Deliberate, not missing. The site owns no inventory and no reviews (CLAUDE.md
 ---
 
 ## Shipped
+
+### "Best of" buying-guide content  *(was #1 of the content items, Medium)*
+- **Shipped:** 2026-08-24. **Approved by:** Jacob, in conversation.
+- `/best-nicotine-pouches` — "Best Nicotine Pouches of 2026", static HTML +
+  Article JSON-LD, linked from the footer's new **Before you buy** column and
+  from the top of `/library`.
+- **It names no winner, deliberately, and this is not an oversight to "fix".**
+  Competitors mark these pages up as a ranked `ItemList` of `Product` +
+  `AggregateRating`. We own no stock and have no reviewers, so any ranking we
+  published would be invented — see item B below, which applies here hardest.
+  The page teaches the comparison (count trap, mg/pouch vs mg/g, format,
+  who owns the big four) and hands the ranking to the live per-pouch shelf,
+  which is arithmetic and changes hourly.
+- Marked up as `Article`, not a product roundup. `dateModified` is what a
+  "2026" page lives on — bump it when the content genuinely changes, not on
+  every deploy.
+
+### On-site vendor trust page  *(was #2 of the content items, Medium)*
+- **Shipped:** 2026-08-24. **Approved by:** Jacob, in conversation.
+- `/trust` — what each shop does about age at its own checkout, where it ships
+  from and how long it takes, with a key explaining that ID, Signature, Date of
+  birth and None are four genuinely different things.
+- **The per-vendor table is generated from `/api/products`, not hand-written.**
+  Copying nineteen vendors' values into the HTML would be the second list
+  CLAUDE.md §3 warns about, on the page where being out of date is worst. The
+  page's substance — the key, what we refuse to publish — is static HTML and is
+  what a crawler indexes; only the rows need JS.
+- An empty `ageCheck` renders **"Not established"**, never "None". Those are
+  different claims and "none" is the flattering direction to guess wrong in.
+- **The Trustpilot/BBB scores this item asked for are NOT on the page**, and
+  that gap is stated on the page itself. They could not be sourced first-hand
+  from the build environment, and quoting an unverified score on the page whose
+  job is saying what has been verified would be self-defeating. Add them with
+  their links when they can be read directly — or not at all.
+
+### FAQ content + FAQPage schema  *(was #3 of the content items, Medium)*
+- **Shipped:** 2026-08-24. **Approved by:** Jacob, in conversation.
+- `/faq` — ten questions, `<details>`/`<summary>`, no JavaScript.
+- **Standalone page, not an accordion under each shelf, because of item A
+  below.** The shelves all rewrite to `index.html` and pick their department in
+  JS, so per-shelf FAQPage schema would have to be injected client-side —
+  exactly the structural ceiling item A records. Schema describing questions a
+  crawler cannot see is worse than none, because it looks handled.
+- All ten schema answers are byte-identical to the visible copy, and all ten
+  `name`s to their `<summary>`. **If you edit one, edit the other** — mismatched
+  FAQPage content is a manual action, not a technicality.
 
 ### Path-based routing for store spotlight pages  *(was #1, High)*
 - **Shipped:** 2026-08-24. **Approved by:** Jacob, in conversation.

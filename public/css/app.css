@@ -1183,6 +1183,17 @@ header.top{position:sticky;top:0;z-index:50;
 .agechip.good{background:rgba(74,222,128,.14);color:var(--sage);border:1px solid rgba(74,222,128,.3)}
 .agechip.soft{background:rgba(240,185,60,.12);color:var(--gold);border:1px solid rgba(240,185,60,.28)}
 .agechip.warn{background:rgba(239,83,80,.12);color:var(--red);border:1px solid rgba(239,83,80,.3)}
+/* /trust names the four levels explicitly rather than good/soft/warn,
+   because that page's whole job is saying WHICH check a shop runs, not
+   just how reassuring it is. Same three colours underneath: a real
+   identity check is green, a typed date of birth is amber, none is red,
+   and "not established" is deliberately grey — an unknown is not a
+   reassurance and must not borrow the colour of one. */
+.agechip.ac-id  {background:rgba(74,222,128,.14);color:var(--sage);border:1px solid rgba(74,222,128,.3)}
+.agechip.ac-sig {background:rgba(74,222,128,.10);color:var(--sage-dk);border:1px solid rgba(74,222,128,.26)}
+.agechip.ac-dob {background:rgba(240,185,60,.12);color:var(--gold);border:1px solid rgba(240,185,60,.28)}
+.agechip.ac-none{background:rgba(239,83,80,.12);color:var(--red);border:1px solid rgba(239,83,80,.3)}
+.agechip.ac-unk {background:var(--chip);color:var(--muted);border:1px dashed var(--line)}
 .dcheckout{display:block;width:100%;text-align:center;font-family:var(--sans);font-weight:700;
   font-size:12.5px;letter-spacing:.02em;padding:12px;border-radius:8px;border:0;cursor:pointer;
   background:var(--gold);color:#0b120d;margin-bottom:8px}
@@ -2108,3 +2119,70 @@ footer p{margin:0 0 9px;line-height:1.6}
 .sfoot .btn:hover{border-color:var(--gold);color:var(--gold)}
 .sfoot .btn+.btn{margin-left:8px}
 @media(max-width:560px){.sgrid{grid-template-columns:1fr}.sstats{gap:22px}}
+
+
+/* ============================================================
+   /faq and /trust
+   ------------------------------------------------------------
+   Both reuse the .st-* long-form vocabulary above; only the two
+   components those pages introduce live here.
+   ============================================================ */
+
+/* THE FAQ ACCORDION is <details>/<summary> — no JavaScript, and the
+   answer stays in the DOM open or shut, so a crawler reads all of them
+   whatever their state. A JS accordion built out of hidden divs would
+   not, which would defeat the FAQPage schema the page carries. */
+.faq-group{margin:0 0 46px}
+.faq-h{font-family:var(--display);font-weight:900;font-size:1.15rem;letter-spacing:-.02em;
+  color:var(--gold);margin:0 0 16px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.faq-q{border-bottom:1px solid var(--line)}
+.faq-q summary{cursor:pointer;list-style:none;padding:16px 34px 16px 0;position:relative;
+  font-family:var(--sans);font-weight:600;font-size:1rem;color:var(--text);line-height:1.45}
+.faq-q summary::-webkit-details-marker{display:none}
+/* A rotating chevron drawn in CSS: one element, no icon font, and it
+   states open/shut without needing a label. */
+.faq-q summary::after{content:"";position:absolute;right:6px;top:23px;width:8px;height:8px;
+  border-right:2px solid var(--ember);border-bottom:2px solid var(--ember);
+  transform:rotate(45deg);transform-origin:center;transition:transform .18s}
+.faq-q[open] summary::after{transform:rotate(-135deg)}
+.faq-q summary:hover{color:var(--gold)}
+.faq-q summary:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:4px}
+.faq-q p{margin:0 0 18px;color:var(--muted);font-size:.98rem;line-height:1.72;max-width:62ch}
+.faq-q a{color:var(--gold)}
+
+/* THE VENDOR TABLE. Its own scroll container, so five columns of vendor
+   facts on a phone scroll sideways inside the table instead of making
+   the whole page scroll sideways. */
+/* BREAKS OUT OF THE 64ch PROSE MEASURE. .st-body caps at 64ch, which is
+   right for reading and much too narrow for five columns — inside it the
+   age-check column, the one people come to this page for, sat off the
+   right edge behind a scroll nobody would know to perform. Centred
+   breakout rather than a wider .st-body, so the prose keeps its measure.
+   overflow-x:auto still catches phones, where it genuinely must scroll. */
+.tr-wrap{position:relative;left:50%;transform:translateX(-50%);
+  width:min(calc(100vw - 40px),980px);
+  overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);
+  background:var(--panel);margin:22px 0 10px}
+.tr-table{border-collapse:collapse;width:100%;min-width:660px;font-size:.87rem}
+.tr-table caption{caption-side:top;text-align:left;padding:14px 16px 4px;
+  color:var(--dim);font-size:.8rem}
+.tr-table th,.tr-table td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);
+  vertical-align:top}
+.tr-table thead th{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--dim);background:var(--chip)}
+.tr-table tbody th{font-weight:600;color:var(--text);white-space:nowrap}
+.tr-table tbody tr:last-child th,.tr-table tbody tr:last-child td{border-bottom:0}
+.tr-table td{color:var(--muted)}
+.tr-dom{display:block;font-weight:400;font-size:11px;color:var(--dim);letter-spacing:.02em}
+.tr-guess{display:inline-block;margin-left:7px;font-size:9.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--dim);border:1px dashed var(--line);
+  border-radius:999px;padding:1px 7px;vertical-align:1px}
+
+/* the key to the four age levels, above the table */
+.tr-key{margin:20px 0 0;display:grid;grid-template-columns:auto 1fr;gap:10px 16px;align-items:start}
+.tr-key dt{margin:0}
+.tr-key dd{margin:0;color:var(--muted);font-size:.94rem;line-height:1.6}
+@media(max-width:560px){
+  .tr-key{grid-template-columns:1fr;gap:4px 0}
+  .tr-key dd{margin:0 0 14px}
+}

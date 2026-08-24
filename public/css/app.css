@@ -544,10 +544,10 @@ header.top{position:sticky;top:0;z-index:50;
 .railhead h2{font-family:var(--display);font-weight:900;font-size:19px;
   letter-spacing:-.02em;margin:0}
 .railhead small{font-size:12px;color:var(--dim)}
-/* the control cluster sits at the far end of the head row. Used to hold
-   prev/next arrows too — removed once the rail got the same wheel/drag
-   scrolling the picker lanes already had, which made a button to tab
-   through it redundant rather than a second way to move it. */
+/* the control cluster sits at the far end of the head row. It held
+   prev/next arrows once; they are back, but over the rail's own edges
+   rather than up here, where they sit on the fade that already says
+   there is more in that direction. This holds Shuffle alone. */
 .railctl{margin-left:auto;display:flex;align-items:center;gap:8px}
 
 /* Hidden when the strip already holds everything there is to show.
@@ -572,21 +572,60 @@ header.top{position:sticky;top:0;z-index:50;
 }
 @media(prefers-reduced-motion:reduce){.railshuf{animation:none}}
 
-/* Scrollbar gone, same as the logo strips. Wheel, drag and native touch
-   are the controls now (dragToScroll() in app.js, plus drag, touch and
-   shift+wheel). This
-   rail LOOPS (renderRail duplicates the set and the scroll listener
-   wraps at the halfway mark), so both fades stay lit whenever it
-   overflows: there is always more content in either direction, and
-   dimming one would tell the reader they had reached an end that does
-   not exist. */
+/* THIS RAIL IS NOT A SCROLLER. overflow:hidden, deliberately.
+
+   It was the last place the page could feel stuck, and unlike the logo
+   lanes it could not be made to hand a gesture back, because it LOOPS:
+   renderRail() duplicates the set and the wrap subtracts half the width
+   at the halfway mark, so it never has an end to reach. A reader who
+   put the cursor on this band and kept scrolling stayed on this band.
+
+   overflow:hidden still leaves the box programmatically scrollable, so
+   railNudge() in app.js moves it and the two arrows below are the only
+   thing that calls it. The logo lanes above are untouched — they do not
+   loop, they have real ends, and drag/touch/shift+wheel still work
+   there.
+
+   Both edge fades stay lit whenever it overflows: there is always more
+   in either direction, and dimming one would claim an end that does not
+   exist. */
 .railwrap{position:relative}
 .rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,1fr);gap:14px;
   align-items:stretch;
-  overflow-x:auto;padding-bottom:14px;scroll-snap-type:x proximity;
-  scrollbar-width:none;-ms-overflow-style:none}
-.rail::-webkit-scrollbar{display:none;width:0;height:0}
-.rail>*{scroll-snap-align:start}
+  overflow:hidden;padding-bottom:14px}
+
+/* THE ARROWS. Loud on purpose — they are now the only control, so a
+   quiet ghost button would strand the reader on the first four cards.
+   Gold-filled and ringed like the Shuffle button beside them, sat over
+   the rail's own edges where the fade already says "more this way".
+
+   One glyph, mirrored: .prev flips #boneArrow rather than carrying a
+   second path to keep in sync. transform is on the <svg>, not the
+   button, so :active can scale the button without unflipping it. */
+.railarrow{position:absolute;top:calc(50% - 7px);transform:translateY(-50%);
+  z-index:3;width:60px;height:60px;border-radius:50%;cursor:pointer;
+  display:none;place-items:center;
+  background:var(--gold);border:2px solid var(--gold-dk);color:#5c3708;
+  box-shadow:0 6px 20px rgba(0,0,0,.5),0 0 0 0 rgba(240,185,60,.5);
+  animation:shufflePulse 2.6s ease-in-out infinite;
+  transition:transform .12s,background .12s}
+.railwrap.can-scroll .railarrow{display:grid}
+.railarrow.prev{left:-6px}
+.railarrow.next{right:-6px}
+.railarrow svg{width:40px;height:18px;pointer-events:none}
+.railarrow.prev svg{transform:scaleX(-1)}
+.railarrow:hover{background:#ffd166;transform:translateY(-50%) scale(1.06)}
+.railarrow:active{transform:translateY(-50%) scale(.94)}
+.railarrow:focus-visible{outline:3px solid var(--text);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.railarrow{animation:none}}
+/* On a phone the rail is barely wider than one card, so a 60px button
+   over each edge would cover most of it. Smaller, and tucked in. */
+@media(max-width:560px){
+  .railarrow{width:48px;height:48px}
+  .railarrow svg{width:31px;height:14px}
+  .railarrow.prev{left:-2px}
+  .railarrow.next{right:-2px}
+}
 .railwrap::before,.railwrap::after{content:"";position:absolute;top:0;bottom:14px;
   width:52px;pointer-events:none;opacity:0;transition:opacity .2s;z-index:1}
 .railwrap::before{left:0;background:linear-gradient(90deg,var(--bg),transparent)}

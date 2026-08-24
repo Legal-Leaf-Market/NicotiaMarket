@@ -137,6 +137,26 @@
        app.css and spawnLeaves() in app.js) — variety against #leafIcon's
        one fixed shape, drawn once and re-coloured per instance via
        fill="currentColor" rather than a fixed palette. -->
+  <!-- The rail's prev/next glyph. A real shot arrow rather than a
+       chevron: knapped bone point, sinew binding at the foreshaft,
+       swept fletching, drawn as flat filled shapes in the same idiom as
+       #leafIcon above so it sits with the leaves rather than beside
+       them. Drawn pointing RIGHT and mirrored in CSS for the left one,
+       so there is one shape to keep, not two that can drift.
+       currentColor throughout except the point, which stays bone. -->
+  <symbol id="boneArrow" viewBox="0 0 64 28">
+    <path d="M22 12.4 C16 10.6 10.6 7.6 5.6 3.4 C5.4 9.8 9.6 13.4 21.6 15.1 Z" fill="currentColor"/>
+    <path d="M22 15.6 C16 17.4 10.6 20.4 5.6 24.6 C5.4 18.2 9.6 14.6 21.6 12.9 Z" fill="currentColor"/>
+    <path d="M7 14 H44" stroke="currentColor" stroke-width="3.1" stroke-linecap="round" fill="none"/>
+    <!-- binding: cut OUT of the shaft in the page ground, so it reads as
+         wraps on the shaft at any size instead of two more gold ticks. -->
+    <g stroke="#0b0f0d" stroke-width="1.5" stroke-linecap="round">
+      <path d="M34.6 11.2 L33.2 16.8"/><path d="M38.4 11.2 L37 16.8"/>
+    </g>
+    <path d="M42.6 6.4 C51.4 8.6 57.4 11 62.4 14 C57.4 17 51.4 19.4 42.6 21.6
+             C45.6 18.8 46.8 16.4 46.8 14 C46.8 11.6 45.6 9.2 42.6 6.4 Z"
+          fill="#f4ecdb" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+  </symbol>
   <symbol id="leafFall" viewBox="0 0 40 56">
     <path d="M20 2 C33 13 36 33 24 47 C22 50 20 53 20 54 C20 53 18 50 16 47 C4 33 7 13 20 2 Z"
           fill="currentColor"/>
@@ -349,7 +369,19 @@
         <button class="railshuf" id="railShuffle" type="button" hidden
           aria-label="Show the next best prices">&#8635; <span>Shuffle</span></button>
       </div></div>
-    <div class="railwrap"><div class="rail" id="rail"></div></div>
+    <div class="railwrap">
+      <div class="rail" id="rail"></div>
+      <!-- The ONLY way to move this rail. It is no longer a scroller —
+           see .rail in app.css and railNudge() in app.js. -->
+      <button class="railarrow prev" id="railPrev" type="button" aria-controls="rail"
+        aria-label="Show earlier best-value picks">
+        <svg viewBox="0 0 64 28" aria-hidden="true"><use href="#boneArrow"></use></svg>
+      </button>
+      <button class="railarrow next" id="railNext" type="button" aria-controls="rail"
+        aria-label="Show more best-value picks">
+        <svg viewBox="0 0 64 28" aria-hidden="true"><use href="#boneArrow"></use></svg>
+      </button>
+    </div>
   </section>
 
   <div id="mount"></div>

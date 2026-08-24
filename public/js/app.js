@@ -1827,11 +1827,41 @@ function dragToScroll(box){
    renderRail() would stack a new listener on every shuffle. */
 (function(){
   var rail=document.getElementById('rail'); if(!rail) return;
+  /* THE ARROWS ARE THE ONLY THING THAT MOVES THIS RAIL.
+
+     dragToScroll(rail) is gone and .rail is overflow:hidden (see
+     app.css) — a reader who put the cursor on this band and kept
+     scrolling used to stay on this band, because the rail loops and so
+     has no end at which to hand the gesture back. overflow:hidden still
+     leaves the box scrollable from script, which is what this uses.
+
+     The wrap is handled HERE rather than in a scroll listener now that
+     one function is the only mover: step to the target, and if that
+     step would cross the seam, jump a whole lap first so the smooth
+     animation never runs through it. A listener that wrapped mid-flight
+     would fight the animation instead. */
+  function railNudge(dir){
+    var half=rail.scrollWidth/2; if(!(half>0)) return;
+    var step=Math.max(rail.clientWidth*0.85, 220);
+    var target=rail.scrollLeft+dir*step;
+    if(target<0){ rail.scrollLeft+=half; target+=half; }
+    else if(target>=half){ rail.scrollLeft-=half; target-=half; }
+    var still=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    rail.scrollTo({left:target, behavior: still?'auto':'smooth'});
+  }
+  var prev=document.getElementById('railPrev'), next=document.getElementById('railNext');
+  if(prev) prev.addEventListener('click',function(){ railNudge(-1); });
+  if(next) next.addEventListener('click',function(){ railNudge(1); });
+
+  /* Focus moving to a card the rail has scrolled out of view scrolls the
+     container itself — the one mover that is not railNudge(), and the
+     one case that can still land past the seam. Put back on the lap it
+     belongs to, so a keyboard tab through the strip cannot walk it off
+     the end of the duplicated set. */
   rail.addEventListener('scroll',function(){
     var half=rail.scrollWidth/2;
     if(half>0 && rail.scrollLeft>=half) rail.scrollLeft-=half;
   },{passive:true});
-  dragToScroll(rail);
 
   /* Edge fades, now that the scrollbar is hidden. Both sides light up
      together because this rail loops: there is no first or last card, so
@@ -1843,6 +1873,8 @@ function dragToScroll(box){
   var wrap=rail.parentElement;
   if(wrap&&wrap.classList.contains('railwrap')){
     var sync=function(){
+      /* Drives the edge fades AND the two arrows: with nothing to move
+         to, an arrow is a button that does nothing. */
       wrap.classList.toggle('can-scroll', rail.scrollWidth-rail.clientWidth>2);
     };
     if(window.MutationObserver)

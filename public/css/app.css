@@ -671,7 +671,20 @@ header.top{position:sticky;top:0;z-index:50;
    syncs their scroll positions; that is the whole point after the
    merged single strip read as one carousel with three tabs in it. */
 .lrlanes{display:flex;gap:22px;flex-wrap:wrap}
-.lrlane{flex:1 1 240px;min-width:0}
+/* Category, Store and Brand are flex siblings on the same line, so
+   align-items:stretch (the flex default) already sizes all three
+   .lrlane boxes to the tallest one. That alone did nothing visible
+   before this: .lrlane laid its head and .lrwrap out in normal block
+   flow, so the extra stretched height just became dead space below a
+   shorter lane's own content instead of reaching .lrwrap — leaving
+   Store and Brand's arrows centred on THEIR box while Category's, with
+   a two-line chip name, sat centred lower on a taller one. Turning
+   .lrlane into a column flex container and letting .lrwrap claim the
+   leftover space (below) is what makes the stretch actually land: all
+   three .lrwrap boxes end up the same height as Category's, so the
+   arrows — centred within their own .lrwrap — line up across all three
+   lanes no matter which one's chip names wrap onto a second line. */
+.lrlane{flex:1 1 240px;min-width:0;display:flex;flex-direction:column}
 .lrlane[hidden]{display:none}
 .lrlane-head{display:flex;align-items:center;gap:6px;margin-bottom:6px}
 .lrlane-label{display:block;font-family:var(--sans);font-weight:700;font-size:10px;
@@ -724,7 +737,17 @@ header.top{position:sticky;top:0;z-index:50;
    as "the pills" once the shelf buttons and the subcategory row were
    both already gone; a plain image with a caption doesn't. Moved by the
    bone arrows at every width, and by a thumb on a phone as well. */
-.lrwrap{position:relative}
+/* flex:1 is the half of the fix that lets .lrwrap actually claim the
+   height .lrlane's stretch gives it (see .lrlane above); align-items
+   centres the one in-flow child (.lrscroll) inside that taller box so
+   a one-line lane's chips sit level with a two-line lane's, rather
+   than pinned to the top with slack underneath. The arrows are
+   position:absolute and unaffected by either. */
+.lrwrap{position:relative;display:flex;align-items:center;flex:1}
+/* Expanded is a full-viewport grid of everything in the lane, not a
+   short row that needs vertical centring — top-align it like the grid
+   always did, or a lane with only a few chips would float mid-panel. */
+.lrlane.expanded .lrwrap{align-items:flex-start}
 /* padding, not margin: overflow-x:auto clips, and the selected chip's
    ring, outer glow and half-off-the-plate tick all sit OUTSIDE the
    chip's own box. At 2px/4px the tick came out sliced. */

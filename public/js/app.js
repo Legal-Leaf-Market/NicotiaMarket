@@ -1873,9 +1873,22 @@ function renderRail(){
     var wrap=box.parentElement;
     if(!wrap||!wrap.classList.contains('lrwrap')) return;
     var max=box.scrollWidth-box.clientWidth;
+    /* THE THRESHOLD HAS TO CLEAR THE CONTAINER'S OWN PADDING, not just be
+       "a couple of px". .lrscroll carries 8px of horizontal padding (so
+       the first/last chip and its selection ring aren't clipped by
+       overflow — see the comment above .lrscroll), and on mobile with
+       scroll-snap active Chromium can report scrollLeft as that padding
+       value at rest, before the reader has scrolled at all. A flat `2`
+       read that as "already scrolled" and showed a prev-arrow pointing
+       at nothing on first load — invisible as a few degrees of an edge
+       fade, not invisible as a whole button. Reading the real padding
+       keeps this correct if it's ever changed, instead of reintroducing
+       the same bug at a new number. */
+    var cs=getComputedStyle(box);
+    var padL=(parseFloat(cs.paddingLeft)||0)+2, padR=(parseFloat(cs.paddingRight)||0)+2;
     var scrollable=max>2,
-        canPrev=scrollable&&box.scrollLeft>2,
-        canNext=scrollable&&box.scrollLeft<max-2;
+        canPrev=scrollable&&box.scrollLeft>padL,
+        canNext=scrollable&&box.scrollLeft<max-padR;
     /* Drives the edge fades AND the two bone arrows, which are display:
        none without these classes — an arrow pointing at nothing is worse
        than no arrow. */
@@ -1884,11 +1897,13 @@ function renderRail(){
   }
 
   /* Category, store and brand each need to read as OBVIOUSLY scrollable
-     with a bone arrow at each end to say so. On desktop that arrow is
-     the only control — .lrscroll is overflow:hidden there — and on a
-     phone the lane is a plain touch scroller and the arrows are hidden.
-     Unlike the value rail these lanes have real ends, so sync() hides
-     an arrow rather than wrapping past one. */
+     with a bone arrow at each end to say so — at every width. On desktop
+     that arrow is the only control, since .lrscroll is overflow:hidden
+     there; on a phone the lane is ALSO a real touch scroller, so a swipe
+     and an arrow tap both work and both keep the arrows in sync (sync()
+     runs off the lane's own 'scroll' event, not off which input moved
+     it). Unlike the value rail these lanes have real ends, so sync()
+     hides an arrow rather than wrapping past one. */
   IDS.forEach(function(id){
     var box=document.getElementById(id); if(!box) return;
     box.addEventListener('scroll',function(){ sync(box); },{passive:true});

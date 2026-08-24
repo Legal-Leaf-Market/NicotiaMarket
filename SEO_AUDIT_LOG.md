@@ -1,6 +1,6 @@
 # SEO / UX Change Log
 
-Living tracker for the SEO & UX audit (started 2026-08-20). Nick has free rein to
+Living tracker for the SEO & UX audit (started 2026-08-20). Nic has free rein to
 propose changes here; nothing gets implemented until Jacob (jake@nicotiamarket.com)
 marks it **Approved**. No email/Slack integration is wired up yet — approval is
 recorded here by whoever has Jacob's go-ahead, however it reached them.

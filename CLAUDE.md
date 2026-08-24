@@ -314,8 +314,8 @@ dropdown. Set a destination with the SHIP TO pill before concluding something is
 | `AWIN_API_KEY` | **Required for `platform:'feedcsv'` stores.** One key covers every AWIN advertiser; each store then needs its own `feedId`. Without it those stores throw a clear error and fall through to their storefront-scrape fallback. |
 | `NM_CRM_WEBHOOK` | Forward `/api/subscribe` signups to an Apps Script `/exec` URL. |
 | `NM_EVENTS_WEBHOOK` | Forward `/api/track` events. |
-| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | **Required for `/community`, and strongly wanted by `/api/products`.** Upstash Redis over REST. `UPSTASH_REDIS_REST_URL` / `_TOKEN` are accepted as aliases. Without them the board returns `ok:false, reason:'no-store'`, and the scraper falls back to making the first visitor wait ~42s for a live scrape (see §7c). |
-| `NM_ADMIN_TOKEN` | **Required for `/moderation`.** Without it every `action=mod:*` route 403s, so the queue is unreachable rather than open. |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | **Required for `/community` and `/popularity`, and strongly wanted by `/api/products`.** Upstash Redis over REST. `UPSTASH_REDIS_REST_URL` / `_TOKEN` are accepted as aliases. Without them the board returns `ok:false, reason:'no-store'`, click counters are never written (the beacon still 200s), and the scraper falls back to making the first visitor wait ~42s for a live scrape (see §7c). |
+| `NM_ADMIN_TOKEN` | **Required for `/moderation` and `/popularity`.** Without it every `action=mod:*` or `action=pop:*` route 403s, so both are unreachable rather than open. |
 | `NM_BLOCKLIST` | Optional, comma-separated. Extra terms that send a post to the hold queue. Deliberately not hardcoded so it can be tuned without a deploy. |
 
 Never commit secrets. `.env*` is gitignored; see `.env.example`.
@@ -382,6 +382,51 @@ stored-XSS bug would be the whole ballgame — do not "simplify" this to `innerH
 
 ---
 
+## 11a. Popularity tracking — `/popularity`
+
+**This is our click data, not the vendors' sales data.** We have no access to
+what actually sells on any store's site — that's their business, not ours to
+see. What we *can* see and own outright is what a shopper does on Nicotia
+Market: which cards they flip, which flavour they pick, what they add to cart,
+which category/store/brand chip they click. `/popularity` rolls that up.
+
+`api/track.js` is both ends: the same `POST` beacon that has existed since
+launch (`add_to_cart`, `checkout_handoff`) now also pipelines a `ZINCRBY` per
+event into the same Upstash KV instance `/community` already requires — no
+new service, no extra cost, and no vendor ever sees this data because it never
+leaves our own KV. `GET ?action=pop:top&kind=item|dept|brand|store|event` reads
+it back, gated by the same `NM_ADMIN_TOKEN` `/moderation` uses.  `public/js/app.js`'s
+`trackGroup(ev,gid,extra)` looks the group up itself so every call site only
+ever has to hand over a gid — dept, brand and store all ride along from there,
+which is what lets `/popularity` answer "most popular category/brand/store" as
+directly as "most popular item."
+
+**Events currently wired:** `card_flip` (opening the detail face — not closing
+it back, that isn't a second look at anything), `flavor_select` /
+`strength_select` (the two dropdowns on a card), `save_toggle`, `add_to_cart`,
+`checkout_handoff`, `chip_click` (category/store/brand lane), `lane_expand`
+("See all"), `cart_open`, `board_open`. Anonymous by design, same as the
+existing beacon: event + gid/dept/brand/store/country, no id, no email.
+
+**A missing gid degrades to silence, not a thrown error** — `trackGroup()`
+looks the group up and returns early if it's gone (a stale DOM node after a
+re-render, say), and `api/track.js` skips the item-keyed writes entirely when
+`gid` is empty rather than polluting `pop:item` with a blank key. The
+dept/brand/store-level rollups still land from whatever the event *did* carry.
+
+Counts are all-time in `pop:item`/`pop:dept`/`pop:brand`/`pop:store`, plus a
+`pop:item:d:<date>` bucket per UTC day (90-day TTL) for a trend view later —
+nothing reads those buckets yet, they're just not being thrown away while
+that's still true. **Do not add a second place that increments these keys**;
+`api/track.js` is the only writer, same one-authority principle as
+`affTemplate()` in §7a.
+
+If this is worth having, it's worth having on Legal-Leaf and Herbal-Leaf too —
+port `api/track.js`'s KV pipeline and `trackGroup()`'s call sites once this
+has run long enough here to know the event list is right, not before.
+
+---
+
 ## 12. Hard "do not" list
 
 - Do NOT reintroduce a base64 engine blob (§5).
@@ -396,3 +441,5 @@ stored-XSS bug would be the whole ballgame — do not "simplify" this to `innerH
   anywhere but `affTemplate()` (§7a). Both fail silently and pay nothing.
 - Do NOT state a vendor's `ships`/`ageCheck` you have not read off their own policy.
   `guess: 1` and `ageCheck: 'unknown'` exist to say "not established" out loud (§7b).
+- Do NOT add a second place that writes `pop:*` KV keys, and do NOT present click
+  counts as vendor sales data — it is our on-site click data only (§11a).

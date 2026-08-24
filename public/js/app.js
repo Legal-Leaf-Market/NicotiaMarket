@@ -2480,6 +2480,16 @@ function track(ev,extra){
     else{ fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true}).catch(function(){}); }
   }catch(e){}
 }
+/* Every per-card interaction (flip, flavour, strength, save) shares the
+   same four facets a shopper picked it by — gid, department, brand,
+   store — so the backend can roll popularity up any of those ways
+   without the front end knowing anything about how it's aggregated.
+   Looks the group up itself so call sites only ever hand over a gid. */
+function trackGroup(ev,gid,extra){
+  var g=groupById(gid); if(!g) return;
+  track(ev,Object.assign({gid:g.gid,dept:deptOf(g),brand:g.brand||'',
+    store:g.key||'',product:g.title||g.brand||''},extra||{}));
+}
 function cartCount(){ var n=0; for(var k in CART) n+=CART[k].qty||0; return n; }
 function addToCart(it){
   var k=it.id;
@@ -2491,7 +2501,8 @@ function addToCart(it){
                 aff:it.aff||it.url||''};
   saveCart(); badges(); renderCart(); pulseCart();
   toast((it.title||'Item')+' added');
-  track('add_to_cart',{store:it.key||'',product:it.title||'',value:Number(it.price)||0});
+  track('add_to_cart',{store:it.key||'',product:it.title||'',value:Number(it.price)||0,
+    dept:deptOf(it),brand:it.brand||''});
 }
 function setQty(k,q){ q=parseInt(q,10); if(isNaN(q)||q<=0) delete CART[k];
   else CART[k].qty=q; saveCart(); badges(); renderCart(); }
@@ -2980,7 +2991,8 @@ document.addEventListener('click',function(e){
   if((el=hit('[data-save]'))){ e.preventDefault(); e.stopPropagation();
     var g=groupById(el.getAttribute('data-save'));
     if(g){ if(BOARD[g.gid]) delete BOARD[g.gid]; else BOARD[g.gid]=gitem(g);
-      saveBoard(); badges(); apply(false); }
+      saveBoard(); badges(); apply(false);
+      trackGroup('save_toggle',g.gid,{value:BOARD[g.gid]?1:0}); }
     return; }
   if((el=hit('[data-add]'))){ e.preventDefault(); e.stopPropagation();
     var gg=groupById(el.getAttribute('data-add'));
@@ -3000,17 +3012,18 @@ document.addEventListener('click',function(e){
       var pick=mine[Number(el.getAttribute('data-sadd'))]; if(pick) addToCart(pick); }
     return; }
   if((el=hit('[data-expand]'))){ e.preventDefault();
-    expandLane(el.getAttribute('data-expand')); return; }
+    var lk=el.getAttribute('data-expand');
+    expandLane(lk); track('lane_expand',{kind:lk}); return; }
   if(hit('[data-collapse]')){ e.preventDefault(); collapseLane(); return; }
 
   if((el=hit('[data-logostore]'))){ e.preventDefault();
     var k=el.getAttribute('data-logostore');
     if(F.stores[k]) delete F.stores[k]; else F.stores[k]=1;
-    F.store='all'; apply(); return; }
+    F.store='all'; apply(); track('chip_click',{kind:'store',store:k}); return; }
   if((el=hit('[data-logobrand]'))){ e.preventDefault();
     var b=el.getAttribute('data-logobrand');
     if(F.brands[b]) delete F.brands[b]; else F.brands[b]=1;
-    F.brand='all'; apply(); return; }
+    F.brand='all'; apply(); track('chip_click',{kind:'brand',brand:b}); return; }
   /* Category, same toggle-into-a-set affordance store/brand already
      have — pouch AND disposable can both be lit at once, which is the
      point of the boot default being a mix rather than a single shelf.
@@ -3022,7 +3035,8 @@ document.addEventListener('click',function(e){
     var newDept=el.getAttribute('data-logocat');
     if(F.depts[newDept]) delete F.depts[newDept]; else F.depts[newDept]=1;
     F.subs=pruneSubs(soleDept()||'all'); F.brands={};
-    leaveSpotlight(); pushDeptPath(); apply(); return; }
+    leaveSpotlight(); pushDeptPath(); apply();
+    track('chip_click',{kind:'category',dept:newDept}); return; }
   if((el=hit('[data-storefilter]'))){ e.preventDefault();
     F.stores={}; F.stores[el.getAttribute('data-storefilter')]=1;
     F.store='all';
@@ -3045,17 +3059,21 @@ document.addEventListener('click',function(e){
     var on=card.classList.toggle('on');
     var ft=card.querySelector('.front .turn');
     if(ft) ft.setAttribute('aria-expanded',on?'true':'false');
+    /* Only the flip TO the detail face is a signal worth counting —
+       flipping back isn't a second look at a different thing. */
+    if(on){ var cgid=card.getAttribute('data-gid'); if(cgid) trackGroup('card_flip',cgid); }
   }
 });
 
 document.addEventListener('change',function(e){
   var t=e.target;
-  if(t.matches('[data-flav]')){ SELV[t.getAttribute('data-flav')]={f:parseInt(t.value,10)||0,v:0};
-    saveSelv(); refreshCard(t.getAttribute('data-flav')); return; }
+  if(t.matches('[data-flav]')){ var fgid=t.getAttribute('data-flav');
+    SELV[fgid]={f:parseInt(t.value,10)||0,v:0};
+    saveSelv(); refreshCard(fgid); trackGroup('flavor_select',fgid); return; }
   if(t.matches('[data-str]')){ var gid=t.getAttribute('data-str');
     var s=SELV[gid]||{f:0,v:0};
     SELV[gid]={f:parseInt(s.f,10)||0, v:parseInt(t.value,10)||0};
-    saveSelv(); refreshCard(gid); return; }
+    saveSelv(); refreshCard(gid); trackGroup('strength_select',gid); return; }
   if(t.matches('[data-qtyset]')){ setQty(t.getAttribute('data-qtyset'),t.value); return; }
 });
 
@@ -3172,8 +3190,8 @@ lrBackdrop.addEventListener('click',collapseLane);
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){ closeZoom(); collapseLane(); }
 });
-document.getElementById('openBoard').addEventListener('click',function(){renderBoard();drawer('board',true);});
-document.getElementById('openList').addEventListener('click',function(){renderCart();drawer('list',true);});
+document.getElementById('openBoard').addEventListener('click',function(){renderBoard();drawer('board',true);track('board_open',{});});
+document.getElementById('openList').addEventListener('click',function(){renderCart();drawer('list',true);track('cart_open',{});});
 document.getElementById('acctBtn').addEventListener('click',function(){
   if(isLoggedIn()){ if(confirm('Sign out of Nicotia Market?')) signOut(); }
   else { setAuthMode('login'); openAuth(); }});

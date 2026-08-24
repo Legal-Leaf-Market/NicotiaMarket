@@ -780,7 +780,6 @@ header.top{position:sticky;top:0;z-index:50;
    the loudest thing in the row rather than a quiet aid to it. Full
    saturation and full opacity on hover, tap and keyboard focus — the
    moment a reader is actually pointed at one, it should be unmissable.
-
    Hidden — not just faded — at a lane's own end, because unlike the
    value rail these lanes do not loop and there is genuinely nothing
    that way. .can-prev/.can-next are already computed per lane for the

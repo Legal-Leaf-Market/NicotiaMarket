@@ -1770,67 +1770,29 @@ function renderRail(){
   }
 }
 
-/* WHEEL REDIRECT — PICKER LANES ONLY, NEVER THE RAIL.
+/* THERE IS NO MOUSE-GESTURE SCROLLING LEFT ON THIS PAGE, and that is
+   the conclusion of a long argument rather than an oversight.
 
-   A vertical wheel over a horizontal strip normally does nothing to it,
-   which reads as "this doesn't scroll" even though it does. So the
-   lanes take the gesture, hand it back at their own ends, and a mouse
-   user can wheel through Category / Store / Brand.
+   wheelToScroll() turned a vertical wheel over a horizontal strip into
+   horizontal scroll. It was walked back twice — once narrowed to hand
+   the gesture back at the box's ends (#25), once removed outright (#26)
+   after the looping value rail proved the hand-back unreachable, then
+   restored for the lanes only (#29) with the scroll-behavior:smooth
+   read-back bug fixed. dragToScroll() gave click-and-drag alongside it.
 
-   NOT THE RAIL. The rail LOOPS — its wrap subtracts half the width at
-   the halfway mark, so scrollLeft never reaches scrollWidth minus
-   clientWidth and the hand-back below is unreachable there by
-   construction. That is what made the middle of the front page swallow
-   every tick forever, and why the rail is overflow:hidden with arrows
-   instead. Do not call this on a looping container.
+   Both are gone now because both carousels stopped being scrollers on
+   desktop: the value rail moves by its arrows (railNudge) and the three
+   picker lanes by theirs (laneNudge), and .rail / .lrscroll are both
+   overflow:hidden above the phone breakpoint. A drag on a box that does
+   not scroll is a control nobody can find, and the wheel belongs to the
+   page.
 
-   WHY THE END CHECK USED TO FAIL, which is the part worth keeping.
-   #25 added exactly the guard below and the lanes still felt sticky,
-   because .lrscroll carries scroll-behavior:smooth. Assigning scrollLeft
-   started an ANIMATION, so the next tick 70ms later read a mid-flight
-   value still short of the end, decided there was room, and swallowed
-   again — a lane could not report reaching its end during a burst of
-   wheeling, which is the only time it matters. scrollTo with an explicit
-   behavior:'auto' overrides that CSS, so the position lands at once and
-   the next tick reads the truth. The wheel supplies its own increments;
-   it never wanted smoothing on top. */
-function wheelToScroll(box){
-  box.addEventListener('wheel',function(e){
-    /* A trackpad's real horizontal swipe is already doing the right
-       thing — leave it entirely alone. */
-    if(Math.abs(e.deltaY)<=Math.abs(e.deltaX)) return;
-    var max=box.scrollWidth-box.clientWidth;
-    if(max<=0) return;                                  /* nothing to scroll */
-    var at=box.scrollLeft;
-    if(e.deltaY<0 && at<=0) return;                     /* at the left end */
-    if(e.deltaY>=0 && at>=max-1) return;                /* at the right end */
-    e.preventDefault();
-    box.scrollTo({left:Math.max(0,Math.min(max,at+e.deltaY)), behavior:'auto'});
-  },{passive:false});
-}
-function dragToScroll(box){
-  var down=false, moved=false, startX=0, startLeft=0;
-  box.addEventListener('mousedown',function(e){
-    down=true; moved=false; startX=e.clientX; startLeft=box.scrollLeft;
-    box.classList.add('dragging');
-  });
-  window.addEventListener('mousemove',function(e){
-    if(!down) return;
-    var dx=e.clientX-startX;
-    if(Math.abs(dx)>3) moved=true;
-    box.scrollLeft=startLeft-dx;
-  });
-  window.addEventListener('mouseup',function(){
-    if(!down) return;
-    down=false; box.classList.remove('dragging');
-    /* Swallow the click a drag ends on, or letting go over a card/chip
-       would also fire its flip or filter toggle. */
-    if(moved){
-      var swallow=function(e){ e.stopPropagation(); box.removeEventListener('click',swallow,true); };
-      box.addEventListener('click',swallow,true);
-    }
-  });
-}
+   On a phone both are real touch scrollers and need no JavaScript.
+
+   If a wheel affordance is ever wanted again: it must not
+   preventDefault() on a looping container, and it must not read
+   scrollLeft back from a container with scroll-behavior:smooth to decide
+   whether it has reached its end. Those are the two bugs, in order. */
 
 /* Attached once — #rail survives every re-render, so binding inside
    renderRail() would stack a new listener on every shuffle. */
@@ -1914,25 +1876,19 @@ function dragToScroll(box){
     var scrollable=max>2,
         canPrev=scrollable&&box.scrollLeft>2,
         canNext=scrollable&&box.scrollLeft<max-2;
-    /* The only affordance now — no arrow buttons any more, three
-       independent lanes of them was exactly the "real estate" this row
-       was asked to shed. Wheel and drag (below) plus native touch pick
-       up the slack. */
+    /* Drives the edge fades AND the two bone arrows, which are display:
+       none without these classes — an arrow pointing at nothing is worse
+       than no arrow. */
     wrap.classList.toggle('can-prev',canPrev);
     wrap.classList.toggle('can-next',canNext);
   }
 
   /* Category, store and brand each need to read as OBVIOUSLY scrollable
-     with no arrow buttons to say so — a mouse user's instinct is to
-     reach for the wheel, and a vertical wheel gesture over a horizontal
-     strip normally does nothing (or scrolls the page underneath it,
-     which reads as "this doesn't scroll" even though it does).
-     wheelToScroll() redirects the vertical wheel delta into scrollLeft
-     and hands the gesture back at either end, and dragToScroll() gives
-     a plain click-and-drag for the mouse users who don't reach for the
-     wheel. A trackpad's native horizontal swipe is left alone. These
-     lanes have real ends, which is what makes the hand-back work here
-     and is exactly what the rail lacks — see wheelToScroll(). */
+     with a bone arrow at each end to say so. On desktop that arrow is
+     the only control — .lrscroll is overflow:hidden there — and on a
+     phone the lane is a plain touch scroller and the arrows are hidden.
+     Unlike the value rail these lanes have real ends, so sync() hides
+     an arrow rather than wrapping past one. */
   IDS.forEach(function(id){
     var box=document.getElementById(id); if(!box) return;
     box.addEventListener('scroll',function(){ sync(box); },{passive:true});
@@ -1941,8 +1897,43 @@ function dragToScroll(box){
     /* Logos arrive as images, so the strip's width changes after the
        chips do. ResizeObserver catches that; the observers above do not. */
     if(window.ResizeObserver) new ResizeObserver(function(){ sync(box); }).observe(box);
-    wheelToScroll(box); dragToScroll(box);
     sync(box);
+  });
+
+  /* THE ARROWS ARE THE DESKTOP CONTROL, and the only one.
+
+     No wheel hijack and no drag — see the note above the rail's own
+     nudge for why both are gone. On desktop .lrscroll is overflow:hidden
+     and these arrows are the whole control; on a phone the lane is a
+     plain touch scroller and needs no JS at all.
+
+     These lanes DO have ends, unlike the looping value rail, so this
+     clamps rather than wrapping and sync() hides an arrow with nothing
+     behind it. behavior:'auto' rather than the CSS smooth, so a second
+     click lands from the true position instead of mid-animation — the
+     same trap that made the old wheel guard fail to notice its end. */
+  function laneNudge(box, dir){
+    var max=box.scrollWidth-box.clientWidth;
+    if(max<=0) return;
+    var step=Math.max(box.clientWidth*0.8, 120);
+    var to=Math.max(0, Math.min(max, box.scrollLeft + dir*step));
+    var still=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    box.scrollTo({left:to, behavior: still?'auto':'smooth'});
+    /* scrollTo is async even at behavior:auto in some engines, and the
+       arrows must vanish the moment an end is reached rather than one
+       interaction later. */
+    setTimeout(function(){ sync(box); }, 60);
+    setTimeout(function(){ sync(box); }, 420);
+  }
+  /* Delegated: the chips inside a lane are re-rendered constantly, and
+     binding per button would stack listeners on every filter change.
+     The buttons themselves live in .lrwrap, outside the re-rendered
+     .lrscroll, but one handler is still the cheaper contract. */
+  document.addEventListener('click',function(e){
+    var btn=e.target&&e.target.closest?e.target.closest('[data-lnudge]'):null;
+    if(!btn) return;
+    var box=document.getElementById(btn.getAttribute('data-lane-for'));
+    if(box) laneNudge(box, Number(btn.getAttribute('data-lnudge'))||1);
   });
 
   window.addEventListener('resize',function(){

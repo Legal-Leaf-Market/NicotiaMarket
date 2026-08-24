@@ -655,6 +655,15 @@ header.top{position:sticky;top:0;z-index:50;
    No arrow buttons any more (see the scroll IIFE in app.js): three
    lanes' worth of them was exactly the real estate this row shed. */
 .lrhint{font-style:italic;color:var(--dim);opacity:.8}
+/* The hint has to be TRUE on both sides of the breakpoint: desktop has
+   arrows and no scrolling, a phone has scrolling and no arrows. One
+   sentence covering both would be wrong on both. */
+.lrhint .on-wide{display:inline}
+.lrhint .on-narrow{display:none}
+@media(max-width:700px){
+  .lrhint .on-wide{display:none}
+  .lrhint .on-narrow{display:inline}
+}
 .lrclear{margin-left:auto;background:none;border:none;color:var(--gold);cursor:pointer;
   font-size:11.5px;letter-spacing:.04em;text-decoration:underline;padding:0}
 
@@ -679,10 +688,20 @@ header.top{position:sticky;top:0;z-index:50;
    a separate overlay: the exact same nodes stay live, so a click still
    runs through the one delegated handler in app.js and renderPickerRow's
    normal re-render keeps working without knowing expansion exists. */
-.lrexpand{background:none;border:none;color:var(--dim);cursor:pointer;padding:2px;
-  display:flex;align-items:center;transition:color .16s}
-.lrexpand svg{width:14px;height:14px}
-.lrexpand:hover{color:var(--gold)}
+/* IT SAYS WHAT IT DOES. This was a 14px bare icon with the answer only
+   in a title attribute, and nobody could tell it opened the whole row.
+   Now a labelled pill: the words carry it, the corner-brackets glyph
+   just seconds them. */
+.lrexpand{background:var(--chip);border:1px solid var(--line);color:var(--muted);
+  cursor:pointer;padding:3px 9px 3px 10px;border-radius:999px;
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;white-space:nowrap;
+  transition:color .16s,border-color .16s,background .16s,transform .12s}
+.lrexpand svg{width:11px;height:11px;flex:none}
+.lrexpand:hover{color:#160c06;background:var(--gold);border-color:var(--gold);
+  transform:translateY(-1px)}
+.lrexpand:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .lrcollapse{display:none;background:none;border:none;color:var(--dim);cursor:pointer;
   font-size:22px;line-height:1;padding:0 2px;margin-left:auto;transition:color .16s}
 .lrcollapse:hover{color:var(--gold)}
@@ -709,21 +728,70 @@ header.top{position:sticky;top:0;z-index:50;
    as "the pills" once the shelf buttons and the subcategory row were
    both already gone; a plain image with a caption doesn't. Scrolls
    three ways with no arrow buttons to say so: the edge fades below, a
-   click-and-drag (dragToScroll() in app.js), touch, and shift+wheel,
-   which the browser gives any horizontally scrollable box for free. A
-   plain vertical wheel belongs to the page and is left alone — taking
-   it is what made the site feel stuck. */
+   the bone arrows on desktop and a thumb on a phone. */
 .lrwrap{position:relative}
 /* padding, not margin: overflow-x:auto clips, and the selected chip's
    ring, outer glow and half-off-the-plate tick all sit OUTSIDE the
    chip's own box. At 2px/4px the tick came out sliced. */
-.lrscroll{display:flex;gap:16px;overflow-x:auto;padding:9px 8px 6px;
-  scrollbar-width:none;-ms-overflow-style:none;cursor:grab;
-  scroll-behavior:smooth;scroll-snap-type:x proximity;user-select:none}
+.lrscroll{display:flex;gap:16px;padding:9px 8px 6px;
+  scrollbar-width:none;-ms-overflow-style:none;
+  scroll-behavior:smooth;user-select:none;
+  /* PHONE DEFAULT: a real touch scroller. A thumb on glass is the one
+     input that moves a horizontal row without any instruction, so it
+     keeps it — the desktop block below is what takes it away. */
+  overflow-x:auto}
 .lrscroll::-webkit-scrollbar{display:none;width:0;height:0}
-.lrscroll>*{scroll-snap-align:start}
-.lrscroll.dragging{cursor:grabbing;scroll-behavior:auto}
 @media(prefers-reduced-motion:reduce){.lrscroll{scroll-behavior:auto}}
+
+/* ============ DESKTOP: ARROWS, NOT SCROLLING ============
+   Above the stacking breakpoint these lanes stop being scrollers. A
+   mouse has no good gesture for a horizontal row: the wheel had to be
+   hijacked to work at all, and hijacking it is what made the page feel
+   stuck twice over (see wheelToScroll's grave in app.js). So on desktop
+   the lanes get the same treatment the value rail got — overflow:hidden,
+   moved only by the arrows, which say what they do without a caption.
+
+   overflow:hidden still leaves the box scrollable from script, which is
+   what laneNudge() uses. scroll-snap is dropped with the scrolling: it
+   fought the exact arrow steps. */
+@media(min-width:701px){
+  .lrscroll{overflow:hidden}
+  .lrwrap .lanearrow{display:grid}
+}
+@media(max-width:700px){
+  /* touch scrolling stays; snap makes a thumb-flick land on a chip */
+  .lrscroll{scroll-snap-type:x proximity}
+  .lrscroll>*{scroll-snap-align:start}
+}
+
+/* THE LANE ARROWS. Same #boneArrow as the value rail, so both carousels
+   are driven by one mark rather than two that can drift.
+
+   50% opacity at rest, deliberately: these sit over the chips
+   themselves, and three lanes of full-strength buttons would shout
+   louder than the logos they are there to help you reach. Full opacity
+   on hover and on keyboard focus.
+
+   Hidden — not just faded — at a lane's own end, because unlike the
+   value rail these lanes do not loop and there is genuinely nothing
+   that way. .can-prev/.can-next are already computed per lane for the
+   edge fades, so the arrows ride the same two classes. */
+.lanearrow{display:none;position:absolute;top:calc(50% - 3px);
+  transform:translateY(-50%);z-index:3;
+  width:36px;height:36px;border-radius:50%;cursor:pointer;place-items:center;
+  background:var(--chip);border:1px solid var(--glass-line);color:var(--gold);
+  opacity:.5;transition:opacity .16s,transform .12s,background .16s}
+.lanearrow.prev{left:-4px}
+.lanearrow.next{right:-4px}
+.lanearrow svg{width:24px;height:11px;pointer-events:none}
+.lanearrow.prev svg{transform:scaleX(-1)}
+.lanearrow:hover{opacity:1;background:var(--gold);color:#160c06;
+  transform:translateY(-50%) scale(1.08)}
+.lanearrow:focus-visible{opacity:1;outline:2px solid var(--gold);outline-offset:2px}
+.lrwrap:not(.can-prev) .lanearrow.prev,
+.lrwrap:not(.can-next) .lanearrow.next{display:none}
+/* the expanded lane is a wrapping grid — nothing to step through */
+.lrlane.expanded .lanearrow{display:none}
 
 /* Edge fades, so a cut-off logo reads as "more this way" rather than as
    a clipped image. Pointer-events off or they would eat clicks on the

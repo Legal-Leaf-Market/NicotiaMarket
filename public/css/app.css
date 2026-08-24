@@ -292,8 +292,26 @@ header.top{position:sticky;top:0;z-index:50;
    ------------------------------------------------------------
    Sits above the safe-area inset so it clears the iPhone home bar, and
    below the drawers' z-index so it can never cover a checkout button.
-   ============================================================ */
-.installhint{position:fixed;left:12px;right:12px;z-index:110;
+
+   A compact corner card everywhere, not a bar spanning the phone's
+   full width — it used to run edge-to-edge on mobile (left:12px;
+   right:12px), which read as a full-width interruption rather than
+   the small aside it's meant to be. Anchored to the right like the
+   desktop version always was, just narrower: ~half the viewport
+   there, capped so it never gets wide enough to look like the old
+   bar again. min-width keeps the icon + "Dismiss" from colliding on
+   the narrowest phones, where 50vw alone would be too tight.
+
+   Android/desktop Chrome's beforeinstallprompt variant adds a fourth
+   child, the "Install" pill, and four items across a half-width card
+   don't fit on one line at any readable font size — the pill and the
+   subtitle just collided. flex-wrap plus `order` reflows THAT variant
+   only (the iOS hint below has no .ih-go, so it never wraps) onto two
+   rows: icon + copy + dismiss stay together on top since they're the
+   ones that need to read as one line, and the button gets its own
+   full-width row under them rather than being squeezed sideways. */
+.installhint{position:fixed;right:12px;left:auto;z-index:110;
+  width:50vw;min-width:210px;max-width:280px;flex-wrap:wrap;
   bottom:calc(12px + env(safe-area-inset-bottom,0px));
   display:flex;align-items:center;gap:12px;padding:12px 14px;
   border-radius:var(--r);border:1px solid var(--glass-line);
@@ -302,19 +320,24 @@ header.top{position:sticky;top:0;z-index:50;
   animation:ihUp .28s cubic-bezier(.2,.7,.3,1)}
 @keyframes ihUp{from{transform:translateY(120%);opacity:0}to{transform:none;opacity:1}}
 @media(prefers-reduced-motion:reduce){.installhint{animation:none}}
-.installhint img{flex:none;border-radius:9px}
-.ih-copy{flex:1;min-width:0;line-height:1.35}
+.installhint img{flex:none;border-radius:9px;order:1}
+.ih-copy{flex:1;min-width:0;line-height:1.35;order:2}
 .ih-copy b{display:block;font-family:var(--display);font-weight:800;font-size:14px;
   color:var(--text);letter-spacing:-.01em}
 .ih-copy span{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
 .ih-copy span b{display:inline;font-family:var(--sans);font-size:11.5px;color:var(--gold)}
-.ih-go{flex:none;font-family:var(--sans);font-weight:700;font-size:12.5px;cursor:pointer;
+.ih-go{flex:1 1 100%;order:4;margin-top:2px;text-align:center;
+  font-family:var(--sans);font-weight:700;font-size:12.5px;cursor:pointer;
   border:0;border-radius:999px;padding:9px 16px;background:var(--ember);color:#160c06}
 .ih-go:hover{background:var(--gold)}
-.ih-x{flex:none;background:none;border:0;color:var(--dim);font-size:22px;line-height:1;
+.ih-x{flex:none;order:3;background:none;border:0;color:var(--dim);font-size:22px;line-height:1;
   cursor:pointer;padding:0 2px;align-self:flex-start}
 .ih-x:hover{color:var(--text)}
-@media(min-width:700px){.installhint{left:auto;right:16px;max-width:390px}}
+@media(min-width:700px){
+  .installhint{right:16px;width:auto;min-width:0;max-width:390px;flex-wrap:nowrap}
+  .installhint img,.ih-copy,.ih-x{order:0}
+  .ih-go{flex:none;order:0;margin-top:0}
+}
 
 /* Why the shelf is thinner than the catalogue. Amber rather than red:
    this is an enforced rule working correctly, not an error. */
@@ -671,7 +694,20 @@ header.top{position:sticky;top:0;z-index:50;
    syncs their scroll positions; that is the whole point after the
    merged single strip read as one carousel with three tabs in it. */
 .lrlanes{display:flex;gap:22px;flex-wrap:wrap}
-.lrlane{flex:1 1 240px;min-width:0}
+/* Category, Store and Brand are flex siblings on the same line, so
+   align-items:stretch (the flex default) already sizes all three
+   .lrlane boxes to the tallest one. That alone did nothing visible
+   before this: .lrlane laid its head and .lrwrap out in normal block
+   flow, so the extra stretched height just became dead space below a
+   shorter lane's own content instead of reaching .lrwrap — leaving
+   Store and Brand's arrows centred on THEIR box while Category's, with
+   a two-line chip name, sat centred lower on a taller one. Turning
+   .lrlane into a column flex container and letting .lrwrap claim the
+   leftover space (below) is what makes the stretch actually land: all
+   three .lrwrap boxes end up the same height as Category's, so the
+   arrows — centred within their own .lrwrap — line up across all three
+   lanes no matter which one's chip names wrap onto a second line. */
+.lrlane{flex:1 1 240px;min-width:0;display:flex;flex-direction:column}
 .lrlane[hidden]{display:none}
 .lrlane-head{display:flex;align-items:center;gap:6px;margin-bottom:6px}
 .lrlane-label{display:block;font-family:var(--sans);font-weight:700;font-size:10px;
@@ -724,7 +760,17 @@ header.top{position:sticky;top:0;z-index:50;
    as "the pills" once the shelf buttons and the subcategory row were
    both already gone; a plain image with a caption doesn't. Moved by the
    bone arrows at every width, and by a thumb on a phone as well. */
-.lrwrap{position:relative}
+/* flex:1 is the half of the fix that lets .lrwrap actually claim the
+   height .lrlane's stretch gives it (see .lrlane above); align-items
+   centres the one in-flow child (.lrscroll) inside that taller box so
+   a one-line lane's chips sit level with a two-line lane's, rather
+   than pinned to the top with slack underneath. The arrows are
+   position:absolute and unaffected by either. */
+.lrwrap{position:relative;display:flex;align-items:center;flex:1}
+/* Expanded is a full-viewport grid of everything in the lane, not a
+   short row that needs vertical centring — top-align it like the grid
+   always did, or a lane with only a few chips would float mid-panel. */
+.lrlane.expanded .lrwrap{align-items:flex-start}
 /* padding, not margin: overflow-x:auto clips, and the selected chip's
    ring, outer glow and half-off-the-plate tick all sit OUTSIDE the
    chip's own box. At 2px/4px the tick came out sliced. */

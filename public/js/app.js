@@ -2312,24 +2312,49 @@ function deptFromPath(){
    department's OWN url — pointing all six at "/" told Google they were
    the homepage wearing a hat, which is why none of them could rank. */
 function setRouteMeta(){
-  var d=soleDept()||'all', s=DEPT_SEO[d]||DEPT_SEO.all;
-  var path=d==='all'?'/':('/'+DEPT_PATH[d]);
-  document.title=s.t;
   var set=function(sel,attr,val){
     var el=document.querySelector(sel); if(el) el.setAttribute(attr,val);
   };
-  set('meta[name="description"]','content',s.d);
+  var title, desc, path;
+
+  /* A SPOTLIGHT DESCRIBES ITSELF. Now that it has a crawlable URL there
+     is something for this to be about, and pointing its canonical at
+     the homepage would undo the whole point of giving it one. Title and
+     description come off the SPOTLIGHT entry rather than being written
+     twice — that copy is already the page's own argument. */
+  var r=currentRoute();
+  if(r.view==='spotlight' && SPOTLIGHT[r.key]){
+    var c=SPOTLIGHT[r.key], st=SMAP[r.key]||{};
+    var name=st.name||r.key;
+    title = c.headline+' · '+name+' | Nicotia Market';
+    /* The blurb is a paragraph; a description wants ~160 characters, cut
+       on a word rather than mid-word. */
+    desc = c.blurb.length>158
+      ? c.blurb.slice(0,158).replace(/\s+\S*$/,'')+'…'
+      : c.blurb;
+    path = spotPath(r.key);
+  }else{
+    var d=soleDept()||'all', sq=DEPT_SEO[d]||DEPT_SEO.all;
+    title=sq.t; desc=sq.d; path = d==='all'?'/':('/'+DEPT_PATH[d]);
+  }
+
+  document.title=title;
+  set('meta[name="description"]','content',desc);
   set('link[rel="canonical"]','href','https://nicotiamarket.com'+path);
-  set('meta[property="og:title"]','content',s.t);
-  set('meta[property="og:description"]','content',s.d);
+  set('meta[property="og:title"]','content',title);
+  set('meta[property="og:description"]','content',desc);
   set('meta[property="og:url"]','content','https://nicotiamarket.com'+path);
 }
 
 /* Keep the address bar honest when the shelf changes, so a department
-   is linkable and the back button steps through shelves. Spotlights own
-   the hash, so this only ever rewrites the path. */
+   is linkable and the back button steps through shelves.
+
+   This used to bail out on a spotlight, back when a spotlight was a
+   hash and the path underneath it was still the shelf's. A spotlight is
+   a path now, so leaveSpotlight() sets the shelf path itself and this
+   finds it already correct — no guard needed, and a guard here would
+   strand a reader on /store/* after they picked a department. */
 function pushDeptPath(){
-  if(currentRoute().view==='spotlight') return;
   var d=soleDept()||'all', want=d==='all'?'/':('/'+DEPT_PATH[d]);
   if(!want||location.pathname===want) return;
   try{ history.pushState({depts:F.depts},'',want+location.search); }catch(e){}
@@ -2352,7 +2377,12 @@ function bootDepts(){
    on every apply(). Nothing extra to sync here now that the shelf is
    chosen from that strip instead of a row of tab buttons. */
 window.addEventListener('popstate',function(){
-  F.depts=bootDepts(); F.subs=pruneSubs(soleDept()||'all'); apply();
+  /* Back and Forward can now cross a spotlight boundary, because the
+     spotlight is a path. route() owns that swap and falls through to
+     apply() on the mall side, so it replaces the bare apply() that was
+     enough while only shelves lived in the path. */
+  F.depts=bootDepts(); F.subs=pruneSubs(soleDept()||'all');
+  route();
 });
 
 /* The hero's three stats went with the hero, and heroStats() with them,
@@ -3141,9 +3171,34 @@ document.getElementById('fscrim').addEventListener('click',function(){toggleFilt
 /* ============================================================
    ROUTING + SPOTLIGHT
    ============================================================ */
+/* A SPOTLIGHT IS A REAL PATH NOW: /store/nicokick, not #/store/nicokick.
+
+   A hash never reaches the server, so the old form was invisible to
+   every crawler and every link unfurler — the department shelves were
+   given real paths for exactly this reason and spotlights never got the
+   same treatment. vercel.json rewrites /store/:key to this document and
+   the key is read back off the path here, the same shape deptFromPath()
+   already uses.
+
+   The hash form is still READ, because links to it are already out in
+   the world. migrateSpotHash() below rewrites them to the path on
+   arrival, so nothing has to keep working in two shapes past boot. */
+var SPOT_PATH=/^\/store\/([a-z0-9_-]+)\/?$/i;
 function currentRoute(){
-  var m=(location.hash||'').match(/^#\/store\/([a-z0-9_-]+)/i);
-  return m ? {view:'spotlight', key:m[1]} : {view:'mall'};
+  var m=String(location.pathname||'').match(SPOT_PATH);
+  if(m) return {view:'spotlight', key:m[1].toLowerCase()};
+  var h=(location.hash||'').match(/^#\/store\/([a-z0-9_-]+)/i);
+  return h ? {view:'spotlight', key:h[1].toLowerCase()} : {view:'mall'};
+}
+function spotPath(key){ return '/store/'+encodeURIComponent(key); }
+
+/* Old shared links keep working, once. Rewritten in place rather than
+   redirected, so the address bar and any subsequent share carry the
+   crawlable form and the Back button has nothing odd in it. */
+function migrateSpotHash(){
+  var h=(location.hash||'').match(/^#\/store\/([a-z0-9_-]+)/i);
+  if(!h) return;
+  try{ history.replaceState({},'',spotPath(h[1].toLowerCase())+location.search); }catch(e){}
 }
 
 /* Leaving a spotlight is part of picking a department.
@@ -3159,7 +3214,15 @@ function currentRoute(){
    drains. Running twice is harmless — it only toggles `hidden`. */
 function leaveSpotlight(){
   if(currentRoute().view!=='spotlight') return false;
-  location.hash='';
+  /* Drop a legacy hash without adding a history entry for it, then push
+     the shelf the reader has just chosen. pushDeptPath() runs right
+     after this in every caller and finds the path already correct, so
+     leaving a spotlight costs one history entry, not two. */
+  if(location.hash){
+    try{ history.replaceState({},'',location.pathname+location.search); }catch(e){}
+  }
+  var d=soleDept()||'all', want=d==='all'?'/':('/'+DEPT_PATH[d]);
+  try{ history.pushState({depts:F.depts},'',want+location.search); }catch(e){}
   route();
   return true;
 }
@@ -3174,16 +3237,35 @@ function route(){
        holds the same rule for anything that renders it later. */
     var pr=document.getElementById('pickerRow'); if(pr) pr.hidden=true;
     renderSpotlight(r.key);
+    setRouteMeta();          /* apply() does not run here, so this must */
     window.scrollTo(0,0);
   }else{
     spot.hidden=true; mall.hidden=false;
     if(ALL.length) apply();
   }
   document.querySelectorAll('[data-route]').forEach(function(a){
-    a.setAttribute('aria-current', a.getAttribute('href')===location.hash ? 'page':'false');
+    var href=a.getAttribute('href')||'';
+    a.setAttribute('aria-current',
+      (href===location.pathname || href===location.hash) ? 'page':'false');
   });
 }
 window.addEventListener('hashchange',route);
+
+/* IN-PAGE NAVIGATION TO A SPOTLIGHT. The link is a real href, so it
+   works with no JS, opens in a new tab on middle-click and is a real
+   crawlable link — this only saves the full reload for an ordinary
+   left-click. Modified clicks are left to the browser. */
+document.addEventListener('click',function(e){
+  if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey) return;
+  var a=e.target&&e.target.closest?e.target.closest('a[href]'):null;
+  if(!a||a.target||a.hasAttribute('download')) return;
+  var href=a.getAttribute('href')||'';
+  if(!SPOT_PATH.test(href)) return;
+  e.preventDefault();
+  if(location.pathname===href) return;
+  try{ history.pushState({},'',href); }catch(err){ location.assign(href); return; }
+  route();
+});
 
 /* Brand-shelf spotlight. Reuses card() and the grouping engine rather
    than inventing a second product renderer — Nicokick's 410 pouches
@@ -3234,7 +3316,7 @@ function renderBrandSpotlight(key, cfg, st){
             'onerror="this.parentNode.remove();">'
           : '<span class="spotword">'+esc(st.name||key)+'</span>')+
       '</div>'+
-      '<a class="sbacklink" href="#/">&larr; All stores</a>'+
+      '<a class="sbacklink" href="/">&larr; All stores</a>'+
       '<header class="shero">'+
         '<p class="eyebrow spot-eyebrow">'+esc(cfg.eyebrow)+'</p>'+
         '<h1>'+esc(cfg.headline)+'</h1>'+
@@ -3317,7 +3399,7 @@ function renderSpotlight(key){
   }).join('');
 
   el.innerHTML='<div class="shell">'+
-    '<a class="sbacklink" href="#/">&larr; All stores</a>'+
+    '<a class="sbacklink" href="/">&larr; All stores</a>'+
     '<header class="shero"><p class="eyebrow">'+esc(cfg.eyebrow)+'</p>'+
       '<h1>'+esc(cfg.headline)+'</h1><p class="sblurb">'+esc(cfg.blurb)+'</p>'+
       '<div class="sstats"><div><b>'+mine.length+'</b><span>products</span></div>'+
@@ -3737,6 +3819,10 @@ if('serviceWorker' in navigator){
 spawnLeaves(document.querySelector('.bgscape'), 64);
 loadLoc(); restoreUserLoc(); locPillUI(); setAgeCopy(); setWarn(); setNotices();
 loadSelv(); loadCart(); loadBoard(); badges(); accountUI(); setAuthMode('signup'); renderCart();
+/* An old #/store/* link becomes /store/* before anything reads the
+   route, so currentRoute(), setRouteMeta() and route() below all see
+   one shape rather than each having to know about both. */
+migrateSpotHash();
 /* The path picks the opening shelf BEFORE the first render, so /pouches
    opens on Pouches instead of dumping the visitor into Everything —
    and the homepage opens on the curated pouch+disposable mix instead

@@ -37,11 +37,22 @@ const MIME = {
 }
 
 // ---- routing, read from the single source of truth --------------------------
-const REWRITES = new Map()
+// Rewrites are compiled to regexes rather than looked up by string, because
+// a source may carry a :param segment (Vercel's own syntax) — "/store/:key"
+// has to match "/store/nicokick". Still parsing the real vercel.json, not
+// keeping a second list: what is compiled here is whatever that file says.
+const REWRITES = []
 const REDIRECTS = new Map()
+function compileSource(src) {
+  const body = src.split("/").map(seg =>
+    seg.startsWith(":") ? "[^/]+" : seg.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  ).join("/")
+  return new RegExp("^" + body + "/?$")
+}
 try {
   const cfg = JSON.parse(await readFile(join(ROOT, "vercel.json"), "utf8"))
-  for (const r of cfg.rewrites || []) REWRITES.set(r.source, r.destination)
+  for (const r of cfg.rewrites || [])
+    REWRITES.push({ re: compileSource(r.source), destination: r.destination })
   for (const r of cfg.redirects || []) {
     // vercel.json allows a capture group like "/(index.html)"; local preview
     // only needs the literal form, so strip the parens.
@@ -140,7 +151,8 @@ const server = createServer(async (req, res) => {
     }
 
     // 3) rewrites (clean URL -> file)
-    if (REWRITES.has(path)) path = REWRITES.get(path)
+    const hit = REWRITES.find(r => r.re.test(path))
+    if (hit) path = hit.destination
 
     // 4) static
     await serveStatic(res, path)
@@ -155,5 +167,5 @@ const server = createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`[dev] Nicotia Market dev server -> http://localhost:${PORT}`)
-  console.log(`[dev] routes from vercel.json: ${REWRITES.size} rewrites, ${REDIRECTS.size} redirects`)
+  console.log(`[dev] routes from vercel.json: ${REWRITES.length} rewrites, ${REDIRECTS.size} redirects`)
 })

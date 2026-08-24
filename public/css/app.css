@@ -651,17 +651,13 @@ header.top{position:sticky;top:0;z-index:50;
 .lrhead h2{font-family:var(--display);font-weight:900;font-size:13.5px;
   letter-spacing:.06em;text-transform:uppercase;margin:0}
 /* The "how do I know this scrolls" hint — italic and dim on purpose, a
-   caption rather than a label, but present without hovering for it.
-   No arrow buttons any more (see the scroll IIFE in app.js): three
-   lanes' worth of them was exactly the real estate this row shed. */
+   caption rather than a label, but present without hovering for it. */
 .lrhint{font-style:italic;color:var(--dim);opacity:.8}
-/* The hint has to be TRUE on both sides of the breakpoint: desktop has
-   arrows and no scrolling, a phone has scrolling and no arrows. One
-   sentence covering both would be wrong on both. */
-.lrhint .on-wide{display:inline}
+/* The hint has to be TRUE on both sides of the breakpoint. Both now have
+   arrows, so "use the arrows" is unconditional; only whether swiping is
+   ALSO true is a phone-only fact, so only that clause is conditional. */
 .lrhint .on-narrow{display:none}
 @media(max-width:700px){
-  .lrhint .on-wide{display:none}
   .lrhint .on-narrow{display:inline}
 }
 .lrclear{margin-left:auto;background:none;border:none;color:var(--gold);cursor:pointer;
@@ -726,9 +722,8 @@ header.top{position:sticky;top:0;z-index:50;
    No card, no border, no background — just the logo (bigger) and a
    label underneath. The bordered box around every item was what read
    as "the pills" once the shelf buttons and the subcategory row were
-   both already gone; a plain image with a caption doesn't. Scrolls
-   three ways with no arrow buttons to say so: the edge fades below, a
-   the bone arrows on desktop and a thumb on a phone. */
+   both already gone; a plain image with a caption doesn't. Moved by the
+   bone arrows at every width, and by a thumb on a phone as well. */
 .lrwrap{position:relative}
 /* padding, not margin: overflow-x:auto clips, and the selected chip's
    ring, outer glow and half-off-the-plate tick all sit OUTSIDE the
@@ -743,7 +738,7 @@ header.top{position:sticky;top:0;z-index:50;
 .lrscroll::-webkit-scrollbar{display:none;width:0;height:0}
 @media(prefers-reduced-motion:reduce){.lrscroll{scroll-behavior:auto}}
 
-/* ============ DESKTOP: ARROWS, NOT SCROLLING ============
+/* ============ DESKTOP: ARROWS INSTEAD OF SCROLLING ============
    Above the stacking breakpoint these lanes stop being scrollers. A
    mouse has no good gesture for a horizontal row: the wheel had to be
    hijacked to work at all, and hijacking it is what made the page feel
@@ -756,16 +751,26 @@ header.top{position:sticky;top:0;z-index:50;
    fought the exact arrow steps. */
 @media(min-width:701px){
   .lrscroll{overflow:hidden}
-  .lrwrap .lanearrow{display:grid}
 }
 @media(max-width:700px){
-  /* touch scrolling stays; snap makes a thumb-flick land on a chip */
+  /* PHONE: ARROWS **AND** TOUCH, BOTH. A thumb swipe was always the
+     native gesture and stays — snap makes a flick land on a chip. But
+     the only signal that a row continued past the viewport edge was a
+     36px gradient fade, and that is a subtler cue on a phone than
+     anywhere else on the page: no cursor ever rides over it the way a
+     desktop pointer does on its way past. The arrows are the same fix
+     Nic asked for on desktop, applied to the affordance problem mobile
+     actually has. Swiping still works exactly as before; the arrows are
+     an second, more obvious way to reach the same motion, not a
+     replacement for it. */
   .lrscroll{scroll-snap-type:x proximity}
   .lrscroll>*{scroll-snap-align:start}
 }
 
 /* THE LANE ARROWS. Same #boneArrow as the value rail, so both carousels
-   are driven by one mark rather than two that can drift.
+   are driven by one mark rather than two that can drift. Shown at every
+   width now — desktop where they are the only mover, and phone where
+   they sit alongside the swipe.
 
    Gold at rest, same as the value rail — but only 30% opacity, because
    these sit over the chips themselves and three lanes of full-strength
@@ -778,8 +783,10 @@ header.top{position:sticky;top:0;z-index:50;
    Hidden — not just faded — at a lane's own end, because unlike the
    value rail these lanes do not loop and there is genuinely nothing
    that way. .can-prev/.can-next are already computed per lane for the
-   edge fades, so the arrows ride the same two classes. */
-.lanearrow{display:none;position:absolute;top:calc(50% - 3px);
+   edge fades (and recomputed on every 'scroll' event, so a swipe on a
+   phone updates them exactly like an arrow tap does), so the arrows
+   ride the same two classes. */
+.lanearrow{display:grid;position:absolute;top:calc(50% - 3px);
   transform:translateY(-50%);z-index:3;
   width:36px;height:36px;border-radius:50%;cursor:pointer;place-items:center;
   background:var(--gold);border:1px solid var(--gold-dk);color:#160c06;
@@ -788,13 +795,32 @@ header.top{position:sticky;top:0;z-index:50;
 .lanearrow.next{right:-4px}
 .lanearrow svg{width:24px;height:11px;pointer-events:none}
 .lanearrow.prev svg{transform:scaleX(-1)}
-.lanearrow:hover{opacity:1;background:#ffd166;
-  transform:translateY(-50%) scale(1.08)}
+/* Guarded to real hover capability: without this, a touch on iOS Safari
+   leaves :hover "stuck" on the tapped button — gold, scaled up — until
+   the reader touches somewhere else, which reads as a second button
+   glued to the first. Devices with an actual pointer keep the hover. */
+@media(hover:hover){
+  .lanearrow:hover{opacity:1;background:#ffd166;
+    transform:translateY(-50%) scale(1.08)}
+}
+.lanearrow:active{opacity:1;background:#ffd166;
+  transform:translateY(-50%) scale(.94)}
 .lanearrow:focus-visible{opacity:1;outline:2px solid var(--gold);outline-offset:2px}
 .lrwrap:not(.can-prev) .lanearrow.prev,
 .lrwrap:not(.can-next) .lanearrow.next{display:none}
 /* the expanded lane is a wrapping grid — nothing to step through */
 .lrlane.expanded .lanearrow{display:none}
+/* 44px is the accepted minimum touch target (Apple HIG / WCAG 2.5.8);
+   36px is fine under a mouse's precision but not under a thumb. Sized
+   up only where touch is the input, not merely where the viewport is
+   narrow — a touch laptop at desktop width still deserves 44px, and a
+   mouse-driven narrow window doesn't need it. */
+@media(max-width:700px) and (pointer:coarse){
+  .lanearrow{width:44px;height:44px}
+  .lanearrow svg{width:27px;height:12px}
+  .lanearrow.prev{left:-6px}
+  .lanearrow.next{right:-6px}
+}
 
 /* Edge fades, so a cut-off logo reads as "more this way" rather than as
    a clipped image. Pointer-events off or they would eat clicks on the

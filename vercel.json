@@ -18,7 +18,8 @@
     { "source": "/devices",     "destination": "/" },
     { "source": "/e-liquid",    "destination": "/" },
     { "source": "/cigars",      "destination": "/" },
-    { "source": "/gear",        "destination": "/" }
+    { "source": "/gear",        "destination": "/" },
+    { "source": "/store/:key",  "destination": "/" }
   ],
   "redirects": [
     { "source": "/(index.html)", "destination": "/", "permanent": true },

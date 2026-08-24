@@ -16,28 +16,7 @@ comparison sites).
 
 ## Open items
 
-### 1. Path-based routing for store spotlight pages
-- **Problem:** `#/store/nicokick` is a hash route with no server path — invisible
-  to every crawler (department shelves already solved this the right way with real
-  paths + `vercel.json` rewrites; spotlights never got the same fix).
-- **Proposed fix:** real path (e.g. `/store/nicokick`), a `vercel.json` rewrite to
-  `/`, `location.pathname`-based routing and per-store SEO meta, mirroring the
-  existing `DEPT_PATH`/`setRouteMeta()` pattern in `app.js`.
-- **Priority:** High
-- **Status:** Proposed
-- **Approved by:** —
-
-### 2. Compress OG/share images
-- **Problem:** `og-default.png` and siblings are 680KB–1.3MB for 1200×630 social
-  cards — fine for visitors (not loaded on normal pages), costly for crawlers and
-  link-unfurl bots.
-- **Proposed fix:** re-export at proper compression, target <150KB, no visible
-  quality loss.
-- **Priority:** Low (quick win)
-- **Status:** Proposed
-- **Approved by:** —
-
-### 3. "Best of" buying-guide content
+### 1. "Best of" buying-guide content
 - **Problem:** every competitor sampled (Nicokick's Northerner hub, Vaping360,
   VapeCityUSA, SnusDaddy) runs refreshed, dated "Best of 2026" ranked-list content
   targeting commercial-intent queries. The library is etymology/culture only —
@@ -48,7 +27,7 @@ comparison sites).
 - **Status:** Proposed
 - **Approved by:** —
 
-### 4. On-site vendor trust/review aggregation page
+### 2. On-site vendor trust/review aggregation page
 - **Problem:** no on-site trust signal beyond the footer's "how we make money"
   note. Nicokick republishes its own Trustpilot reviews at `/us/customer-stories`.
 - **Proposed fix:** a page honestly citing each vendor's own public reputation
@@ -58,7 +37,7 @@ comparison sites).
 - **Status:** Proposed
 - **Approved by:** —
 
-### 5. FAQ content block + FAQPage schema on department shelves
+### 3. FAQ content block + FAQPage schema on department shelves
 - **Problem:** Nicokick has a dedicated indexed `/us/faq`; department shelves here
   are pure product grids with no Q&A content, so there's nothing for FAQPage
   schema to attach to.
@@ -90,4 +69,33 @@ Deliberate, not missing. The site owns no inventory and no reviews (CLAUDE.md
 
 ## Shipped
 
-*(none yet)*
+### Path-based routing for store spotlight pages  *(was #1, High)*
+- **Shipped:** 2026-08-24. **Approved by:** Jacob, in conversation.
+- `#/store/nicokick` is now `/store/nicokick`: a `/store/:key` rewrite in
+  `vercel.json`, `location.pathname` routing in `app.js`, and per-store
+  title/description/canonical/og off the `SPOTLIGHT` entry rather than the
+  homepage's. Listed in `sitemap.xml` — which is only possible now, since a
+  hash never reaches the server for a crawler to see.
+- Old `#/store/*` links are rewritten to the path on arrival, so anything
+  already shared keeps working and any re-share carries the crawlable form.
+- `server.mjs` now compiles rewrite sources to regexes so a `:param` route
+  matches locally. Still parsing the real `vercel.json` — no second list
+  (CLAUDE.md §3).
+- Adding a `SPOTLIGHT` entry now wants a matching `sitemap.xml` line.
+
+### Compress OG/share images  *(was #2, Low)*
+- **Shipped:** 2026-08-24. **Approved by:** Jacob, in conversation.
+- All eight cards: **6,310 KB → 296 KB, 95.3% smaller.** Largest file is now
+  51 KB against the 150 KB target. Filenames and `.png` extensions unchanged,
+  so nothing needed re-referencing and no shared card lost its cached image.
+- Every one was RGBA with a **fully opaque alpha channel** — a wasted fourth
+  channel on every pixel — and only 4–8k distinct colours, so these were flat
+  designed cards being stored as though they were photographs.
+- Quantised to a 256-colour palette with **FASTOCTREE, not MEDIANCUT**. This
+  matters and is worth not re-litigating: median-cut allocates palette slots
+  by population, so the leaf mark's sage veins — a few hundred pixels of
+  `--sage`, one of the three tokens shared with the sister sites — drifted to
+  grey-blue (measured colour drift 56.9). Octree subdivides colour space
+  instead and holds them at drift 0.5, while also producing a file a quarter
+  the size. WebP drifted them too (36.7). Overall RMSE ≤ 2.2 everywhere.
+- **If these are ever re-exported, check the sage veins on the leaf mark.**

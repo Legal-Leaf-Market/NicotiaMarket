@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Who you are actually buying from: every vendor, checked | Nicotia Market</title>
-<meta name="description" content="We do not sell anything, so the shop matters more than we do. Where each shop ships from, how long it takes, and — the part nobody advertises — whether it really checks your age at checkout. Read off their own policies. Adults 21+.">
+<title>Every Vendor, Checked: Who You Buy From | Nicotia Market</title>
+<meta name="description" content="We sell nothing, so the shop matters more than we do: where each one ships from, how long it takes, and whether it checks your age. Adults 21+.">
 <link rel="canonical" href="https://nicotiamarket.com/trust">
 <meta name="theme-color" content="#0b0f0d">
 <link rel="icon" href="/assets/mark.svg" type="image/svg+xml">
@@ -18,7 +18,7 @@
 <meta property="og:image" content="https://nicotiamarket.com/assets/og-default.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Nicotia Market — what it actually costs">
+<meta property="og:image:alt" content="Nicotia Market: what it actually costs">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Who you are actually buying from">
 <meta name="twitter:description" content="Every shop we carry: where it ships from, how long it takes, and whether it really checks your age.">
@@ -42,7 +42,7 @@
       "isPartOf": { "@id": "https://nicotiamarket.com/#website" },
       "url": "https://nicotiamarket.com/trust",
       "headline": "Who you are actually buying from",
-      "description": "Where each shop we carry ships from, how long it takes, and whether it really checks your age at checkout — read off each vendor's own published policy, with the gaps named rather than filled in.",
+      "description": "Where each shop we carry ships from, how long it takes, and whether it really checks your age at checkout, read off each vendor's own published policy, with the gaps named rather than filled in.",
       "image": "https://nicotiamarket.com/assets/og-default.png",
       "inLanguage": "en",
       "publisher": { "@id": "https://nicotiamarket.com/#org" },
@@ -78,7 +78,7 @@
     <h1><span class="st-lead">ten shops behind ten identical</span>buttons</h1>
     <p class="st-standfirst">
       We sell nothing, so the shop matters far more than we do. And the shops are
-      <em>not interchangeable</em> — least of all on the one thing none of them advertise,
+      <em>not interchangeable</em>, least of all on the one thing none of them advertise,
       which is whether they really check your age.
     </p>
   </header>
@@ -94,7 +94,7 @@
       </p>
       <p>
         So we read every vendor's published policy directly. What is below is what those
-        policies say — not what the shops' marketing says, and not what we assumed. Where a
+        policies say, not what the shops' marketing says, and not what we assumed. Where a
         policy did not answer the question, the row says <b>not established</b> instead of
         guessing, because the flattering guess and the true answer are not the same thing.
       </p>
@@ -112,7 +112,7 @@
       <p>These are four genuinely different things, and the difference is the point.</p>
       <dl class="tr-key">
         <dt><span class="agechip ac-id">ID</span></dt>
-        <dd>A real identity check before the order ships — a verification service, a
+        <dd>A real identity check before the order ships, a verification service, a
           document upload, or a signature demanded at the door. The strongest of the four.</dd>
         <dt><span class="agechip ac-sig">Signature</span></dt>
         <dd>Adult signature required on delivery, with ID shown to the carrier rather than
@@ -167,8 +167,8 @@
         <b>Third-party reputation scores.</b> Republishing each vendor's Trustpilot or BBB
         standing is a reasonable thing for this page to carry, and it is not here yet, for
         one reason: we have not been able to read those sources first-hand. Quoting a score
-        we have not verified — on the page whose entire job is telling you what has been
-        verified — would be self-defeating. When we can source and link them properly, they
+        we have not verified, on the page whose entire job is telling you what has been
+        verified, would be self-defeating. When we can source and link them properly, they
         will appear here with the link, or not at all.
       </p>
       <p>
@@ -181,7 +181,7 @@
     <section class="st-chapter st-hilite st-final">
       <h2>And how we get paid</h2>
       <p>
-        Affiliate commission on some — not all — of the shops here. It costs you nothing
+        Affiliate commission on some, not all, of the shops here. It costs you nothing
         extra, and it moves nothing up the page. Several shops in the table above pay us
         precisely nothing and are listed identically to the ones that do. If that ever
         stops being true, this paragraph is the one that should change first.
@@ -237,7 +237,7 @@
        somebody's money to a shop that will not post to them. */
     if (s.only && s.only.length) return s.only.map(function (c) { return FROM[c] || c; }).join(', ') + ' only';
     var z = (s.ships || []).map(function (c) { return ZONE[c] || c; });
-    return z.length ? z.join(' + ') : '—';
+    return z.length ? z.join(' + ') : 'Not stated';
   }
 
   fetch('/api/products')
@@ -284,8 +284,8 @@
           ships.appendChild(g);
         }
 
-        cell(tr, FROM[s.from] || s.from || '—');
-        cell(tr, s.days || '—');
+        cell(tr, FROM[s.from] || s.from || 'Not stated');
+        cell(tr, s.days || 'Not stated');
 
         body.appendChild(tr);
       });

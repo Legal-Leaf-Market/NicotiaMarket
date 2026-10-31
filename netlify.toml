@@ -74,6 +74,11 @@
   for = "/*"
   [headers.values]
     X-Content-Type-Options = "nosniff"
+    # Nothing here is meant to be framed, and nothing uses the camera, the
+    # microphone or location (the ship-to country is picked, never sensed).
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
 [[headers]]
   for = "/css/*"
   [headers.values]

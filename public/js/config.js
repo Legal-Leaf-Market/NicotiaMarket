@@ -33,6 +33,13 @@ window.NM_CONFIG = {
      destination with the SHIP TO pill to see the US selection. */
   previewMode: false,
 
+  /* THE PROMO BANNER (js/promo.js). The code is shown ONLY next to stores
+     whose registry entry in api/products.js carries `coupon: '<this code>'`.
+     That one field is also what the cart applies at checkout, so the banner
+     can never advertise a code that no store on the shelf accepts: no store
+     carrying it, no banner. Add the code to a store there to light it up. */
+  promo: { code: 'JACOBKENNEDY' },
+
   /* Sister sites — rendered in the footer strip on all three. */
   sisters: [
     { name: 'Legal-Leaf Market',  url: 'https://legal-leafmarket.com', blurb: 'Hemp & cannabinoids' },

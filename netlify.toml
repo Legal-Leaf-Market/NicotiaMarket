@@ -1,0 +1,113 @@
+# netlify.toml — production on Netlify.
+#   public/              served as files; /foo is public/foo.html (pretty URLs).
+#   netlify/functions/   api.mjs answers /api/* by running api/<name>.js.
+# vercel.json is kept because server.mjs (the local preview) reads its routes.
+# A route added there must be mirrored here, and the reverse.
+
+[build]
+  publish = "public"
+  # No command: static files plus functions, nothing to build (CLAUDE.md §2).
+  # Never remove publish: without it Netlify serves the repo root, CLAUDE.md
+  # and api/ included.
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  # api.mjs imports handlers by name at run time, which the bundler cannot
+  # follow, so the folder is shipped whole.
+  included_files = ["api/**"]
+
+# ---- department and store URLs render the one page (vercel.json rewrites) ----
+[[redirects]]
+  from = "/pouches"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/disposables"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/devices"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/e-liquid"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/cigars"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/gear"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/store/*"
+  to = "/index.html"
+  status = 200
+
+# ---- old URLs (vercel.json redirects) ----
+[[redirects]]
+  from = "/vape"
+  to = "/devices"
+  status = 301
+[[redirects]]
+  from = "/eliquid"
+  to = "/e-liquid"
+  status = 301
+[[redirects]]
+  from = "/disposable"
+  to = "/disposables"
+  status = 301
+
+# Vercel Analytics only exists on Vercel; answer with an empty script instead
+# of an HTML 404 page served as JavaScript.
+[[redirects]]
+  from = "/_vercel/insights/*"
+  to = "/js/noop.js"
+  status = 200
+  force = true
+
+# ---- headers (files only; function answers are handled in edge-headers.mjs) ----
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+[[headers]]
+  for = "/sitemap.xml"
+  [headers.values]
+    Content-Type = "application/xml"
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Content-Type = "application/javascript"
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Service-Worker-Allowed = "/"
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+[[headers]]
+  for = "/.well-known/assetlinks.json"
+  [headers.values]
+    Content-Type = "application/json"
+    Cache-Control = "public, max-age=300"
+[[headers]]
+  for = "/*.apk"
+  [headers.values]
+    Content-Type = "application/vnd.android.package-archive"
+    Content-Disposition = "attachment"
+    Cache-Control = "public, max-age=0, must-revalidate"

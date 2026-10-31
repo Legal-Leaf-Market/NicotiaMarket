@@ -37,6 +37,18 @@ public/
 
 ## 2. Deploy model
 
+**Production moved to Netlify (project `Nicotia-Market`) in Oct 2026.** `netlify.toml`
+publishes `public/` (never remove that line: without it Netlify serves the repo root,
+this file included), and `netlify/functions/api.mjs` answers `/api/*` by running
+`api/<name>.js` unchanged through `netlify/lib/node-compat.mjs` (ported from
+LegalLeafMarketShop). It also applies the `/api/*` cache policy vercel.json used to
+add from config, because `api/products.js` sets none itself (§7c). The 06:00 refresh
+is `cron-products.mjs` (scheduled, 30s cap) handing off to `cron-worker.mjs`
+(background, 15 min), because a cold scrape is ~42s. `vercel.json` stays: `server.mjs`
+reads its routes, so a route change goes in BOTH files. Sync functions stop at 60s;
+`BUDGET_MS` (45s) still fits. The notes below about Vercel are history.
+
+
 ```
 edit -> PR to GitHub -> Vercel auto-deploys
 ```

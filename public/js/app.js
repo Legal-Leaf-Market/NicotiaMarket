@@ -1132,7 +1132,7 @@ function setAgeCopy(){
      the headline above it already said 21 (US audit finding N1). */
   var y=document.getElementById('gyes'); if(y) y.textContent="Yes, I'm "+a+'+';
   var s=document.getElementById('gsub');
-  if(s) s.textContent='This site sells tobacco and vapour products for adults '+a+
+  if(s) s.textContent='This site compares prices on tobacco and vapour products for adults '+a+
     ' and over who already use them. It is not for anyone under '+a+
     ", and not for people who don't currently use tobacco or nicotine.";
 }
